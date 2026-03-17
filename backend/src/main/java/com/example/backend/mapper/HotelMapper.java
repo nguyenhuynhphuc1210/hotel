@@ -34,7 +34,7 @@ public class HotelMapper {
                 .phone(req.getPhone())
                 .email(req.getEmail())
                 .owner(owner)
-                .isActive(req.getIsActive() != null ? req.getIsActive() : false)
+                .isActive(false)
                 .build();
     }
 

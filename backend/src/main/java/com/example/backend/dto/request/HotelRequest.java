@@ -34,8 +34,6 @@ public class HotelRequest {
     @Email(message = "Email không đúng định dạng")
     private String email;
 
-    @NotNull(message = "ID chủ sở hữu không được để trống")
     private Long ownerId;
 
-    private Boolean isActive;
 }

@@ -28,7 +28,7 @@ public class HotelController {
     }
 
     @PostMapping
-    public ResponseEntity<HotelResponse> create( @Valid @RequestBody HotelRequest request) {
+    public ResponseEntity<HotelResponse> create(@Valid @RequestBody HotelRequest request) {
         HotelResponse created = hotelService.createHotel(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -42,5 +42,15 @@ public class HotelController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         hotelService.deleteHotel(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/approve")
+    public ResponseEntity<HotelResponse> approveHotel(@PathVariable Long id) {
+        return ResponseEntity.ok(hotelService.approveHotel(id));
+    }
+
+    @PatchMapping("/{id}/disable")
+    public ResponseEntity<HotelResponse> disableHotel(@PathVariable Long id) {
+        return ResponseEntity.ok(hotelService.disableHotel(id));
     }
 }

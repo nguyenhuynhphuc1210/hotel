@@ -19,7 +19,7 @@ public class UserMapper {
                 .gender(req.getGender())
                 .avatarUrl(req.getAvatarUrl())
                 .role(role)
-                .isActive(req.getIsActive() != null ? req.getIsActive() : true)
+                .isActive(true)
                 .build();
     }
 

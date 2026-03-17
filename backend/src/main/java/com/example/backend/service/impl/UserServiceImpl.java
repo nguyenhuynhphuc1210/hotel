@@ -43,9 +43,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse createUser(UserRequest request) {
-        Role role = roleRepository.findByRoleName("ROLE_USER")
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Default role USER not found"));
+        Role role = roleRepository.findById(request.getRoleId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy Role với ID: " + request.getRoleId()));
 
         User user = userMapper.toUser(request, role);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
@@ -59,12 +59,9 @@ public class UserServiceImpl implements UserService {
         User existing = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found id=" + id));
 
-        // Đã xóa phần cập nhật Role bằng request.getRoleId()
-
         if (request.getEmail() != null)
             existing.setEmail(request.getEmail());
 
-        // Lưu ý: Chỉ băm và cập nhật mật khẩu nếu người dùng có gửi mật khẩu mới lên
         if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
             existing.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
@@ -79,8 +76,13 @@ public class UserServiceImpl implements UserService {
             existing.setGender(request.getGender());
         if (request.getAvatarUrl() != null)
             existing.setAvatarUrl(request.getAvatarUrl());
-        if (request.getIsActive() != null)
-            existing.setIsActive(request.getIsActive());
+
+        if (request.getRoleId() != null) {
+        Role newRole = roleRepository.findById(request.getRoleId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                        "Không tìm thấy Role với ID: " + request.getRoleId()));
+        existing.setRole(newRole);
+    }
 
         return userMapper.toUserResponse(userRepository.save(existing));
     }
@@ -91,5 +93,39 @@ public class UserServiceImpl implements UserService {
         User existing = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found id=" + id));
         userRepository.delete(existing);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse disableUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found id=" + id));
+
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "User đã bị vô hiệu hóa trước đó");
+        }
+
+        user.setIsActive(false);
+
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse enableUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found id=" + id));
+
+        if (Boolean.TRUE.equals(user.getIsActive())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "User đã đang hoạt động");
+        }
+
+        user.setIsActive(true);
+
+        return userMapper.toUserResponse(userRepository.save(user));
     }
 }

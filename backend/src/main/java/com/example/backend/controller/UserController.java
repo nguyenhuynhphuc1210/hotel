@@ -29,7 +29,7 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<UserResponse> create( @Valid @RequestBody UserRequest request) {
+    public ResponseEntity<UserResponse> create(@Valid @RequestBody UserRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
     }
 
@@ -42,5 +42,15 @@ public class UserController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/disable")
+    public ResponseEntity<UserResponse> disableUser(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.disableUser(id));
+    }
+
+    @PatchMapping("/{id}/enable")
+    public ResponseEntity<UserResponse> enableUser(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.enableUser(id));
     }
 }
