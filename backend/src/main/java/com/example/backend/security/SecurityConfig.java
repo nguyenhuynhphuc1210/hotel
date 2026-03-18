@@ -37,7 +37,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://192.168.*.*:3000"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 
@@ -76,10 +76,26 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/hotels/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/hotels/**").hasRole("ADMIN")
 
-                        .requestMatchers(HttpMethod.GET, "/api/animals/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/animals").hasAnyRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/animals/**").hasAnyRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/animals/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/amenities/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/amenities").hasAnyRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/amenities/**").hasAnyRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/amenities/**").hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/hotel-amenities/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/hotel-amenities").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/hotel-amenities/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/hotel-amenities/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+
+                        .requestMatchers(HttpMethod.GET, "/api/promotions/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/promotions").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/promotions/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/promotions/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+
+                        .requestMatchers(HttpMethod.GET, "/api/hotel-policies/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/hotel-policies").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/hotel-policies/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/hotel-policies/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+
 
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/roles/**").hasRole("ADMIN")

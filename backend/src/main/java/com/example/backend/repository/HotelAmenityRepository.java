@@ -8,6 +8,8 @@ import java.util.List;
 
 public interface HotelAmenityRepository extends JpaRepository<HotelAmenity, HotelAmenityId> {
 
+    List<HotelAmenity> findByHotel_Owner_Email(String email);
+
     List<HotelAmenity> findByHotel_Id(Long hotelId);
 
     List<HotelAmenity> findByAmenity_Id(Long amenityId);

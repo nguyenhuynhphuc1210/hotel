@@ -44,4 +44,39 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(apiError, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDeniedException(
+            org.springframework.security.access.AccessDeniedException ex) {
+        ApiError apiError = ApiError.builder()
+                .status(HttpStatus.FORBIDDEN.value())
+                .message("Bạn không có quyền thực hiện thao tác này!")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(apiError, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ApiError> handleResponseStatusException(
+            org.springframework.web.server.ResponseStatusException ex) {
+        ApiError apiError = ApiError.builder()
+                .status(ex.getStatusCode().value())
+                .message(ex.getReason())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(apiError, ex.getStatusCode());
+    }
+
+    @ExceptionHandler(jakarta.persistence.EntityNotFoundException.class)
+    public ResponseEntity<ApiError> handleNotFoundException(Exception ex) {
+        ApiError apiError = ApiError.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .message("Không tìm thấy dữ liệu")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(apiError, HttpStatus.NOT_FOUND);
+    }
+
 }

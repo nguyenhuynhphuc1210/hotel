@@ -1,5 +1,6 @@
 package com.example.backend.service.impl;
 
+import static com.example.backend.security.SecurityUtils.*;
 import com.example.backend.dto.request.RoomTypeRequest;
 import com.example.backend.dto.response.RoomTypeResponse;
 import com.example.backend.entity.Hotel;
@@ -27,7 +28,20 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional(readOnly = true)
     public List<RoomTypeResponse> getAllRoomTypes() {
-        return roomTypeRepository.findAll().stream().map(roomTypeMapper::toRoomTypeResponse).collect(Collectors.toList());
+
+        List<RoomType> roomTypes;
+
+        if (isAdmin()) {
+            roomTypes = roomTypeRepository.findAll();
+        } else if (isHotelOwner()) {
+            roomTypes = roomTypeRepository.findByHotelOwnerEmail(getCurrentUserEmail());
+        } else {
+            roomTypes = roomTypeRepository.findByHotelIsActiveTrue();
+        }
+
+        return roomTypes.stream()
+                .map(roomTypeMapper::toRoomTypeResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -41,27 +55,32 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional
     public RoomTypeResponse createRoomType(RoomTypeRequest request) {
+
         Hotel hotel = hotelRepository.findById(request.getHotelId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Hotel not found id=" + request.getHotelId()));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Hotel not found id=" + request.getHotelId()));
+
+        checkOwnerOrAdmin(hotel.getOwner().getEmail());
+
         RoomType roomType = roomTypeMapper.toRoomType(request, hotel);
+
         return roomTypeMapper.toRoomTypeResponse(roomTypeRepository.save(roomType));
     }
 
     @Override
     @Transactional
     public RoomTypeResponse updateRoomType(Long id, RoomTypeRequest request) {
-        RoomType existing = roomTypeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "RoomType not found id=" + id));
 
-        if (request.getHotelId() != null) {
-            Hotel hotel = hotelRepository.findById(request.getHotelId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Hotel not found id=" + request.getHotelId()));
-            existing.setHotel(hotel);
-        }
+        RoomType existing = roomTypeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "RoomType not found id=" + id));
+
+        checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
+
         existing.setTypeName(request.getTypeName());
         existing.setDescription(request.getDescription());
-        existing.setMaxAdults(request.getMaxAdults() != null ? request.getMaxAdults() : existing.getMaxAdults());
-        existing.setMaxChildren(request.getMaxChildren() != null ? request.getMaxChildren() : existing.getMaxChildren());
+        existing.setMaxAdults(request.getMaxAdults());
+        existing.setMaxChildren(request.getMaxChildren());
         existing.setBedType(request.getBedType());
         existing.setRoomSize(request.getRoomSize());
         existing.setBasePrice(request.getBasePrice());
@@ -72,8 +91,13 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional
     public void deleteRoomType(Long id) {
+
         RoomType existing = roomTypeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "RoomType not found id=" + id));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "RoomType not found id=" + id));
+
+        checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
+
         roomTypeRepository.delete(existing);
     }
 }

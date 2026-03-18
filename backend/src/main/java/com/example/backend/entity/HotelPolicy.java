@@ -18,8 +18,8 @@ public class HotelPolicy {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "hotel_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hotel_id", nullable = false, unique = true)
     private Hotel hotel;
 
     @Builder.Default

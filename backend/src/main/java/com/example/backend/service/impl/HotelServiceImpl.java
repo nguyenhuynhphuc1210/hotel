@@ -1,5 +1,6 @@
 package com.example.backend.service.impl;
 
+import static com.example.backend.security.SecurityUtils.*;
 import com.example.backend.dto.request.HotelRequest;
 import com.example.backend.dto.response.HotelResponse;
 import com.example.backend.entity.Hotel;
@@ -10,10 +11,8 @@ import com.example.backend.repository.UserRepository;
 import com.example.backend.service.HotelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -30,20 +29,13 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional(readOnly = true)
     public List<HotelResponse> getAllHotels() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(r -> r.getAuthority().equals("ROLE_ADMIN"));
-        boolean isOwner = auth.getAuthorities().stream()
-                .anyMatch(r -> r.getAuthority().equals("ROLE_HOTEL_OWNER"));
-
-        String currentEmail = auth.getName();
         List<Hotel> hotels;
 
-        if (isAdmin) {
+        if (isAdmin()) {
             hotels = hotelRepository.findAll();
-        } else if (isOwner) {
-            hotels = hotelRepository.findByOwnerEmail(currentEmail);
+        } else if (isHotelOwner()) {
+            hotels = hotelRepository.findByOwnerEmail(getCurrentUserEmail());
         } else {
             hotels = hotelRepository.findByIsActiveTrue();
         }
@@ -66,34 +58,29 @@ public class HotelServiceImpl implements HotelService {
     public HotelResponse createHotel(HotelRequest request) {
 
         if (hotelRepository.existsByEmail(request.getEmail())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email khách sạn đã tồn tại!");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Email khách sạn đã tồn tại!");
         }
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Bạn chưa đăng nhập");
-        }
-
-        String currentUsername = authentication.getName();
+        String currentEmail = getCurrentUserEmail();
 
         User owner;
         if (request.getOwnerId() != null) {
             owner = userRepository.findById(request.getOwnerId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
                             "Không tìm thấy User với ID: " + request.getOwnerId()));
         } else {
-            owner = userRepository.findByEmail(currentUsername)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+            owner = userRepository.findByEmail(currentEmail)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
                             "Không tìm thấy tài khoản người dùng hiện tại"));
         }
 
         Hotel hotel = hotelMapper.toHotel(request, owner);
         hotel.setStarRating(BigDecimal.ZERO);
 
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(r -> r.getAuthority().equals("ROLE_ADMIN"));
-
-        hotel.setIsActive(isAdmin);
+        hotel.setIsActive(isAdmin());
 
         return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
     }
@@ -106,22 +93,7 @@ public class HotelServiceImpl implements HotelService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-        if (auth == null || !auth.isAuthenticated()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Bạn chưa đăng nhập");
-        }
-
-        String currentEmail = auth.getName();
-
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(r -> r.getAuthority().equals("ROLE_ADMIN"));
-
-        if (!isAdmin && !existing.getOwner().getEmail().equals(currentEmail)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Bạn không có quyền sửa khách sạn này!");
-        }
+        checkOwnerOrAdmin(existing.getOwner().getEmail());
 
         if (!existing.getEmail().equalsIgnoreCase(request.getEmail())) {
             if (hotelRepository.existsByEmail(request.getEmail())) {
@@ -140,7 +112,7 @@ public class HotelServiceImpl implements HotelService {
         existing.setPhone(request.getPhone());
         existing.setEmail(request.getEmail());
 
-        if (isAdmin && request.getOwnerId() != null) {
+        if (isAdmin() && request.getOwnerId() != null) {
             User owner = userRepository.findById(request.getOwnerId())
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.BAD_REQUEST, "Owner not found"));
@@ -148,15 +120,23 @@ public class HotelServiceImpl implements HotelService {
             existing.setOwner(owner);
         }
 
-        Hotel updated = hotelRepository.save(existing);
-
-        return hotelMapper.toHotelResponse(updated);
+        return hotelMapper.toHotelResponse(hotelRepository.save(existing));
     }
 
     @Override
+    @Transactional
     public void deleteHotel(Long id) {
+
         Hotel existing = hotelRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
+
+        if (!isAdmin()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Chỉ ADMIN mới được xoá khách sạn!");
+        }
+
         hotelRepository.delete(existing);
     }
 
@@ -168,14 +148,16 @@ public class HotelServiceImpl implements HotelService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(r -> r.getAuthority().equals("ROLE_ADMIN"));
-
-        if (!isAdmin) {
+        if (!isAdmin()) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Chỉ ADMIN mới được duyệt khách sạn!");
+        }
+
+        if (Boolean.TRUE.equals(hotel.getIsActive())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Khách sạn đã được duyệt trước đó!");
         }
 
         hotel.setIsActive(true);
@@ -186,13 +168,21 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional
     public HotelResponse disableHotel(Long id) {
+
         Hotel hotel = hotelRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
 
+        if (!isAdmin()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Chỉ ADMIN mới được vô hiệu hóa khách sạn!");
+        }
+
         if (!Boolean.TRUE.equals(hotel.getIsActive())) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Khách sạn đã bị vô hiệu hóa trước đó");
+                    HttpStatus.BAD_REQUEST,
+                    "Khách sạn đã bị vô hiệu hóa trước đó");
         }
 
         hotel.setIsActive(false);
