@@ -26,4 +26,7 @@ public class RoomImage {
     @Builder.Default
     @Column(name = "is_primary")
     private Boolean isPrimary = false;
+
+    @Column(name = "public_id")
+    private String publicId;
 }

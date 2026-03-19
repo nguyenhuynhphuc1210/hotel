@@ -1,14 +1,10 @@
 package com.example.backend.service;
 
-import com.example.backend.dto.request.HotelImageRequest;
-import com.example.backend.dto.response.HotelImageResponse;
-
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface HotelImageService {
-    List<HotelImageResponse> getAllHotelImages();
-    HotelImageResponse getHotelImageById(Long id);
-    HotelImageResponse createHotelImage(HotelImageRequest request);
-    HotelImageResponse updateHotelImage(Long id, HotelImageRequest request);
-    void deleteHotelImage(Long id);
+    List<String> uploadImagesForHotel(Long hotelId, List<MultipartFile> files);
+    void deleteImageByPublicId(String publicId);
+    void setPrimaryImage(Long imageId);
 }

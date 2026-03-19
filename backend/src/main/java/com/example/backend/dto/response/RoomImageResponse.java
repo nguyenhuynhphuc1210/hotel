@@ -12,4 +12,5 @@ public class RoomImageResponse {
     private String roomTypeName;
     private String imageUrl;
     private Boolean isPrimary;
+    private String publicId;
 }

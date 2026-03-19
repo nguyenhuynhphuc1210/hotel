@@ -9,6 +9,8 @@ import lombok.*;
 public class HotelImageResponse {
     private Long id;
     private Long hotelId;
+    private String hotelName;
     private String imageUrl;
     private Boolean isPrimary;
+    private String publicId;
 }

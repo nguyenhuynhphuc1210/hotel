@@ -1,72 +1,99 @@
 package com.example.backend.service.impl;
 
-import com.example.backend.dto.request.HotelImageRequest;
-import com.example.backend.dto.response.HotelImageResponse;
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.HotelImage;
-import com.example.backend.mapper.HotelImageMapper;
 import com.example.backend.repository.HotelImageRepository;
 import com.example.backend.repository.HotelRepository;
+import com.example.backend.security.SecurityUtils;
+import com.example.backend.service.CloudinaryService;
 import com.example.backend.service.HotelImageService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class HotelImageServiceImpl implements HotelImageService {
+
+    private final CloudinaryService cloudinaryService;
     private final HotelImageRepository hotelImageRepository;
     private final HotelRepository hotelRepository;
-    private final HotelImageMapper hotelImageMapper;
 
     @Override
-    public List<HotelImageResponse> getAllHotelImages() {
-        return hotelImageRepository.findAll().stream()
-                .map(hotelImageMapper::toHotelImageResponse)
-                .collect(Collectors.toList());
-    }
+    @Transactional
+    public List<String> uploadImagesForHotel(Long hotelId, List<MultipartFile> files) {
 
-    @Override
-    public HotelImageResponse getHotelImageById(Long id) {
-        return hotelImageRepository.findById(id)
-                .map(hotelImageMapper::toHotelImageResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "HotelImage not found id=" + id));
-    }
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách sạn với ID: " + hotelId));
 
-    @Override
-    public HotelImageResponse createHotelImage(HotelImageRequest request) {
-        Hotel hotel = hotelRepository.findById(request.getHotelId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Hotel not found id=" + request.getHotelId()));
-        
-        HotelImage saved = hotelImageRepository.save(hotelImageMapper.toHotelImage(request, hotel));
-        return hotelImageMapper.toHotelImageResponse(saved);
-    }
+        SecurityUtils.checkOwnerOrAdmin(hotel.getOwner().getEmail());
 
-    @Override
-    public HotelImageResponse updateHotelImage(Long id, HotelImageRequest request) {
-        HotelImage existing = hotelImageRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "HotelImage not found id=" + id));
+        List<String> uploadedUrls = new ArrayList<>();
+        try {
 
-        if (request.getHotelId() != null) {
-            Hotel hotel = hotelRepository.findById(request.getHotelId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Hotel not found id=" + request.getHotelId()));
-            existing.setHotel(hotel);
+            List<Map<String, Object>> uploadResults = cloudinaryService.uploadMultipleImages(files,
+                    "hotels/" + hotelId);
+
+            for (Map<String, Object> result : uploadResults) {
+                String imageUrl = (String) result.get("secure_url");
+                String publicId = (String) result.get("public_id");
+
+                HotelImage hotelImage = HotelImage.builder()
+                        .hotel(hotel)
+                        .imageUrl(imageUrl)
+                        .publicId(publicId)
+                        .isPrimary(false)
+                        .build();
+
+                hotelImageRepository.save(hotelImage);
+                uploadedUrls.add(imageUrl);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi trong quá trình upload ảnh: " + e.getMessage());
         }
-        
-        if (request.getImageUrl() != null) existing.setImageUrl(request.getImageUrl());
-        if (request.getIsPrimary() != null) existing.setIsPrimary(request.getIsPrimary());
 
-        return hotelImageMapper.toHotelImageResponse(hotelImageRepository.save(existing));
+        return uploadedUrls;
     }
 
     @Override
-    public void deleteHotelImage(Long id) {
-        HotelImage existing = hotelImageRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "HotelImage not found id=" + id));
-        hotelImageRepository.delete(existing);
+    @Transactional
+    public void deleteImageByPublicId(String publicId) {
+
+        HotelImage hotelImage = hotelImageRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ảnh với Public ID: " + publicId));
+
+        SecurityUtils.checkOwnerOrAdmin(
+                hotelImage.getHotel().getOwner().getEmail());
+        try {
+
+            cloudinaryService.deleteImage(publicId);
+
+            hotelImageRepository.delete(hotelImage);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi xóa ảnh: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void setPrimaryImage(Long imageId) {
+
+        HotelImage targetImage = hotelImageRepository.findById(imageId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ảnh với ID: " + imageId));
+
+        SecurityUtils.checkOwnerOrAdmin(
+                targetImage.getHotel().getOwner().getEmail());
+
+        Long hotelId = targetImage.getHotel().getId();
+
+        hotelImageRepository.resetPrimaryImageForHotel(hotelId);
+
+        targetImage.setIsPrimary(true);
+        hotelImageRepository.save(targetImage);
     }
 }

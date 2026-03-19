@@ -1,19 +1,12 @@
 package com.example.backend.service;
 
-import com.example.backend.dto.request.RoomImageRequest;
-import com.example.backend.dto.response.RoomImageResponse;
-
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface RoomImageService {
+    List<String> uploadImagesForRoomType(Long roomTypeId, List<MultipartFile> files);
 
-    List<RoomImageResponse> getAllRoomImages();
+    void deleteImageByPublicId(String publicId);
 
-    RoomImageResponse getRoomImageById(Long id);
-
-    RoomImageResponse createRoomImage(RoomImageRequest request);
-
-    RoomImageResponse updateRoomImage(Long id, RoomImageRequest request);
-
-    void deleteRoomImage(Long id);
+    void setPrimaryImage(Long imageId);
 }

@@ -1,12 +1,10 @@
 package com.example.backend.controller;
 
-import com.example.backend.dto.request.HotelImageRequest;
-import com.example.backend.dto.response.HotelImageResponse;
 import com.example.backend.service.HotelImageService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -14,31 +12,38 @@ import java.util.List;
 @RequestMapping("/api/hotel-images")
 @RequiredArgsConstructor
 public class HotelImageController {
+
     private final HotelImageService hotelImageService;
 
-    @GetMapping
-    public ResponseEntity<List<HotelImageResponse>> getAll() {
-        return ResponseEntity.ok(hotelImageService.getAllHotelImages());
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadImages(
+            @RequestParam("hotelId") Long hotelId,
+            @RequestParam("files") List<MultipartFile> files) {
+        try {
+            List<String> urls = hotelImageService.uploadImagesForHotel(hotelId, files);
+            return ResponseEntity.ok(urls);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<HotelImageResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(hotelImageService.getHotelImageById(id));
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> deleteImage(@RequestParam("publicId") String publicId) {
+        try {
+            hotelImageService.deleteImageByPublicId(publicId);
+            return ResponseEntity.ok("Xóa ảnh thành công!");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
-    @PostMapping
-    public ResponseEntity<HotelImageResponse> create(@RequestBody HotelImageRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(hotelImageService.createHotelImage(request));
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<HotelImageResponse> update(@PathVariable Long id, @RequestBody HotelImageRequest request) {
-        return ResponseEntity.ok(hotelImageService.updateHotelImage(id, request));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        hotelImageService.deleteHotelImage(id);
-        return ResponseEntity.noContent().build();
+    @PutMapping("/{id}/set-primary")
+    public ResponseEntity<?> setPrimaryImage(@PathVariable Long id) {
+        try {
+            hotelImageService.setPrimaryImage(id);
+            return ResponseEntity.ok("Đã thiết lập ảnh đại diện khách sạn thành công!");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }
