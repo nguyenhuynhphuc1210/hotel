@@ -35,7 +35,7 @@ public class Booking {
     @Column(name = "guest_name", nullable = false)
     private String guestName;
 
-    @Column(name = "guest_phone", nullable = false)
+    @Column(name = "guest_phone")
     private String guestPhone;
 
     @ManyToOne(fetch = FetchType.LAZY)

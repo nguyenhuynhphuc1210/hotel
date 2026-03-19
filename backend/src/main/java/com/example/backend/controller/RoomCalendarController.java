@@ -1,50 +1,45 @@
 package com.example.backend.controller;
 
-import com.example.backend.dto.request.RoomCalendarRequest;
+import com.example.backend.dto.request.UpdateCalendarRequest;
 import com.example.backend.dto.response.RoomCalendarResponse;
-import com.example.backend.service.RoomCalendarService;
+import com.example.backend.service.impl.RoomCalendarServiceImpl;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import jakarta.validation.Valid;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/room-calendars")
 @RequiredArgsConstructor
 public class RoomCalendarController {
 
-    private final RoomCalendarService roomCalendarService;
+    private final RoomCalendarServiceImpl roomCalendarService;
 
-    @GetMapping
-    public ResponseEntity<List<RoomCalendarResponse>> getAll() {
-        return ResponseEntity.ok(roomCalendarService.getAllRoomCalendars());
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<RoomCalendarResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(roomCalendarService.getRoomCalendarById(id));
-    }
-
-    @PostMapping
-    public ResponseEntity<RoomCalendarResponse> create( @Valid @RequestBody RoomCalendarRequest request) {
-        RoomCalendarResponse created = roomCalendarService.createRoomCalendar(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<RoomCalendarResponse> update(
-            @PathVariable Long id,
-            @Valid @RequestBody RoomCalendarRequest request
+    @PutMapping("/room-types/{roomTypeId}/range")
+    public ResponseEntity<String> updateCalendarRange(
+            @PathVariable Long roomTypeId,
+            @Valid @RequestBody UpdateCalendarRequest request
     ) {
-        return ResponseEntity.ok(roomCalendarService.updateRoomCalendar(id, request));
+        
+        roomCalendarService.updateCalendarByDateRange(roomTypeId, request);
+        
+        return ResponseEntity.ok("Đã cập nhật lịch và giá phòng thành công!");
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        roomCalendarService.deleteRoomCalendar(id);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/room-types/{roomTypeId}")
+    public ResponseEntity<List<RoomCalendarResponse>> getRoomCalendar(
+            @PathVariable Long roomTypeId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        
+        List<RoomCalendarResponse> responses = roomCalendarService.getCalendarByDateRange(roomTypeId, startDate, endDate);
+        
+        return ResponseEntity.ok(responses);
     }
 }

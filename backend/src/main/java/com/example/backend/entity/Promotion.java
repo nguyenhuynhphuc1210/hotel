@@ -19,7 +19,7 @@ public class Promotion {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "hotel_id") // Nếu NULL có thể hiểu là mã dùng chung cho toàn hệ thống
+    @JoinColumn(name = "hotel_id")
     private Hotel hotel;
 
     @Column(name = "promo_code", nullable = false, unique = true, length = 20)

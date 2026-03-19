@@ -33,7 +33,6 @@ public class BookingMapper {
             return null;
 
         return Booking.builder()
-                // backend generate bookingCode
                 .bookingCode(generateBookingCode())
 
                 .user(user)
@@ -46,10 +45,8 @@ public class BookingMapper {
                 .checkInDate(req.getCheckInDate())
                 .checkOutDate(req.getCheckOutDate())
 
-                // mặc định khi tạo booking
                 .status(BookingStatus.PENDING)
 
-                // backend sẽ tính sau
                 .subtotal(BigDecimal.ZERO)
                 .discountAmount(BigDecimal.ZERO)
                 .totalAmount(BigDecimal.ZERO)

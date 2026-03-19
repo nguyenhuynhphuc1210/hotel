@@ -22,7 +22,6 @@ public class BookingRequest {
     @NotBlank(message = "Tên khách hàng không được để trống")
     private String guestName;
 
-    @NotBlank(message = "Số điện thoại không được để trống")
     private String guestPhone;
 
     @NotNull(message = "Hotel ID không được để trống")

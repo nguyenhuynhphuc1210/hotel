@@ -27,7 +27,7 @@ public class RoomImageServiceImpl implements RoomImageService {
     @Override
     @Transactional
     public List<String> uploadImagesForRoomType(Long roomTypeId, List<MultipartFile> files) {
-        // 1. Kiểm tra loại phòng có tồn tại không
+
         RoomType roomType = roomTypeRepository.findById(roomTypeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng với ID: " + roomTypeId));
 
@@ -36,11 +36,10 @@ public class RoomImageServiceImpl implements RoomImageService {
 
         List<String> uploadedUrls = new ArrayList<>();
         try {
-            // 2. Upload lên Cloudinary vào folder "room-types/{roomTypeId}"
+
             List<Map<String, Object>> uploadResults = cloudinaryService.uploadMultipleImages(files,
                     "room-types/" + roomTypeId);
 
-            // 3. Lưu thông tin vào Database
             for (Map<String, Object> result : uploadResults) {
                 String imageUrl = (String) result.get("secure_url");
                 String publicId = (String) result.get("public_id");
@@ -90,10 +89,8 @@ public class RoomImageServiceImpl implements RoomImageService {
 
         Long roomTypeId = targetImage.getRoomType().getId();
 
-        // Đưa tất cả ảnh của loại phòng này về false
         roomImageRepository.resetPrimaryImageForRoomType(roomTypeId);
 
-        // Set ảnh đích thành true
         targetImage.setIsPrimary(true);
         roomImageRepository.save(targetImage);
     }

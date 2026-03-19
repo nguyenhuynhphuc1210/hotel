@@ -29,13 +29,11 @@ public class RoomType {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Builder.Default
-    @Column(name = "max_adults")
-    private Integer maxAdults = 2;
+    @Column(name = "max_adults", nullable = false)
+    private Integer maxAdults;
 
-    @Builder.Default
     @Column(name = "max_children")
-    private Integer maxChildren = 1;
+    private Integer maxChildren;
 
     @Column(name = "bed_type")
     private String bedType;
@@ -46,13 +44,20 @@ public class RoomType {
     @Column(name = "base_price", precision = 12, scale = 2, nullable = false)
     private BigDecimal basePrice;
 
+    @Column(name = "total_rooms", nullable = false)
+    private Integer totalRooms;
+
+    @Builder.Default
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "roomType", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "roomType", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<RoomImage> images;
 
     @PrePersist

@@ -33,4 +33,8 @@ public class RoomTypeRequest {
     @NotNull(message = "Giá phòng không được để trống")
     @DecimalMin(value = "0.0", inclusive = false, message = "Giá phòng phải lớn hơn 0")
     private BigDecimal basePrice;
+
+    @NotNull(message = "Tổng số phòng không được để trống")
+    @Min(value = 1, message = "Tổng số phòng vật lý phải lớn hơn hoặc bằng 1")
+    private Integer totalRooms;
 }

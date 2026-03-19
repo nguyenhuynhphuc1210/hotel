@@ -1,19 +1,23 @@
 package com.example.backend.service;
 
-import com.example.backend.dto.request.RoomCalendarRequest;
+import com.example.backend.dto.request.UpdateCalendarRequest;
 import com.example.backend.dto.response.RoomCalendarResponse;
+import com.example.backend.entity.RoomType;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface RoomCalendarService {
 
-    List<RoomCalendarResponse> getAllRoomCalendars();
+    void generateCalendarForNewRoomType(RoomType roomType);
 
-    RoomCalendarResponse getRoomCalendarById(Long id);
+    void syncFutureCalendar(Long roomTypeId, BigDecimal newPrice, Integer newTotalRooms);
 
-    RoomCalendarResponse createRoomCalendar(RoomCalendarRequest request);
+    void deactivateFutureCalendar(Long roomTypeId);
 
-    RoomCalendarResponse updateRoomCalendar(Long id, RoomCalendarRequest request);
+    void updateCalendarByDateRange(Long roomTypeId, UpdateCalendarRequest request);
 
-    void deleteRoomCalendar(Long id);
+    List<RoomCalendarResponse> getCalendarByDateRange(Long roomTypeId, LocalDate startDate, LocalDate endDate);
+
 }

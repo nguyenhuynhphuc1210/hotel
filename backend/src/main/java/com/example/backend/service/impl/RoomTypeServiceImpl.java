@@ -24,6 +24,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     private final RoomTypeRepository roomTypeRepository;
     private final HotelRepository hotelRepository;
     private final RoomTypeMapper roomTypeMapper;
+    private final RoomCalendarServiceImpl roomCalendarService;
 
     @Override
     @Transactional(readOnly = true)
@@ -34,9 +35,9 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         if (isAdmin()) {
             roomTypes = roomTypeRepository.findAll();
         } else if (isHotelOwner()) {
-            roomTypes = roomTypeRepository.findByHotelOwnerEmail(getCurrentUserEmail());
+            roomTypes = roomTypeRepository.findByHotelOwnerEmailAndIsActiveTrue(getCurrentUserEmail());
         } else {
-            roomTypes = roomTypeRepository.findByHotelIsActiveTrue();
+            roomTypes = roomTypeRepository.findByIsActiveTrue();
         }
 
         return roomTypes.stream()
@@ -64,7 +65,11 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
         RoomType roomType = roomTypeMapper.toRoomType(request, hotel);
 
-        return roomTypeMapper.toRoomTypeResponse(roomTypeRepository.save(roomType));
+        RoomType savedRoomType = roomTypeRepository.save(roomType);
+
+        roomCalendarService.generateCalendarForNewRoomType(savedRoomType);
+
+        return roomTypeMapper.toRoomTypeResponse(savedRoomType);
     }
 
     @Override
@@ -77,6 +82,9 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
 
+        boolean isPriceChanged = existing.getBasePrice().compareTo(request.getBasePrice()) != 0;
+        boolean isRoomsChanged = !existing.getTotalRooms().equals(request.getTotalRooms());
+
         existing.setTypeName(request.getTypeName());
         existing.setDescription(request.getDescription());
         existing.setMaxAdults(request.getMaxAdults());
@@ -84,8 +92,18 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         existing.setBedType(request.getBedType());
         existing.setRoomSize(request.getRoomSize());
         existing.setBasePrice(request.getBasePrice());
+        existing.setTotalRooms(request.getTotalRooms());
 
-        return roomTypeMapper.toRoomTypeResponse(roomTypeRepository.save(existing));
+        RoomType savedRoomType = roomTypeRepository.save(existing);
+
+        if (isPriceChanged || isRoomsChanged) {
+            roomCalendarService.syncFutureCalendar(
+                    savedRoomType.getId(),
+                    isPriceChanged ? savedRoomType.getBasePrice() : null,
+                    isRoomsChanged ? savedRoomType.getTotalRooms() : null);
+        }
+
+        return roomTypeMapper.toRoomTypeResponse(savedRoomType);
     }
 
     @Override
@@ -98,6 +116,9 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
 
-        roomTypeRepository.delete(existing);
+        existing.setIsActive(false);
+        roomTypeRepository.save(existing);
+
+        roomCalendarService.deactivateFutureCalendar(id);
     }
 }

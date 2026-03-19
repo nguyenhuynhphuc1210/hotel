@@ -1,13 +1,14 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.request.BookingRequest;
+import com.example.backend.dto.request.UpdateBookingStatusRequest;
 import com.example.backend.dto.response.BookingResponse;
 import com.example.backend.service.BookingService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -15,26 +16,41 @@ import java.util.List;
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
 public class BookingController {
+
     private final BookingService bookingService;
 
+    @PostMapping
+    public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody BookingRequest request) {
+        BookingResponse response = bookingService.createBooking(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     @GetMapping
-    public ResponseEntity<List<BookingResponse>> getAll() {
+    public ResponseEntity<List<BookingResponse>> getAllBookings() {
         return ResponseEntity.ok(bookingService.getAllBookings());
     }
 
+    @GetMapping("/lookup")
+    public ResponseEntity<BookingResponse> lookupGuestBooking(
+            @RequestParam String bookingCode,
+            @RequestParam String email) {
+        return ResponseEntity.ok(bookingService.lookupGuestBooking(bookingCode, email));
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<BookingResponse> cancelBooking(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.cancelBooking(id));
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<BookingResponse> updateBookingStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateBookingStatusRequest request) {
+        return ResponseEntity.ok(bookingService.updateBookingStatus(id, request));
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<BookingResponse> getById(@PathVariable Long id) {
+    public ResponseEntity<BookingResponse> getBookingById(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.getBookingById(id));
-    }
-
-    @PostMapping
-    public ResponseEntity<BookingResponse> create( @Valid @RequestBody BookingRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(bookingService.createBooking(request));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        bookingService.deleteBooking(id);
-        return ResponseEntity.noContent().build();
     }
 }

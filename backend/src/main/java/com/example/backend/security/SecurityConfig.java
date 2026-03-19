@@ -104,6 +104,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/room-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/room-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
 
+                        .requestMatchers(HttpMethod.GET, "/api/room-calendars/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/room-calendars/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+
+                        .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/bookings/*/cancel").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/bookings/*/status").hasAnyRole("ADMIN", "HOTEL_OWNER")
+
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/roles/**").hasRole("ADMIN")
 

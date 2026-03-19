@@ -2,27 +2,23 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.request.BookingRequest;
 import com.example.backend.dto.request.BookingRoomRequest;
+import com.example.backend.dto.request.UpdateBookingStatusRequest;
 import com.example.backend.dto.response.BookingResponse;
-import com.example.backend.entity.Booking;
-import com.example.backend.entity.BookingRoom;
-import com.example.backend.entity.Hotel;
-import com.example.backend.entity.Promotion;
-import com.example.backend.entity.RoomType;
-import com.example.backend.entity.User;
+import com.example.backend.entity.*;
+import com.example.backend.enums.BookingStatus;
 import com.example.backend.mapper.BookingMapper;
-import com.example.backend.repository.BookingRepository;
-import com.example.backend.repository.HotelRepository;
-import com.example.backend.repository.PromotionRepository;
-import com.example.backend.repository.RoomTypeRepository;
-import com.example.backend.repository.UserRepository;
+import com.example.backend.repository.*;
+import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.BookingService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,124 +26,265 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
+
     private final BookingRepository bookingRepository;
-    private final UserRepository userRepository;
     private final HotelRepository hotelRepository;
-    private final PromotionRepository promotionRepository;
     private final RoomTypeRepository roomTypeRepository;
+    private final RoomCalendarRepository roomCalendarRepository;
+    private final UserRepository userRepository;
+    private final PromotionRepository promotionRepository;
     private final BookingMapper bookingMapper;
-
-    @Override
-    public List<BookingResponse> getAllBookings() {
-        return bookingRepository.findAll().stream().map(bookingMapper::toBookingResponse).collect(Collectors.toList());
-    }
-
-    @Override
-    public BookingResponse getBookingById(Long id) {
-        return bookingRepository.findById(id)
-                .map(bookingMapper::toBookingResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found id=" + id));
-    }
 
     @Override
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
-        // 1. Tìm các thực thể liên quan
-        User user = (request.getUserId() != null) ? userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found")) : null;
+        // 1. Kiểm tra ngày tháng
+        if (!request.getCheckInDate().isBefore(request.getCheckOutDate())) {
+            throw new IllegalArgumentException("Ngày check-out phải sau ngày check-in ít nhất 1 đêm");
+        }
 
+        // 2. Lấy thông tin User (Cho phép null nếu là khách vãng lai)
+        User user = null;
+        if (request.getUserId() != null) {
+            user = userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        }
+
+        // 3. Lấy thông tin Khách sạn
         Hotel hotel = hotelRepository.findById(request.getHotelId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Hotel not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách sạn"));
 
-        Promotion promotion = (request.getPromotionId() != null)
-                ? promotionRepository.findById(request.getPromotionId())
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Promotion not found"))
-                : null;
+        // 4. Khởi tạo Booking Entity
+        Booking booking = bookingMapper.toBooking(request, user, hotel, null, new ArrayList<>());
+        BigDecimal grandTotal = BigDecimal.ZERO;
 
-        // 2. Tính số đêm ở
-        long nights = java.time.temporal.ChronoUnit.DAYS.between(request.getCheckInDate(), request.getCheckOutDate());
-        if (nights <= 0)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ngày trả phòng phải sau ngày nhận phòng");
+        // 5. Xử lý từng loại phòng khách đặt
+        long expectedNights = request.getCheckOutDate().toEpochDay() - request.getCheckInDate().toEpochDay();
 
-        // 3. Xử lý danh sách phòng và tính Subtotal
-        BigDecimal subtotal = BigDecimal.ZERO;
-        List<BookingRoom> rooms = new ArrayList<>();
+        for (BookingRoomRequest roomReq : request.getBookingRooms()) {
+            RoomType roomType = roomTypeRepository.findById(roomReq.getRoomTypeId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng"));
 
-        for (BookingRoomRequest r : request.getBookingRooms()) {
-            RoomType roomType = roomTypeRepository.findById(r.getRoomTypeId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "RoomType not found"));
+            // SỬ DỤNG PESSIMISTIC LOCK: Khóa các ngày lịch này lại để chống Overbooking
+            List<RoomCalendar> calendars = roomCalendarRepository.findAndLockByRoomType_IdAndDateBetween(
+                    roomType.getId(),
+                    request.getCheckInDate(),
+                    request.getCheckOutDate().minusDays(1));
 
-            // Lấy giá từ DB
-            BigDecimal pricePerNight = roomType.getBasePrice();
-            BigDecimal roomTotal = pricePerNight.multiply(BigDecimal.valueOf(r.getQuantity()))
-                    .multiply(BigDecimal.valueOf(nights));
-            subtotal = subtotal.add(roomTotal);
+            if (calendars.size() != expectedNights) {
+                throw new RuntimeException("Hệ thống chưa có đủ lịch giá cho khoảng thời gian này");
+            }
 
-            BookingRoom br = BookingRoom.builder()
+            BigDecimal roomTotalCost = BigDecimal.ZERO;
+            BookingRoom bookingRoom = BookingRoom.builder()
+                    .booking(booking)
                     .roomType(roomType)
-                    .quantity(r.getQuantity())
-                    .pricePerNight(pricePerNight)
+                    .quantity(roomReq.getQuantity())
+                    .rates(new ArrayList<>())
                     .build();
-            rooms.add(br);
-        }
 
-        // 4. Tính toán giảm giá (Promotion Logic)
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        if (promotion != null && promotion.getIsActive()) { // Giả sử entity Promotion có trường isActive
-            if (subtotal.compareTo(promotion.getMinOrderValue()) >= 0) {
-                BigDecimal percentFactor = promotion.getDiscountPercent().divide(new BigDecimal("100"));
-                discountAmount = subtotal.multiply(percentFactor);
-
-                if (promotion.getMaxDiscountAmount() != null &&
-                        discountAmount.compareTo(promotion.getMaxDiscountAmount()) > 0) {
-                    discountAmount = promotion.getMaxDiscountAmount();
+            for (RoomCalendar calendar : calendars) {
+                // Kiểm tra phòng trống
+                if (!calendar.getIsAvailable()
+                        || (calendar.getTotalRooms() - calendar.getBookedRooms() < roomReq.getQuantity())) {
+                    throw new RuntimeException("Loại phòng " + roomType.getTypeName() + " đã hết phòng trống vào ngày "
+                            + calendar.getDate());
                 }
+
+                // Trừ phòng (Giữ chỗ)
+                calendar.setBookedRooms(calendar.getBookedRooms() + roomReq.getQuantity());
+
+                // Tính tiền đêm đó
+                BigDecimal nightlyCost = calendar.getPrice().multiply(BigDecimal.valueOf(roomReq.getQuantity()));
+                roomTotalCost = roomTotalCost.add(nightlyCost);
+
+                // Lưu lịch sử giá
+                BookingRoomRate rate = BookingRoomRate.builder()
+                        .bookingRoom(bookingRoom)
+                        .date(calendar.getDate())
+                        .price(calendar.getPrice())
+                        .build();
+                bookingRoom.getRates().add(rate);
             }
+
+            bookingRoom.setPricePerNight(
+                    roomTotalCost.divide(BigDecimal.valueOf(expectedNights), 2, RoundingMode.HALF_UP));
+            booking.getBookingRooms().add(bookingRoom);
+            grandTotal = grandTotal.add(roomTotalCost);
         }
 
-        if (discountAmount.compareTo(subtotal) > 0)
-            discountAmount = subtotal;
-        BigDecimal totalAmount = subtotal.subtract(discountAmount);
+        booking.setSubtotal(grandTotal);
 
-        // 5. Khởi tạo Entity Booking và xử lý thông tin Khách hàng (Lazy Validation)
-        Booking booking = bookingMapper.toBooking(request, user, hotel, promotion, rooms);
+        // 6. Xử lý Mã giảm giá (Promotion)
+        BigDecimal discount = BigDecimal.ZERO;
+        if (request.getPromotionId() != null) {
+            Promotion promo = promotionRepository.findById(request.getPromotionId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy mã giảm giá"));
 
-        if (user != null) {
-            booking.setUser(user);
-            // Ưu tiên lấy từ request để khách có thể đặt hộ người khác,
-            // nhưng nếu request trống thì lấy từ profile user.
-            booking.setGuestEmail(request.getGuestEmail() != null ? request.getGuestEmail() : user.getEmail());
-            booking.setGuestName(request.getGuestName() != null ? request.getGuestName() : user.getFullName());
-            booking.setGuestPhone(request.getGuestPhone() != null ? request.getGuestPhone() : user.getPhone());
-
-            // LOGIC CẬP NHẬT PHONE CHO USER (Lazy Validation)
-            if (user.getPhone() == null && request.getGuestPhone() != null) {
-                user.setPhone(request.getGuestPhone());
-                userRepository.save(user); // Lưu lại vào profile để lần sau không cần nhập
+            LocalDate today = LocalDate.now();
+            if (!promo.getIsActive() || today.isBefore(promo.getStartDate().toLocalDate())
+                    || today.isAfter(promo.getEndDate().toLocalDate())) {
+                throw new IllegalArgumentException("Mã giảm giá đã hết hạn hoặc không hợp lệ");
             }
+
+            if (promo.getHotel() != null && !promo.getHotel().getId().equals(hotel.getId())) {
+                throw new IllegalArgumentException("Mã giảm giá này không áp dụng cho khách sạn này");
+            }
+
+            BigDecimal calculatedDiscount = grandTotal
+                    .multiply(promo.getDiscountPercent().divide(BigDecimal.valueOf(100)));
+            if (promo.getMaxDiscountAmount() != null
+                    && calculatedDiscount.compareTo(promo.getMaxDiscountAmount()) > 0) {
+                discount = promo.getMaxDiscountAmount();
+            } else {
+                discount = calculatedDiscount;
+            }
+
+            booking.setPromotion(promo);
+        }
+
+        booking.setDiscountAmount(discount);
+        booking.setTotalAmount(grandTotal.subtract(discount));
+
+        // 7. Lưu và trả kết quả
+        Booking savedBooking = bookingRepository.save(booking);
+        return bookingMapper.toBookingResponse(savedBooking);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse cancelBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
+
+        if (SecurityUtils.isAdmin()) {
+
+
+        } else if (SecurityUtils.isHotelOwner()) {
+            String ownerEmail = SecurityUtils.getCurrentUserEmail();
+            if (!booking.getHotel().getOwner().getEmail().equals(ownerEmail)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Bạn không có quyền hủy đơn của khách sạn khác.");
+            }
+
         } else {
-            // Khách vãng lai
-            booking.setGuestEmail(request.getGuestEmail());
-            booking.setGuestName(request.getGuestName());
-            booking.setGuestPhone(request.getGuestPhone());
+
+            String userEmail = SecurityUtils.getCurrentUserEmail();
+
+            if (booking.getUser() == null || !booking.getUser().getEmail().equals(userEmail)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền hủy đơn đặt phòng này.");
+            }
         }
 
-        booking.setSubtotal(subtotal);
-        booking.setDiscountAmount(discountAmount);
-        booking.setTotalAmount(totalAmount);
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.COMPLETED) {
+            throw new IllegalStateException("Không thể hủy đơn đặt phòng ở trạng thái hiện tại");
+        }
 
-        // Thiết lập quan hệ 2 chiều
-        rooms.forEach(br -> br.setBooking(booking));
-        booking.setBookingRooms(rooms);
+        restoreRoomInventory(booking);
+
+        booking.setStatus(BookingStatus.CANCELLED);
 
         return bookingMapper.toBookingResponse(bookingRepository.save(booking));
     }
 
+    @Override
+    @Transactional
+    public BookingResponse updateBookingStatus(Long bookingId, UpdateBookingStatusRequest request) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
+
+        SecurityUtils.checkOwnerOrAdmin(booking.getHotel().getOwner().getEmail());
+
+        BookingStatus newStatus = request.getStatus();
+
+        if (booking.getStatus() == BookingStatus.CANCELLED && newStatus != BookingStatus.CANCELLED) {
+            throw new IllegalStateException("Đơn đã hủy không thể phục hồi trạng thái.");
+        }
+
+        if (newStatus == BookingStatus.CANCELLED && booking.getStatus() != BookingStatus.CANCELLED) {
+            restoreRoomInventory(booking);
+        }
+
+        booking.setStatus(newStatus);
+        return bookingMapper.toBookingResponse(bookingRepository.save(booking));
+    }
 
     @Override
-    public void deleteBooking(Long id) {
-        Booking existing = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found id=" + id));
-        bookingRepository.delete(existing);
+    @Transactional(readOnly = true)
+    public List<BookingResponse> getAllBookings() {
+        List<Booking> bookings;
+
+        if (SecurityUtils.isAdmin()) {
+
+            bookings = bookingRepository.findAllByOrderByCreatedAtDesc();
+        } else if (SecurityUtils.isHotelOwner()) {
+
+            String ownerEmail = SecurityUtils.getCurrentUserEmail();
+            bookings = bookingRepository.findByHotelOwnerEmailOrderByCreatedAtDesc(ownerEmail);
+        } else {
+
+            String userEmail = SecurityUtils.getCurrentUserEmail();
+            User currentUser = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản người dùng"));
+
+            bookings = bookingRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getId());
+        }
+
+        return bookings.stream()
+                .map(bookingMapper::toBookingResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BookingResponse getBookingById(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
+
+        if (SecurityUtils.isAdmin()) {
+            // Admin: Được xem thoải mái tất cả các đơn
+
+        } else if (SecurityUtils.isHotelOwner()) {
+            // Owner: Chỉ được xem đơn của khách sạn do mình quản lý
+            String ownerEmail = SecurityUtils.getCurrentUserEmail();
+            if (!booking.getHotel().getOwner().getEmail().equals(ownerEmail)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Bạn không có quyền xem đơn đặt phòng của khách sạn khác.");
+            }
+
+        } else {
+            // User (Khách hàng đăng nhập): Chỉ được xem đơn của chính mình
+            String userEmail = SecurityUtils.getCurrentUserEmail();
+
+            // Nếu đơn này là của khách vãng lai (user == null) HOẶC user không khớp email
+            // -> Cấm xem
+            if (booking.getUser() == null || !booking.getUser().getEmail().equals(userEmail)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem đơn đặt phòng này.");
+            }
+        }
+
+        return bookingMapper.toBookingResponse(booking);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BookingResponse lookupGuestBooking(String bookingCode, String email) {
+        Booking booking = bookingRepository.findByBookingCodeAndGuestEmail(bookingCode, email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với mã và email này"));
+        return bookingMapper.toBookingResponse(booking);
+    }
+
+    private void restoreRoomInventory(Booking booking) {
+        for (BookingRoom br : booking.getBookingRooms()) {
+            for (BookingRoomRate rate : br.getRates()) {
+                RoomCalendar calendar = roomCalendarRepository.findByRoomType_IdAndDate(
+                        br.getRoomType().getId(), rate.getDate())
+                        .orElseThrow(() -> new RuntimeException("Lỗi hệ thống: Không tìm thấy lịch phòng"));
+
+                int newBookedRooms = calendar.getBookedRooms() - br.getQuantity();
+                calendar.setBookedRooms(Math.max(newBookedRooms, 0));
+                roomCalendarRepository.save(calendar);
+            }
+        }
     }
 }

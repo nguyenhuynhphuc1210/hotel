@@ -33,11 +33,11 @@ public class RoomCalendar {
     private Integer totalRooms;
 
     @Builder.Default
-    @Column(name = "booked_rooms")
+    @Column(name = "booked_rooms", nullable = false)
     private Integer bookedRooms = 0;
 
     @Builder.Default
-    @Column(name = "is_available")
+    @Column(name = "is_available", nullable = false)
     private Boolean isAvailable = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)

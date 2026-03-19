@@ -20,6 +20,8 @@ public class RoomTypeResponse {
     private String bedType;
     private Double roomSize;
     private BigDecimal basePrice;
+    private Integer totalRooms;
+    private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<RoomImageResponse> images;
