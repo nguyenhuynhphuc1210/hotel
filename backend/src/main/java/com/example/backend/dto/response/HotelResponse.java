@@ -26,6 +26,6 @@ public class HotelResponse {
     private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private List<RoomTypeResponse> roomTypes;
+
     private List<HotelImageResponse> images;
 }

@@ -2,8 +2,8 @@ package com.example.backend.mapper;
 
 import com.example.backend.dto.request.HotelRequest;
 import com.example.backend.dto.response.HotelResponse;
+import com.example.backend.dto.response.HotelSummaryResponse;
 import com.example.backend.dto.response.HotelImageResponse;
-import com.example.backend.dto.response.RoomTypeResponse;
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class HotelMapper {
 
     private final HotelImageMapper hotelImageMapper;
-    private final RoomTypeMapper roomTypeMapper;
+
 
     public Hotel toHotel(HotelRequest req, User owner) {
         if (req == null) return null;
@@ -40,12 +40,10 @@ public class HotelMapper {
 
     public HotelResponse toHotelResponse(Hotel hotel) {
         if (hotel == null) return null;
+        
         List<HotelImageResponse> imageResponses = hotel.getImages() == null
                 ? Collections.emptyList()
                 : hotel.getImages().stream().map(hotelImageMapper::toHotelImageResponse).collect(Collectors.toList());
-        List<RoomTypeResponse> roomTypeResponses = hotel.getRoomTypes() == null
-                ? Collections.emptyList()
-                : hotel.getRoomTypes().stream().map(roomTypeMapper::toRoomTypeResponse).collect(Collectors.toList());
 
         return HotelResponse.builder()
                 .id(hotel.getId())
@@ -64,7 +62,25 @@ public class HotelMapper {
                 .createdAt(hotel.getCreatedAt())
                 .updatedAt(hotel.getUpdatedAt())
                 .images(imageResponses)
-                .roomTypes(roomTypeResponses)
+                .build();
+    }
+
+    public HotelSummaryResponse toHotelSummaryResponse(Hotel hotel) {
+        if (hotel == null) return null;
+
+        String thumbnail = null;
+        if (hotel.getImages() != null && !hotel.getImages().isEmpty()) {
+            thumbnail = hotel.getImages().get(0).getImageUrl();
+        }
+
+        return HotelSummaryResponse.builder()
+                .id(hotel.getId())
+                .hotelName(hotel.getHotelName())
+                .starRating(hotel.getStarRating())
+                .district(hotel.getDistrict())
+                .city(hotel.getCity())
+                .isActive(hotel.getIsActive())
+                .thumbnailUrl(thumbnail)
                 .build();
     }
 }

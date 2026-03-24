@@ -1,9 +1,7 @@
 package com.example.backend.exception;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -12,9 +10,14 @@ import java.util.Map;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiError {
+
     private int status;
+    private String error;
     private String message;
+    private String path;
     private LocalDateTime timestamp;
+
     private Map<String, String> errors;
 }
