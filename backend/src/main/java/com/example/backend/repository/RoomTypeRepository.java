@@ -8,4 +8,6 @@ public interface RoomTypeRepository extends JpaRepository<RoomType, Long> {
     List<RoomType> findByHotelOwnerEmailAndIsActiveTrue(String email);
 
     List<RoomType> findByIsActiveTrue();
+
+    List<RoomType> findByHotelIdAndIsActiveTrue(Long hotelId);
 }

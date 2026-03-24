@@ -70,4 +70,5 @@ public class RoomType {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+    
 }

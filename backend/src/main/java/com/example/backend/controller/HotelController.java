@@ -4,11 +4,15 @@ import com.example.backend.dto.request.HotelRequest;
 import com.example.backend.dto.response.HotelResponse;
 import com.example.backend.service.HotelService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -52,5 +56,23 @@ public class HotelController {
     @PatchMapping("/{id}/disable")
     public ResponseEntity<HotelResponse> disableHotel(@PathVariable Long id) {
         return ResponseEntity.ok(hotelService.disableHotel(id));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<HotelResponse>> search(
+            @RequestParam(required = false) String district,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
+            @RequestParam(required = false, defaultValue = "1") Integer guests) {
+        return ResponseEntity.ok(hotelService.searchHotels(district, keyword, checkIn, checkOut, guests));
+    }
+
+    @GetMapping("/{id}/min-price")
+    public ResponseEntity<BigDecimal> getMinPrice(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
+        return ResponseEntity.ok(hotelService.getMinPriceForHotel(id, checkIn, checkOut));
     }
 }

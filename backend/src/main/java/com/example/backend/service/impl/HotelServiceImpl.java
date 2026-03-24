@@ -4,9 +4,13 @@ import static com.example.backend.security.SecurityUtils.*;
 import com.example.backend.dto.request.HotelRequest;
 import com.example.backend.dto.response.HotelResponse;
 import com.example.backend.entity.Hotel;
+import com.example.backend.entity.RoomCalendar;
+import com.example.backend.entity.RoomType;
 import com.example.backend.entity.User;
 import com.example.backend.mapper.HotelMapper;
 import com.example.backend.repository.HotelRepository;
+import com.example.backend.repository.RoomCalendarRepository;
+import com.example.backend.repository.RoomTypeRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.service.HotelService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,6 +30,8 @@ public class HotelServiceImpl implements HotelService {
     private final HotelRepository hotelRepository;
     private final UserRepository userRepository;
     private final HotelMapper hotelMapper;
+    private final RoomCalendarRepository roomCalendarRepository;
+    private final RoomTypeRepository roomTypeRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -188,5 +195,45 @@ public class HotelServiceImpl implements HotelService {
         hotel.setIsActive(false);
 
         return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<HotelResponse> searchHotels(String district, String keyword,
+            LocalDate checkIn, LocalDate checkOut, Integer guests) {
+
+        List<Hotel> hotels = hotelRepository.findByIsActiveTrue();
+
+        return hotels.stream()
+                .filter(h -> district == null || district.isBlank() ||
+                        h.getDistrict().toLowerCase().contains(district.toLowerCase()))
+                .filter(h -> keyword == null || keyword.isBlank() ||
+                        h.getHotelName().toLowerCase().contains(keyword.toLowerCase()) ||
+                        h.getAddressLine().toLowerCase().contains(keyword.toLowerCase()))
+                .filter(h -> {
+                    if (checkIn == null || checkOut == null)
+                        return true;
+                    long days = checkOut.toEpochDay() - checkIn.toEpochDay();
+                    long availableDays = roomCalendarRepository
+                            .countAvailableByHotelAndDateRange(h.getId(), checkIn, checkOut);
+                    return availableDays >= days;
+                })
+                .map(hotelMapper::toHotelResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getMinPriceForHotel(Long hotelId, LocalDate checkIn, LocalDate checkOut) {
+        List<RoomType> roomTypes = roomTypeRepository.findByHotelIdAndIsActiveTrue(hotelId);
+
+        return roomTypes.stream()
+                .flatMap(rt -> roomCalendarRepository
+                        .findByRoomType_IdAndDateBetween(rt.getId(), checkIn, checkOut)
+                        .stream())
+                .filter(c -> c.getIsAvailable() && (c.getTotalRooms() - c.getBookedRooms()) > 0)
+                .map(RoomCalendar::getPrice)
+                .min(BigDecimal::compareTo)
+                .orElse(null);
     }
 }
