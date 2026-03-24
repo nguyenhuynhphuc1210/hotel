@@ -1,27 +1,35 @@
 package com.example.backend.exception;
 
+import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
+    // ===================== VALIDATION =====================
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiError> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
+
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
+
+        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
+            errors.put(error.getField(), error.getDefaultMessage());
+        }
 
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
@@ -30,53 +38,98 @@ public class GlobalExceptionHandler {
                 .errors(errors)
                 .build();
 
-        return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiError> handleRuntimeException(RuntimeException ex) {
+    // ===================== AUTHENTICATION (401) =====================
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiError> handleBadCredentials(BadCredentialsException ex) {
+
         ApiError apiError = ApiError.builder()
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .message(ex.getMessage())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .message("Sai username hoặc password")
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        return new ResponseEntity<>(apiError, HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
     }
 
-    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
-    public ResponseEntity<ApiError> handleAccessDeniedException(
-            org.springframework.security.access.AccessDeniedException ex) {
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiError> handleAuthentication(AuthenticationException ex) {
+
+        ApiError apiError = ApiError.builder()
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .message("Chưa xác thực hoặc token không hợp lệ")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
+    }
+
+    // ===================== AUTHORIZATION (403) =====================
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex) {
+
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.FORBIDDEN.value())
                 .message("Bạn không có quyền thực hiện thao tác này!")
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        return new ResponseEntity<>(apiError, HttpStatus.FORBIDDEN);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(apiError);
     }
 
-    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
-    public ResponseEntity<ApiError> handleResponseStatusException(
-            org.springframework.web.server.ResponseStatusException ex) {
-        ApiError apiError = ApiError.builder()
-                .status(ex.getStatusCode().value())
-                .message(ex.getReason())
-                .timestamp(LocalDateTime.now())
-                .build();
+    // ===================== NOT FOUND (404) =====================
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ApiError> handleNotFound(EntityNotFoundException ex) {
 
-        return new ResponseEntity<>(apiError, ex.getStatusCode());
-    }
-
-    @ExceptionHandler(jakarta.persistence.EntityNotFoundException.class)
-    public ResponseEntity<ApiError> handleNotFoundException(Exception ex) {
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.NOT_FOUND.value())
                 .message("Không tìm thấy dữ liệu")
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        return new ResponseEntity<>(apiError, HttpStatus.NOT_FOUND);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
     }
 
+    // ===================== CUSTOM STATUS =====================
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiError> handleResponseStatus(ResponseStatusException ex) {
+
+        ApiError apiError = ApiError.builder()
+                .status(ex.getStatusCode().value())
+                .message(ex.getReason())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(ex.getStatusCode()).body(apiError);
+    }
+
+    // ===================== BUSINESS (400) =====================
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> handleBadRequest(IllegalArgumentException ex) {
+
+        ApiError apiError = ApiError.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
+    }
+
+    // ===================== UNKNOWN ERROR (500) =====================
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleException(Exception ex) {
+
+        log.error("Unexpected error: ", ex);
+
+        ApiError apiError = ApiError.builder()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .message("Lỗi hệ thống, vui lòng thử lại sau")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiError);
+    }
 }

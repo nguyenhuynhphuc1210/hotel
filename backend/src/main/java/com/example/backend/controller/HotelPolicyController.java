@@ -29,7 +29,7 @@ public class HotelPolicyController {
     }
 
     @PostMapping
-    public ResponseEntity<HotelPolicyResponse> create( @Valid @RequestBody HotelPolicyRequest request) {
+    public ResponseEntity<HotelPolicyResponse> create(@Valid @RequestBody HotelPolicyRequest request) {
         HotelPolicyResponse created = hotelPolicyService.createHotelPolicy(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -37,8 +37,7 @@ public class HotelPolicyController {
     @PutMapping("/{id}")
     public ResponseEntity<HotelPolicyResponse> update(
             @PathVariable Long id,
-            @Valid @RequestBody HotelPolicyRequest request
-    ) {
+            @Valid @RequestBody HotelPolicyRequest request) {
         return ResponseEntity.ok(hotelPolicyService.updateHotelPolicy(id, request));
     }
 
@@ -46,5 +45,10 @@ public class HotelPolicyController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         hotelPolicyService.deleteHotelPolicy(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/hotel/{hotelId}")
+    public ResponseEntity<HotelPolicyResponse> getPolicyByHotelId(@PathVariable Long hotelId) {
+        return ResponseEntity.ok(hotelPolicyService.getPolicyByHotelId(hotelId));
     }
 }

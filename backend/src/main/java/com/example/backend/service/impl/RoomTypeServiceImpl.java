@@ -3,6 +3,7 @@ package com.example.backend.service.impl;
 import static com.example.backend.security.SecurityUtils.*;
 import com.example.backend.dto.request.RoomTypeRequest;
 import com.example.backend.dto.response.RoomTypeResponse;
+import com.example.backend.dto.response.RoomTypeSummaryResponse; // Đã thêm import
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.RoomType;
 import com.example.backend.mapper.RoomTypeMapper;
@@ -28,26 +29,44 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<RoomTypeResponse> getAllRoomTypes() {
-
+    public List<RoomTypeSummaryResponse> getAllRoomTypes() {
         List<RoomType> roomTypes;
 
         if (isAdmin()) {
             roomTypes = roomTypeRepository.findAll();
         } else if (isHotelOwner()) {
-            roomTypes = roomTypeRepository.findByHotelOwnerEmailAndIsActiveTrue(getCurrentUserEmail());
+            roomTypes = roomTypeRepository.findByHotelOwnerEmail(getCurrentUserEmail());
         } else {
-            roomTypes = roomTypeRepository.findByIsActiveTrue();
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập trang quản trị");
         }
 
         return roomTypes.stream()
-                .map(roomTypeMapper::toRoomTypeResponse)
+                .map(roomTypeMapper::toRoomTypeSummaryResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoomTypeSummaryResponse> getActiveRoomTypes() {
+        return roomTypeRepository.findByIsActiveTrue()
+                .stream()
+                .map(roomTypeMapper::toRoomTypeSummaryResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoomTypeSummaryResponse> getActiveRoomTypesByHotel(Long hotelId) {
+        return roomTypeRepository.findByHotelIdAndIsActiveTrue(hotelId)
+                .stream()
+                .map(roomTypeMapper::toRoomTypeSummaryResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public RoomTypeResponse getRoomTypeById(Long id) {
+
         return roomTypeRepository.findById(id)
                 .map(roomTypeMapper::toRoomTypeResponse)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "RoomType not found id=" + id));

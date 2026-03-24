@@ -2,6 +2,7 @@ package com.example.backend.mapper;
 
 import com.example.backend.dto.request.RoomTypeRequest;
 import com.example.backend.dto.response.RoomTypeResponse;
+import com.example.backend.dto.response.RoomTypeSummaryResponse;
 import com.example.backend.dto.response.RoomImageResponse;
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.RoomType;
@@ -36,7 +37,11 @@ public class RoomTypeMapper {
 
     public RoomTypeResponse toRoomTypeResponse(RoomType rt) {
         if (rt == null) return null;
-        List<RoomImageResponse> images = rt.getImages() == null ? Collections.emptyList() : rt.getImages().stream().map(roomImageMapper::toRoomImageResponse).collect(Collectors.toList());
+        
+        List<RoomImageResponse> images = rt.getImages() == null 
+                ? Collections.emptyList() 
+                : rt.getImages().stream().map(roomImageMapper::toRoomImageResponse).collect(Collectors.toList());
+        
         return RoomTypeResponse.builder()
                 .id(rt.getId())
                 .hotelId(rt.getHotel() != null ? rt.getHotel().getId() : null)
@@ -53,6 +58,28 @@ public class RoomTypeMapper {
                 .createdAt(rt.getCreatedAt())
                 .updatedAt(rt.getUpdatedAt())
                 .images(images)
+                .build();
+    }
+
+    public RoomTypeSummaryResponse toRoomTypeSummaryResponse(RoomType rt) {
+        if (rt == null) return null;
+
+        String thumbnail = null;
+        if (rt.getImages() != null && !rt.getImages().isEmpty()) {
+            thumbnail = rt.getImages().get(0).getImageUrl();
+        }
+
+        return RoomTypeSummaryResponse.builder()
+                .id(rt.getId())
+                .typeName(rt.getTypeName())
+                .maxAdults(rt.getMaxAdults())
+                .maxChildren(rt.getMaxChildren())
+                .bedType(rt.getBedType())
+                .roomSize(rt.getRoomSize())
+                .basePrice(rt.getBasePrice())
+                .totalRooms(rt.getTotalRooms())
+                .isActive(rt.getIsActive())
+                .thumbnailUrl(thumbnail)
                 .build();
     }
 }

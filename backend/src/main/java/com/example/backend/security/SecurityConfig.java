@@ -66,7 +66,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/room-types").hasAnyRole("ADMIN", "HOTEL_OWNER")
-.requestMatchers(HttpMethod.GET, "/api/room-types/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/room-types/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/room-types").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/room-types/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/room-types/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
@@ -100,7 +100,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/hotel-policies/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.POST, "/api/hotel-images/upload").hasAnyRole("ADMIN", "HOTEL_OWNER")
-.requestMatchers(HttpMethod.PUT, "/api/hotel-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/hotel-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/hotel-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.POST, "/api/room-images/upload").hasAnyRole("ADMIN", "HOTEL_OWNER")

@@ -52,6 +52,15 @@ public class HotelPolicyServiceImpl implements HotelPolicyService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public HotelPolicyResponse getPolicyByHotelId(Long hotelId) {
+        return hotelPolicyRepository.findByHotel_Id(hotelId)
+                .map(hotelPolicyMapper::toHotelPolicyResponse)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Chưa có chính sách cho khách sạn này"));
+    }
+
+    @Override
     @Transactional
     public HotelPolicyResponse createHotelPolicy(HotelPolicyRequest request) {
 

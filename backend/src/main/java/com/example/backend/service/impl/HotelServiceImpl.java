@@ -3,15 +3,16 @@ package com.example.backend.service.impl;
 import static com.example.backend.security.SecurityUtils.*;
 import com.example.backend.dto.request.HotelRequest;
 import com.example.backend.dto.response.HotelResponse;
+import com.example.backend.dto.response.HotelSummaryResponse;
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.RoomCalendar;
 import com.example.backend.entity.RoomType;
 import com.example.backend.entity.User;
 import com.example.backend.mapper.HotelMapper;
 import com.example.backend.repository.HotelRepository;
+import com.example.backend.repository.UserRepository;
 import com.example.backend.repository.RoomCalendarRepository;
 import com.example.backend.repository.RoomTypeRepository;
-import com.example.backend.repository.UserRepository;
 import com.example.backend.service.HotelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -35,8 +36,16 @@ public class HotelServiceImpl implements HotelService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<HotelResponse> getAllHotels() {
+    public List<HotelSummaryResponse> getActiveHotels() {
+        return hotelRepository.findByIsActiveTrue()
+                .stream()
+                .map(hotelMapper::toHotelSummaryResponse)
+                .collect(Collectors.toList());
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<HotelSummaryResponse> getAllHotels() {
         List<Hotel> hotels;
 
         if (isAdmin()) {
@@ -44,17 +53,18 @@ public class HotelServiceImpl implements HotelService {
         } else if (isHotelOwner()) {
             hotels = hotelRepository.findByOwnerEmail(getCurrentUserEmail());
         } else {
-            hotels = hotelRepository.findByIsActiveTrue();
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập trang quản trị");
         }
 
         return hotels.stream()
-                .map(hotelMapper::toHotelResponse)
+                .map(hotelMapper::toHotelSummaryResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public HotelResponse getHotelById(Long id) {
+
         return hotelRepository.findById(id)
                 .map(hotelMapper::toHotelResponse)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
@@ -199,7 +209,7 @@ public class HotelServiceImpl implements HotelService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<HotelResponse> searchHotels(String district, String keyword,
+    public List<HotelSummaryResponse> searchHotels(String district, String keyword,
             LocalDate checkIn, LocalDate checkOut, Integer guests) {
 
         List<Hotel> hotels = hotelRepository.findByIsActiveTrue();
@@ -214,11 +224,11 @@ public class HotelServiceImpl implements HotelService {
                     if (checkIn == null || checkOut == null)
                         return true;
                     long days = checkOut.toEpochDay() - checkIn.toEpochDay();
-                    long availableDays = roomCalendarRepository
-                            .countAvailableByHotelAndDateRange(h.getId(), checkIn, checkOut);
+                    long availableDays = roomCalendarRepository.countAvailableByHotelAndDateRange(h.getId(), checkIn,
+                            checkOut);
                     return availableDays >= days;
                 })
-                .map(hotelMapper::toHotelResponse)
+                .map(hotelMapper::toHotelSummaryResponse)
                 .collect(Collectors.toList());
     }
 
@@ -236,4 +246,5 @@ public class HotelServiceImpl implements HotelService {
                 .min(BigDecimal::compareTo)
                 .orElse(null);
     }
+
 }

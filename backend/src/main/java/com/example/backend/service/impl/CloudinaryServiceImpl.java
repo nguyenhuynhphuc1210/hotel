@@ -21,6 +21,10 @@ public class CloudinaryServiceImpl implements CloudinaryService {
     @Override
     @SuppressWarnings("unchecked")
     public Map<String, Object> uploadImage(MultipartFile file, String folderName) throws IOException {
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("File tải lên không hợp lệ. Chỉ chấp nhận định dạng hình ảnh!");
+        }
         return cloudinary.uploader().upload(file.getBytes(),
                 ObjectUtils.asMap("folder", folderName));
     }
