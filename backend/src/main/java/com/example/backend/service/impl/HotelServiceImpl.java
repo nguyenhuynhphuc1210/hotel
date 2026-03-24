@@ -5,11 +5,14 @@ import com.example.backend.dto.request.HotelRequest;
 import com.example.backend.dto.response.HotelResponse;
 import com.example.backend.dto.response.HotelSummaryResponse;
 import com.example.backend.entity.Hotel;
+import com.example.backend.entity.RoomCalendar;
+import com.example.backend.entity.RoomType;
 import com.example.backend.entity.User;
 import com.example.backend.mapper.HotelMapper;
 import com.example.backend.repository.HotelRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.repository.RoomCalendarRepository;
+import com.example.backend.repository.RoomTypeRepository;
 import com.example.backend.service.HotelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +32,7 @@ public class HotelServiceImpl implements HotelService {
     private final UserRepository userRepository;
     private final HotelMapper hotelMapper;
     private final RoomCalendarRepository roomCalendarRepository;
+    private final RoomTypeRepository roomTypeRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -227,4 +231,20 @@ public class HotelServiceImpl implements HotelService {
                 .map(hotelMapper::toHotelSummaryResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getMinPriceForHotel(Long hotelId, LocalDate checkIn, LocalDate checkOut) {
+        List<RoomType> roomTypes = roomTypeRepository.findByHotelIdAndIsActiveTrue(hotelId);
+
+        return roomTypes.stream()
+                .flatMap(rt -> roomCalendarRepository
+                        .findByRoomType_IdAndDateBetween(rt.getId(), checkIn, checkOut)
+                        .stream())
+                .filter(c -> c.getIsAvailable() && (c.getTotalRooms() - c.getBookedRooms()) > 0)
+                .map(RoomCalendar::getPrice)
+                .min(BigDecimal::compareTo)
+                .orElse(null);
+    }
+
 }

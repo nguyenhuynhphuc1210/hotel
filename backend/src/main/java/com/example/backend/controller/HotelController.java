@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -75,5 +77,13 @@ public class HotelController {
         
         List<HotelSummaryResponse> results = hotelService.searchHotels(district, keyword, checkIn, checkOut, guests);
         return ResponseEntity.ok(results);
+    }
+
+    @GetMapping("/{id}/min-price")
+    public ResponseEntity<BigDecimal> getMinPrice(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
+        return ResponseEntity.ok(hotelService.getMinPriceForHotel(id, checkIn, checkOut));
     }
 }
