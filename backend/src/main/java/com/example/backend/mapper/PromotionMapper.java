@@ -18,7 +18,7 @@ public class PromotionMapper {
                 .startDate(req.getStartDate())
                 .endDate(req.getEndDate())
                 .minOrderValue(req.getMinOrderValue() != null ? req.getMinOrderValue() : java.math.BigDecimal.ZERO)
-                .isActive(req.getIsActive() != null ? req.getIsActive() : true)
+                .isActive(true)
                 .build();
     }
 

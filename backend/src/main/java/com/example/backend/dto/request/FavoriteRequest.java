@@ -7,6 +7,5 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FavoriteRequest {
-    private Long userId;
     private Long hotelId;
 }

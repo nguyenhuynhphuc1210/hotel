@@ -37,12 +37,12 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.lookupGuestBooking(bookingCode, email));
     }
 
-    @PutMapping("/{id}/cancel")
+    @PostMapping("/{id}/cancel")
     public ResponseEntity<BookingResponse> cancelBooking(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.cancelBooking(id));
     }
 
-    @PutMapping("/{id}/status")
+    @PatchMapping("/{id}/status")
     public ResponseEntity<BookingResponse> updateBookingStatus(
             @PathVariable Long id,
             @Valid @RequestBody UpdateBookingStatusRequest request) {

@@ -1,7 +1,7 @@
 package com.example.backend.service.impl;
 
 import com.example.backend.dto.request.LoginRequest;
-import com.example.backend.dto.request.UserRequest;
+import com.example.backend.dto.request.RegisterRequest;
 import com.example.backend.dto.response.AuthResponse;
 import com.example.backend.dto.response.UserResponse;
 import com.example.backend.entity.Role;
@@ -17,6 +17,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtTokenProvider.generateToken(authentication);
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng"));
 
         return AuthResponse.builder()
                 .token(token)
@@ -48,13 +50,15 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public UserResponse register(UserRequest request) {
+    @Transactional
+    public UserResponse register(RegisterRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email đã được sử dụng!");
+            throw new IllegalArgumentException("Email đã được sử dụng!");
         }
 
         Role role = roleRepository.findByRoleName("ROLE_USER")
-                .orElseThrow(() -> new RuntimeException("Lỗi cấu hình Server: Không tìm thấy quyền USER trong CSDL!"));
+                .orElseThrow(() -> new EntityNotFoundException("Lỗi hệ thống: Không tìm thấy quyền USER!"));
 
         User user = userMapper.toUser(request, role);
 

@@ -1,5 +1,6 @@
 package com.example.backend.mapper;
 
+import com.example.backend.dto.request.RegisterRequest;
 import com.example.backend.dto.request.UserRequest;
 import com.example.backend.dto.response.UserResponse;
 import com.example.backend.entity.Role;
@@ -8,11 +9,30 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class UserMapper {
+
+
     public User toUser(UserRequest req, Role role) {
         if (req == null) return null;
+        
         return User.builder()
                 .email(req.getEmail())
-                .passwordHash(req.getPassword())
+
+                .fullName(req.getFullName())
+                .phone(req.getPhone())
+                .dateOfBirth(req.getDateOfBirth())
+                .gender(req.getGender())
+                .avatarUrl(req.getAvatarUrl())
+                .role(role)
+                .isActive(true)
+                .build();
+    }
+
+    public User toUser(RegisterRequest req, Role role) {
+        if (req == null) return null;
+        
+        return User.builder()
+                .email(req.getEmail())
+
                 .fullName(req.getFullName())
                 .phone(req.getPhone())
                 .dateOfBirth(req.getDateOfBirth())
@@ -25,6 +45,7 @@ public class UserMapper {
 
     public UserResponse toUserResponse(User u) {
         if (u == null) return null;
+        
         return UserResponse.builder()
                 .id(u.getId())
                 .email(u.getEmail())

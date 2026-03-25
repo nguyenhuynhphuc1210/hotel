@@ -7,19 +7,17 @@ import lombok.*;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.example.backend.enums.PaymentMethod;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class BookingRequest {
 
-    private Long userId;
-
-    @NotBlank(message = "Email khách hàng không được để trống")
     @Email(message = "Email không đúng định dạng")
     private String guestEmail;
 
-    @NotBlank(message = "Tên khách hàng không được để trống")
     private String guestName;
 
     private String guestPhone;
@@ -36,6 +34,9 @@ public class BookingRequest {
     private LocalDate checkOutDate;
 
     private Long promotionId;
+
+    @NotNull(message = "Phương thức thanh toán không được để trống")
+    private PaymentMethod paymentMethod;
 
     @NotEmpty(message = "Danh sách phòng đặt không được để trống")
     @Valid

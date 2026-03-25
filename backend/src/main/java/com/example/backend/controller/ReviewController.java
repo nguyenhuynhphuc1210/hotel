@@ -4,41 +4,40 @@ import com.example.backend.dto.request.ReviewRequest;
 import com.example.backend.dto.response.ReviewResponse;
 import com.example.backend.service.ReviewService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/reviews")
 @RequiredArgsConstructor
 public class ReviewController {
+
     private final ReviewService reviewService;
 
-    @GetMapping
-    public ResponseEntity<List<ReviewResponse>> getAll() {
-        return ResponseEntity.ok(reviewService.getAllReviews());
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ReviewResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(reviewService.getReviewById(id));
-    }
-
     @PostMapping
-    public ResponseEntity<ReviewResponse> create(@RequestBody ReviewRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(reviewService.createReview(request));
+    public ResponseEntity<ReviewResponse> createReview(@RequestBody ReviewRequest request) {
+        return ResponseEntity.ok(reviewService.createReview(request));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ReviewResponse> update(@PathVariable Long id, @RequestBody ReviewRequest request) {
-        return ResponseEntity.ok(reviewService.updateReview(id, request));
+    @PatchMapping("/{id}/toggle-visibility")
+    public ResponseEntity<ReviewResponse> toggleReviewVisibility(@PathVariable Long id) {
+        return ResponseEntity.ok(reviewService.toggleReviewVisibility(id));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        reviewService.deleteReview(id);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/hotel/{hotelId}/public")
+    public ResponseEntity<Page<ReviewResponse>> getPublicReviews(
+            @PathVariable Long hotelId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(reviewService.getPublicReviews(hotelId, page, size));
+    }
+
+    @GetMapping("/hotel/{hotelId}/admin")
+    public ResponseEntity<Page<ReviewResponse>> getAdminReviews(
+            @PathVariable Long hotelId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(reviewService.getAdminReviews(hotelId, page, size));
     }
 }
