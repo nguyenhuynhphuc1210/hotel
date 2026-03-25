@@ -127,8 +127,6 @@ public class PromotionServiceImpl implements PromotionService {
             existing.setEndDate(request.getEndDate());
         if (request.getMinOrderValue() != null)
             existing.setMinOrderValue(request.getMinOrderValue());
-        if (request.getIsActive() != null)
-            existing.setIsActive(request.getIsActive());
 
         return promotionMapper.toPromotionResponse(promotionRepository.save(existing));
     }

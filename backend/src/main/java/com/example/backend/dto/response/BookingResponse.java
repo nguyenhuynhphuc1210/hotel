@@ -16,7 +16,6 @@ public class BookingResponse {
     private Long id;
     private String bookingCode;
     private Long userId;
-    private String userEmail;
     private String guestEmail;
     private String guestName;
     private String guestPhone;
@@ -32,6 +31,7 @@ public class BookingResponse {
     private Long promotionId;
     private String promoCode;
     private BigDecimal totalAmount;
+    private String paymentUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<BookingRoomResponse> bookingRooms;

@@ -17,7 +17,6 @@ public class PaymentMapper {
                 .transactionId(req.getTransactionId())
                 .amount(req.getAmount())
                 .status(com.example.backend.enums.PaymentStatus.PENDING)
-                .paymentDate(java.time.LocalDateTime.now())
                 .build();
     }
 

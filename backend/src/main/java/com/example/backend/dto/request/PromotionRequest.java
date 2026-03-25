@@ -12,7 +12,7 @@ import jakarta.validation.constraints.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PromotionRequest {
-    @NotNull(message = "Hotel ID không được để trống")
+
     private Long hotelId;
 
     @NotBlank(message = "Mã giảm giá không được để trống")
@@ -38,6 +38,5 @@ public class PromotionRequest {
 
     @DecimalMin(value = "0.0", message = "Giá trị đơn hàng tối thiểu không được âm")
     private BigDecimal minOrderValue;
-    
-    private Boolean isActive;
+
 }
