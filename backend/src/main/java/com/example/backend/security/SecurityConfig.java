@@ -115,6 +115,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/status").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.POST, "/api/bookings/*/cancel").authenticated()
 
+                        .requestMatchers(HttpMethod.POST, "/api/reviews").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/reviews/*/toggle-visibility").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/hotel/*/public").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/hotel/*/admin")
+                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
+
+                        .requestMatchers("/api/favorites/**").authenticated()
+
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/roles/**").hasRole("ADMIN")
 

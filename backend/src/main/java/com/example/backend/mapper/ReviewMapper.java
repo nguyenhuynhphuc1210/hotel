@@ -17,7 +17,7 @@ public class ReviewMapper {
                 .hotel(booking != null ? booking.getHotel() : null)
                 .rating(req.getRating())
                 .comment(req.getComment())
-                .isPublished(true) // mặc định khi tạo review sẽ không được publish ngay
+                .isPublished(true)
                 .build();
     }
 
