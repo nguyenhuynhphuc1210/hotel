@@ -1,11 +1,14 @@
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
-import { LoginRequest, AuthResponse } from '@/types/auth.types'
+import { LoginRequest, AuthResponse, RegisterRequest } from '@/types/auth.types'
 
 const authApi = {
   // POST /api/auth/login
   login: (data: LoginRequest) =>
     axiosInstance.post<AuthResponse>(API_CONFIG.ENDPOINTS.LOGIN, data),
+
+  register: (data: RegisterRequest) =>
+    axiosInstance.post(API_CONFIG.ENDPOINTS.REGISTER, data),
 
   // POST /api/auth/logout (chỉ xoá token phía FE, BE stateless)
   logout: () => {
@@ -13,6 +16,7 @@ const authApi = {
     localStorage.removeItem('user')
     window.location.href = '/login'
   },
+
 }
 
 export default authApi

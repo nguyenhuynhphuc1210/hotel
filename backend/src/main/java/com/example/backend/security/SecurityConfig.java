@@ -99,6 +99,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/hotel-policies/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/hotel-policies/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
 
+                        
                         .requestMatchers(HttpMethod.POST, "/api/hotel-images/upload").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/hotel-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/hotel-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")

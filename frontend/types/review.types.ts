@@ -1,3 +1,9 @@
+export interface ReviewRequest {
+  bookingId: number
+  rating: number 
+  comment: string
+}
+
 export interface ReviewResponse {
   id: number
   bookingId: number
@@ -8,5 +14,5 @@ export interface ReviewResponse {
   rating: number
   comment: string | null
   isPublished: boolean
-  createdAt: string
+  createdAt: string 
 }

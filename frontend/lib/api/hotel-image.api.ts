@@ -29,6 +29,8 @@ const hotelImageApi = {
   // Set ảnh đại diện
   setPrimary: (id: number | string) =>
     axiosInstance.put(API_CONFIG.ENDPOINTS.HOTEL_IMAGE_SET_PRIMARY(id)),
+
+  
 }
 
 

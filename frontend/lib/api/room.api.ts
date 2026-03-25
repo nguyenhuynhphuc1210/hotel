@@ -6,8 +6,8 @@ const roomApi = {
   getAll: () =>
     axiosInstance.get<RoomTypeResponse[]>(API_CONFIG.ENDPOINTS.ROOM_TYPES),
 
-  getById: (id: number | string) =>
-    axiosInstance.get<RoomTypeResponse>(API_CONFIG.ENDPOINTS.ROOM_TYPE_BY_ID(id)),
+  getByHotelId: (hotelId: number | string) =>
+    axiosInstance.get<RoomTypeResponse[]>(`${API_CONFIG.ENDPOINTS.ROOM_TYPES}/hotel/${hotelId}`),
 
   create: (data: RoomTypeRequest) =>
     axiosInstance.post<RoomTypeResponse>(API_CONFIG.ENDPOINTS.ROOM_TYPES, data),

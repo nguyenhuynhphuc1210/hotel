@@ -3,6 +3,17 @@ export interface LoginRequest {
   password: string
 }
 
+export interface RegisterRequest {
+  email: string
+  password: string
+  fullName: string
+  phone?: string
+  dateOfBirth?: string   
+  gender?: 'MALE' | 'FEMALE' | 'OTHER'
+  avatarUrl?: string
+  roleId: number
+}
+
 export interface AuthResponse {
   token: string
   user: UserResponse

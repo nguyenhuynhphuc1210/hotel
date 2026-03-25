@@ -18,7 +18,8 @@ export interface HotelResponse {
   createdAt: string
   updatedAt: string
   roomTypes: RoomTypeResponse[]
-  images: HotelImageResponse[]
+  thumbnailUrl?: string;
+  images?: HotelImageResponse[]
 }
 
 export interface HotelRequest {
@@ -72,6 +73,9 @@ const hotelApi = {
   // PATCH /api/hotels/:id/disable
   disable: (id: number | string) =>
     axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/disable`),
+
+  getActive: () =>
+    axiosInstance.get<HotelResponse[]>(`${API_CONFIG.ENDPOINTS.HOTELS}/active`),
 }
 
 export default hotelApi

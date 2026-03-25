@@ -53,8 +53,8 @@ export default function HomePage() {
     const router = useRouter()
 
     const { data: hotels = [] } = useQuery({
-        queryKey: ['hotels-public'],
-        queryFn: () => hotelApi.getAll().then(r => r.data),
+        queryKey: ['hotels-active'],
+        queryFn: () => hotelApi.getActive().then(r => r.data),
     })
 
     const { data: promotions = [] } = useQuery({
@@ -269,17 +269,25 @@ function DistrictCarousel({
 // ─── Hotel Card ───────────────────────────────────────────
 function HotelCard({ hotel }: { hotel: HotelResponse }) {
     const router = useRouter()
-    const primaryImage = hotel.images?.find(i => i.isPrimary)?.imageUrl
+    // const primaryImage = hotel.images?.find(i => i.isPrimary)?.imageUrl
+    const handleCardClick = () => {
+        // Chuyển hướng tới trang chi tiết
+        router.push(`/hotels/${hotel.id}`)
+    }
+    const displayImage = hotel.thumbnailUrl || hotel.images?.find(i => i.isPrimary)?.imageUrl;
 
     return (
         <div
-            onClick={() => router.push(`/hotels/${hotel.id}`)}
+            onClick={handleCardClick}
             className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group"
         >
             <div className="h-44 bg-gradient-to-br from-green-100 to-emerald-50 relative overflow-hidden">
-                {primaryImage ? (
-                    <img src={primaryImage} alt={hotel.hotelName}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                {displayImage ? (
+                    <img
+                        src={displayImage}
+                        alt={hotel.hotelName}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-5xl">🏨</div>
                 )}

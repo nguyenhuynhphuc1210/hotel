@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { 
   Save, Loader2, Upload, Trash2, Star, Hotel, 
-  Shield, Sparkles, Link as LinkIcon, Plus 
+  Shield, Sparkles, Link as LinkIcon, Plus , CheckCircle2, X
 } from 'lucide-react'
 import hotelApi, { HotelResponse, HotelImageResponse } from '@/lib/api/hotel.api'
 import policyApi from '@/lib/api/policy.api'
@@ -18,6 +18,7 @@ import { HotelPolicyResponse } from '@/types/policy.types'
 import { HotelAmenityResponse } from '@/types/amenity.types'
 import toast from 'react-hot-toast'
 import { useOwnerHotel } from '../../owner-hotel-context'
+
 
 // ── Schemas ──────────────────────────────────────────────
 const hotelSchema = z.object({
@@ -200,6 +201,8 @@ function InfoTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
 function ImageSection({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
   const [uploading, setUploading] = useState(false)
   const [urlInput, setUrlInput] = useState('')
+
+  
 
   // Mutation: Upload file
   const uploadMutation = useMutation({
@@ -435,14 +438,21 @@ function PolicyTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
 }
 
 // ─── Tab Tiện ích ─────────────────────────────────────────
-function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
+
+interface ExtendedHotelAmenity extends HotelAmenityResponse {
+  amenity_id?: number; // Cho phép nhận diện cả amenity_id nếu backend trả về thô
+}
+
+export function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
   const { data: allAmenities = [] } = useAmenities()
 
-  const { data: hotelAmenities = [] } = useQuery({
+  // Lấy danh sách tiện ích mà khách sạn này đã chọn (từ bảng trung gian)
+  const { data: hotelAmenities = [], isLoading } = useQuery<HotelAmenityResponse[]>({
     queryKey: ['hotel-amenities-owner', hotel.id],
     queryFn: () => hotelAmenityApi.getByHotel(hotel.id).then(r => r.data),
   })
 
+  // Mutation Thêm tiện ích vào khách sạn
   const addMutation = useMutation({
     mutationFn: (amenityId: number) =>
       hotelAmenityApi.create({ hotelId: hotel.id, amenityId, isFree: true }),
@@ -456,62 +466,132 @@ function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
     },
   })
 
+  // Mutation Gỡ bỏ tiện ích khỏi khách sạn
   const deleteMutation = useMutation({
     mutationFn: (amenityId: number) =>
       hotelAmenityApi.delete(hotel.id, amenityId),
     onSuccess: () => {
-      toast.success('Đã xoá tiện ích!')
+      toast.success('Đã gỡ bỏ tiện ích thành công!')
       qc.invalidateQueries({ queryKey: ['hotel-amenities-owner', hotel.id] })
     },
     onError: (e: unknown) => {
       const err = e as ApiError
-      toast.error(err?.response?.data?.message || 'Xoá thất bại')
+      toast.error(err?.response?.data?.message || 'Gỡ thất bại')
     },
   })
 
+  // CHÍNH SỬA LOGIC: Lấy danh sách ID đã chọn 
+  // Sử dụng ép kiểu (cast) sang ExtendedHotelAmenity để tránh lỗi 'any' mà vẫn đọc được amenity_id
   const linkedIds = new Set(
-    hotelAmenities.map((a: HotelAmenityResponse) => a.amenityId)
-  )
+    (hotelAmenities as ExtendedHotelAmenity[]).map((a) => 
+      String(a.amenityId || a.amenity_id)
+    )
+  );
+
+  // Lọc ra các tiện ích ĐANG CÓ (nằm trong bảng trung gian)
+  const selectedAmenities = allAmenities.filter(a => linkedIds.has(String(a.id)))
+  
+  // Lọc ra các tiện ích CHƯA CÓ (để hiển thị ở kho thêm mới)
+  const availableAmenities = allAmenities.filter(a => !linkedIds.has(String(a.id)))
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-20 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="animate-spin text-blue-500" size={30} />
+        <p className="text-gray-400">Đang đồng bộ tiện ích...</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h2 className="text-sm font-semibold text-gray-900 mb-4">
-        Tiện ích khách sạn
-        <span className="ml-2 text-xs font-normal text-gray-400">
-          ({hotelAmenities.length} đã chọn)
-        </span>
-      </h2>
+    <div className="space-y-6">
+      
+      {/* ── PHẦN 1: TIỆN ÍCH ĐANG CÓ (Danh sách xanh) ── */}
+      <div className="bg-white rounded-2xl border-2 border-blue-500 shadow-md overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-blue-100 bg-blue-50">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={20} className="text-blue-600" />
+            <h3 className="text-base font-bold text-blue-900">Tiện ích ĐANG CÓ</h3>
+          </div>
+          <span className="text-xs font-black text-white bg-blue-600 px-3 py-1 rounded-full uppercase">
+            {selectedAmenities.length} Dịch vụ
+          </span>
+        </div>
 
-      {allAmenities.length === 0 ? (
-        <div className="text-center py-8 text-gray-400 text-sm">
-          Chưa có tiện ích nào trong hệ thống. Admin cần thêm tiện ích trước.
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {allAmenities.map(a => {
-            const linked = linkedIds.has(a.id)
-            return (
-              <button
-                key={a.id}
-                onClick={() => linked ? deleteMutation.mutate(a.id) : addMutation.mutate(a.id)}
-                className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all text-left ${linked
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                  }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${linked ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                  {a.iconUrl
-                    ? <img src={a.iconUrl} alt="" className="w-5 h-5 object-contain" />
-                    : <Sparkles size={15} className={linked ? 'text-blue-500' : 'text-gray-400'} />
-                  }
+        <div className="p-6">
+          {selectedAmenities.length === 0 ? (
+            <div className="py-12 text-center border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center gap-3 bg-gray-50">
+              <Sparkles className="text-gray-300" size={40} />
+              <p className="text-gray-500 font-medium">Bạn chưa chọn tiện ích nào.</p>
+              <p className="text-xs text-gray-400">Hãy nhấp vào dấu cộng (+) ở bên dưới để thêm tiện ích cho khách sạn.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {selectedAmenities.map(a => (
+                <div key={a.id} className="flex items-center justify-between p-4 bg-white border border-blue-200 rounded-2xl shadow-sm group ring-1 ring-blue-50 hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 text-white shadow-sm">
+                      {a.iconUrl ? <img src={a.iconUrl} alt="" className="w-6 h-6 object-contain" /> : <Sparkles size={16} />}
+                    </div>
+                    <span className="font-bold text-gray-800 truncate text-sm">{a.amenityName}</span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if(confirm(`Gỡ bỏ "${a.amenityName}" khỏi danh sách dịch vụ khách sạn?`)) {
+                        deleteMutation.mutate(a.id)
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all font-bold border border-red-100 shadow-sm"
+                  >
+                    {deleteMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={14} />}
+                    <span className="text-[10px] uppercase">Gỡ bỏ</span>
+                  </button>
                 </div>
-                <span className="truncate flex-1">{a.amenityName}</span>
-                {linked && <span className="text-blue-500 font-bold">✓</span>}
-              </button>
-            )
-          })}
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
+
+      {/* ── PHẦN 2: KHO TIỆN ÍCH ĐỂ THÊM (Danh sách xám) ── */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+          <h3 className="text-sm font-bold text-gray-700 uppercase">Kho tiện ích hệ thống (Thêm mới)</h3>
+        </div>
+
+        <div className="p-6">
+          {availableAmenities.length === 0 ? (
+            <div className="text-center py-6 text-gray-400 text-sm italic">
+              Đã thêm tất cả các tiện ích có sẵn vào hệ thống.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {availableAmenities.map(a => (
+                <button
+                  key={a.id}
+                  onClick={() => addMutation.mutate(a.id)}
+                  disabled={addMutation.isPending}
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-gray-100 bg-white hover:border-blue-500 hover:bg-blue-50/30 transition-all group relative active:scale-95"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center group-hover:bg-white group-hover:scale-110 transition-transform">
+                    {a.iconUrl ? (
+                      <img src={a.iconUrl} alt="" className="w-5 h-5 object-contain grayscale group-hover:grayscale-0" />
+                    ) : (
+                      <Sparkles size={14} className="text-gray-300 group-hover:text-blue-500" />
+                    )}
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-500 group-hover:text-blue-700 uppercase text-center line-clamp-1">{a.amenityName}</span>
+                  <div className="mt-1 px-2 py-0.5 bg-gray-100 rounded text-[8px] font-black text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                     {addMutation.isPending ? '...' : '+ THÊM'}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

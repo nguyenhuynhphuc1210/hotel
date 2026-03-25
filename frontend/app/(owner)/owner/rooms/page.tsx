@@ -8,6 +8,7 @@ import { z } from 'zod'
 import {
   Plus, Pencil, Trash2, X, Loader2, Save,
   BedDouble, Users, Maximize2, Upload, Star,
+  ChevronRight,
 } from 'lucide-react'
 import hotelApi from '@/lib/api/hotel.api'
 import roomApi from '@/lib/api/room.api'
@@ -46,11 +47,19 @@ export default function OwnerRoomsPage() {
   // 2. Lấy danh sách room types dựa trên activeHotelId từ Context
   const { data: allRooms = [], isLoading: isRoomsLoading } = useQuery({
     queryKey: ['owner-rooms', activeHotelId],
-    queryFn: () => roomApi.getAll().then(r =>
-      r.data.filter((room: RoomTypeResponse) => room.hotelId === activeHotelId)
-    ),
-    enabled: !!activeHotelId, // Chỉ chạy khi đã có ID khách sạn
+    queryFn: async () => {
+      // 1. Kiểm tra nếu chưa có ID thì trả về mảng rỗng ngay lập tức
+      if (!activeHotelId) return [];
+
+      // 2. Lúc này TypeScript hiểu activeHotelId chắc chắn là number
+      const r = await roomApi.getByHotelId(activeHotelId);
+      return r.data;
+    },
+    // Giữ nguyên enabled để query không tự chạy khi chưa có ID
+    enabled: !!activeHotelId,
   })
+
+
 
   // 3. Xử lý xóa phòng
   const deleteMutation = useMutation({
@@ -170,81 +179,93 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, isDeleting }: {
   onDelete: () => void
   onManageImages: () => void
   isDeleting: boolean
-}) {
-  const primaryImage = room.images?.find(i => i.isPrimary)?.imageUrl
+}) {  
+  const displayImage = room.thumbnailUrl || room.images?.find(i => i.isPrimary)?.imageUrl;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow">
-      <div className="flex">
-        {/* Image */}
-        <div
-          className="w-36 shrink-0 bg-gradient-to-br from-blue-50 to-indigo-50 relative cursor-pointer"
-          onClick={onManageImages}
-        >
-          {primaryImage ? (
-            <img src={primaryImage} alt={room.typeName} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 min-h-[140px]">
-              <BedDouble size={28} />
-              <span className="text-xs">Thêm ảnh</span>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-            <Upload size={20} className="text-white" />
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all group flex flex-col">
+      {/* ── Phần ảnh (Giống Home) ── */}
+      <div
+        className="relative h-48 bg-gray-100 overflow-hidden cursor-pointer"
+        onClick={onManageImages}
+      >
+        {displayImage ? (
+          <img
+            src={displayImage}
+            alt={room.typeName}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-400">
+            <BedDouble size={32} />
+            <span className="text-xs">Chưa có ảnh</span>
+          </div>
+        )}
+
+        {/* Badge số lượng ảnh (Overlay) */}
+        {/* <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-lg text-[10px] font-medium flex items-center gap-1">
+          <Upload size={10} /> {room.images?.length || 0} ảnh
+        </div> */}
+
+        {/* Nút thao tác nhanh khi hover */}
+        <div className="absolute top-3 right-3 flex gap-2 translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="p-2 bg-white/90 hover:bg-white text-blue-600 rounded-full shadow-sm"
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            disabled={isDeleting}
+            className="p-2 bg-white/90 hover:bg-red-50 text-red-600 rounded-full shadow-sm disabled:opacity-50"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Phần nội dung ── */}
+      <div className="p-4 flex-1 flex flex-col">
+        <div className="mb-2">
+          <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+            {room.typeName}
+          </h3>
+          <p className="text-xs text-gray-500 line-clamp-2 mt-1 min-h-[32px]">
+            {room.description || 'Chưa có mô tả cho loại phòng này.'}
+          </p>
+        </div>
+
+        {/* Tags tiện ích nhỏ */}
+        <div className="flex flex-wrap gap-3 py-3 border-y border-gray-50 my-2">
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Users size={13} className="text-gray-400" />
+            <span>{room.maxAdults}L {room.maxChildren ? `, ${room.maxChildren}T` : ''}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Maximize2 size={13} className="text-gray-400" />
+            <span>{room.roomSize}m²</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <BedDouble size={13} className="text-gray-400" />
+            <span className="truncate max-w-[80px]">{room.bedType}</span>
           </div>
         </div>
 
-        {/* Info */}
-        <div className="flex-1 p-4">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <h3 className="font-semibold text-gray-900">{room.typeName}</h3>
-            <div className="flex gap-1 shrink-0">
-              <button onClick={onEdit}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                <Pencil size={14} />
-              </button>
-              <button onClick={onDelete} disabled={isDeleting}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                <Trash2 size={14} />
-              </button>
+        {/* Giá và Nút chi tiết */}
+        <div className="mt-auto pt-2 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Giá mỗi đêm</span>
+            <div className="text-blue-600 font-black text-base">
+              {Number(room.basePrice).toLocaleString('vi-VN')}₫
             </div>
           </div>
-
-          {room.description && (
-            <p className="text-xs text-gray-500 mb-3 line-clamp-2">{room.description}</p>
-          )}
-
-          <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-            {room.maxAdults && (
-              <span className="flex items-center gap-1">
-                <Users size={12} /> {room.maxAdults} người lớn
-                {room.maxChildren ? `, ${room.maxChildren} trẻ em` : ''}
-              </span>
-            )}
-            {room.bedType && (
-              <span className="flex items-center gap-1">
-                <BedDouble size={12} /> {room.bedType}
-              </span>
-            )}
-            {room.roomSize && (
-              <span className="flex items-center gap-1">
-                <Maximize2 size={12} /> {room.roomSize}m²
-              </span>
-            )}
-          </div>
-
-          <div className="mt-3 flex items-center justify-between">
-            <div>
-              <span className="text-xs text-gray-400">Giá cơ bản / đêm</span>
-              <div className="text-blue-600 font-bold text-sm">
-                {Number(room.basePrice).toLocaleString('vi-VN')}₫
-              </div>
-            </div>
-            <button onClick={onManageImages}
-              className="text-xs text-blue-600 hover:underline font-medium">
-              {room.images?.length ?? 0} ảnh →
-            </button>
-          </div>
+          <button
+            onClick={onManageImages}
+            className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-tighter flex items-center gap-1"
+          >
+            Quản lý ảnh <ChevronRight size={12} />
+          </button>
         </div>
       </div>
     </div>

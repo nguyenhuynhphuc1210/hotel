@@ -19,7 +19,8 @@ export interface RoomTypeResponse {
   isActive: boolean | null
   createdAt: string
   updatedAt: string
-  images: RoomImageResponse[]
+  thumbnailUrl?: string;
+  images?: RoomImageResponse[]
 }
 
 export interface RoomTypeRequest {

@@ -11,7 +11,7 @@ const API_CONFIG = {
     HOTEL_BY_ID: (id: number | string) => `/api/hotels/${id}`,
     HOTELS_SEARCH: '/api/hotels/search',
     HOTEL_MIN_PRICE: (id: number | string) => `/api/hotels/${id}/min-price`,
-    
+
     // Bookings
     BOOKINGS: '/api/bookings',
     BOOKING_BY_ID: (id: number | string) => `/api/bookings/${id}`,
@@ -63,7 +63,6 @@ const API_CONFIG = {
     ROOM_IMAGES_DELETE: '/api/room-images/delete',
     ROOM_IMAGE_SET_PRIMARY: (id: number | string) => `/api/room-images/${id}/set-primary`,
 
-    
   },
 }
 

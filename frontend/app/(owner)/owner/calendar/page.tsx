@@ -21,17 +21,17 @@ import { useOwnerHotel } from '../../owner-hotel-context'
 type ApiError = { response?: { data?: { message?: string } } }
 
 const MONTH_NAMES = [
-  'Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6',
-  'Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12',
+  'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+  'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
 ]
-const DAY_LABELS = ['T2','T3','T4','T5','T6','T7','CN']
+const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
 
 const updateSchema = z.object({
-  startDate:   z.string().min(1, 'Chọn ngày bắt đầu'),
-  endDate:     z.string().min(1, 'Chọn ngày kết thúc'),
-  price:       z.coerce.number().min(1000, 'Giá tối thiểu 1,000₫'),
-  totalRooms:  z.coerce.number().min(1, 'Tối thiểu 1 phòng'),
-  isAvailable: z.boolean(),
+  startDate: z.string().min(1, 'Chọn ngày bắt đầu'),
+  endDate: z.string().min(1, 'Chọn ngày kết thúc'),
+  price: z.coerce.number().min(1000, 'Giá tối thiểu 1,000₫'),
+  totalRooms: z.coerce.number().min(1, 'Tối thiểu 1 phòng'),
+  isAvailable: z.preprocess((val) => val === 'true' || val === true, z.boolean()),
 })
 
 type UpdateForm = z.infer<typeof updateSchema>
@@ -58,10 +58,10 @@ export default function OwnerCalendarPage() {
    * mà không cần dùng useEffect gây lỗi cascading renders.
    */
   return (
-    <CalendarContent 
-      key={activeHotelId} 
-      activeHotelId={activeHotelId} 
-      hotelName={activeHotel.hotelName} 
+    <CalendarContent
+      key={activeHotelId}
+      activeHotelId={activeHotelId}
+      hotelName={activeHotel.hotelName}
     />
   )
 }
@@ -71,25 +71,23 @@ function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, 
   const qc = useQueryClient()
 
   // State sẽ tự reset khi key ở component cha thay đổi
-  const [calYear, setCalYear]           = useState(new Date().getFullYear())
-  const [calMonth, setCalMonth]         = useState(new Date().getMonth())
+  const [calYear, setCalYear] = useState(new Date().getFullYear())
+  const [calMonth, setCalMonth] = useState(new Date().getMonth())
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null)
-  const [selectedDates, setSelectedDates]   = useState<string[]>([])
+  const [selectedDates, setSelectedDates] = useState<string[]>([])
   const [showUpdateModal, setShowUpdateModal] = useState(false)
 
   // Lấy Room types của khách sạn đang chọn
-  const { data: allRooms = [] } = useQuery({
+  const { data: allRooms = [], isLoading: isRoomsLoading } = useQuery({
     queryKey: ['owner-rooms', activeHotelId],
-    queryFn: () => roomApi.getAll().then(r =>
-      r.data.filter((rm: RoomTypeResponse) => rm.hotelId === activeHotelId)
-    ),
+    queryFn: () => roomApi.getByHotelId(activeHotelId).then(r => r.data), // Dùng getByHotelId
     enabled: !!activeHotelId,
   })
 
   const activeRoomId = selectedRoomId ?? allRooms[0]?.id ?? null
 
   const firstDay = new Date(calYear, calMonth, 1).toISOString().split('T')[0]
-  const lastDay  = new Date(calYear, calMonth + 1, 0).toISOString().split('T')[0]
+  const lastDay = new Date(calYear, calMonth + 1, 0).toISOString().split('T')[0]
 
   const { data: calendarData = [] } = useQuery({
     queryKey: ['room-calendar', activeRoomId, calYear, calMonth],
@@ -105,7 +103,7 @@ function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, 
   calendarData.forEach(c => calMap.set(c.date, c))
 
   const getDaysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate()
-  const getFirstDay    = (y: number, m: number) => {
+  const getFirstDay = (y: number, m: number) => {
     const d = new Date(y, m, 1).getDay()
     return d === 0 ? 6 : d - 1
   }
@@ -136,10 +134,10 @@ function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, 
   }
 
   const renderCalendar = () => {
-    const days      = getDaysInMonth(calYear, calMonth)
-    const firstDay  = getFirstDay(calYear, calMonth)
-    const today     = new Date().toISOString().split('T')[0]
-    const cells     = []
+    const days = getDaysInMonth(calYear, calMonth)
+    const firstDay = getFirstDay(calYear, calMonth)
+    const today = new Date().toISOString().split('T')[0]
+    const cells = []
 
     for (let i = 0; i < firstDay; i++) {
       cells.push(<div key={`e${i}`} />)
@@ -147,10 +145,10 @@ function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, 
 
     for (let day = 1; day <= days; day++) {
       const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-      const cal     = calMap.get(dateStr)
-      const isPast  = dateStr < today
+      const cal = calMap.get(dateStr)
+      const isPast = dateStr < today
       const isSelected = selectedDates.includes(dateStr)
-      const available  = cal ? cal.isAvailable && (cal.totalRooms - cal.bookedRooms) > 0 : null
+      const available = cal ? cal.isAvailable && (cal.totalRooms - cal.bookedRooms) > 0 : null
 
       cells.push(
         <button
@@ -163,19 +161,18 @@ function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, 
             isPast
               ? 'bg-gray-50 border-gray-100 cursor-not-allowed opacity-50'
               : isSelected
-              ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-400 ring-offset-1'
-              : available === true
-              ? 'border-green-200 bg-white hover:border-green-400 cursor-pointer'
-              : available === false
-              ? 'border-red-200 bg-red-50 hover:border-red-300 cursor-pointer'
-              : 'border-gray-200 bg-white hover:border-gray-300 cursor-pointer',
+                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-400 ring-offset-1'
+                : available === true
+                  ? 'border-green-200 bg-white hover:border-green-400 cursor-pointer'
+                  : available === false
+                    ? 'border-red-200 bg-red-50 hover:border-red-300 cursor-pointer'
+                    : 'border-gray-200 bg-white hover:border-gray-300 cursor-pointer',
           ].join(' ')}
         >
-          <div className={`text-xs font-bold mb-1 ${
-            isPast ? 'text-gray-400'
+          <div className={`text-xs font-bold mb-1 ${isPast ? 'text-gray-400'
             : isSelected ? 'text-blue-700'
-            : 'text-gray-800'
-          }`}>
+              : 'text-gray-800'
+            }`}>
             {day}
           </div>
 
@@ -187,11 +184,10 @@ function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, 
               <div className="text-xs text-gray-500 mt-auto">
                 {cal.totalRooms - cal.bookedRooms}/{cal.totalRooms} phòng
               </div>
-              <div className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${
-                cal.isAvailable && (cal.totalRooms - cal.bookedRooms) > 0
-                  ? 'bg-green-400'
-                  : 'bg-red-400'
-              }`} />
+              <div className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${cal.isAvailable && (cal.totalRooms - cal.bookedRooms) > 0
+                ? 'bg-green-400'
+                : 'bg-red-400'
+                }`} />
             </>
           ) : (
             <div className="text-xs text-gray-300 mt-auto">Chưa có</div>
@@ -230,11 +226,10 @@ function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, 
         {allRooms.map((rm: RoomTypeResponse) => (
           <button key={rm.id}
             onClick={() => { setSelectedRoomId(rm.id); setSelectedDates([]) }}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${
-              activeRoomId === rm.id
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
-            }`}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${activeRoomId === rm.id
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+              }`}
           >
             {rm.typeName}
           </button>
@@ -306,8 +301,8 @@ function UpdateModal({ roomId, selectedDates, qc, calYear, calMonth, onClose }: 
   onClose: () => void
 }) {
   const sortedDates = [...selectedDates].sort()
-  const startDate   = sortedDates[0]
-  const endDate     = sortedDates[sortedDates.length - 1]
+  const startDate = sortedDates[0]
+  const endDate = sortedDates[sortedDates.length - 1]
 
   const updateMutation = useMutation({
     mutationFn: (data: UpdateForm) =>
@@ -331,8 +326,8 @@ function UpdateModal({ roomId, selectedDates, qc, calYear, calMonth, onClose }: 
     defaultValues: {
       startDate,
       endDate,
-      price:       500000,
-      totalRooms:  1,
+      price: 500000,
+      totalRooms: 1,
       isAvailable: true,
     },
   })
@@ -378,17 +373,26 @@ function UpdateModal({ roomId, selectedDates, qc, calYear, calMonth, onClose }: 
           <div>
             <label className={labelClass}>Trạng thái</label>
             <div className="flex gap-3">
-              <label className={`flex-1 flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 cursor-pointer transition-colors ${
-                isAvailable ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}>
-                <input id="av-true" {...register('isAvailable')} type="radio" value="true" className="accent-green-600" checked={isAvailable === true} onChange={() => {}} />
+              <label className={`flex-1 flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 cursor-pointer transition-colors ${isAvailable ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}>
+                <input
+                  {...register('isAvailable')}
+                  type="radio"
+                  value="true" // Giá trị là string "true"
+                  className="accent-green-600"
+                />
                 <CheckCircle size={16} className={isAvailable ? 'text-green-600' : 'text-gray-300'} />
                 <span className={`text-sm font-medium ${isAvailable ? 'text-green-700' : 'text-gray-500'}`}>Mở bán</span>
               </label>
-              <label className={`flex-1 flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 cursor-pointer transition-colors ${
-                !isAvailable ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}>
-                <input id="av-false" {...register('isAvailable')} type="radio" value="false" className="accent-red-500" checked={isAvailable === false} onChange={() => {}} />
+
+              <label className={`flex-1 flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 cursor-pointer transition-colors ${!isAvailable ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}>
+                <input
+                  {...register('isAvailable')}
+                  type="radio"
+                  value="false" // Giá trị là string "false"
+                  className="accent-red-500"
+                />
                 <AlertCircle size={16} className={!isAvailable ? 'text-red-500' : 'text-gray-300'} />
                 <span className={`text-sm font-medium ${!isAvailable ? 'text-red-600' : 'text-gray-500'}`}>Tạm đóng</span>
               </label>
