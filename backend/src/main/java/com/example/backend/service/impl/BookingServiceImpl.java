@@ -45,20 +45,17 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
-        // 1. Kiểm tra ngày tháng
+
         if (!request.getCheckInDate().isBefore(request.getCheckOutDate())) {
             throw new IllegalArgumentException("Ngày check-out phải sau ngày check-in ít nhất 1 đêm");
         }
 
-        // 2. Lấy thông tin User (Cho phép null nếu là khách vãng lai)
         User user = null;
 
-        // Lấy Authentication trực tiếp để tránh bị ném lỗi 401 từ SecurityUtils nếu là
-        // khách vãng lai
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
-            String currentUserEmail = auth.getName(); // Lấy email từ Token
+            String currentUserEmail = auth.getName();
 
             user = userRepository.findByEmail(currentUserEmail)
                     .orElseThrow(() -> new EntityNotFoundException("Tài khoản không tồn tại hoặc đã bị khóa"));
@@ -73,22 +70,18 @@ public class BookingServiceImpl implements BookingService {
             }
         }
 
-        // 3. Lấy thông tin Khách sạn
         Hotel hotel = hotelRepository.findById(request.getHotelId())
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn"));
 
-        // 4. Khởi tạo Booking Entity
         Booking booking = bookingMapper.toBooking(request, user, hotel, null, new ArrayList<>());
         BigDecimal grandTotal = BigDecimal.ZERO;
 
-        // 5. Xử lý từng loại phòng khách đặt
         long expectedNights = request.getCheckOutDate().toEpochDay() - request.getCheckInDate().toEpochDay();
 
         for (BookingRoomRequest roomReq : request.getBookingRooms()) {
             RoomType roomType = roomTypeRepository.findById(roomReq.getRoomTypeId())
                     .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng"));
 
-            // SỬ DỤNG PESSIMISTIC LOCK: Khóa các ngày lịch này lại để chống Overbooking
             List<RoomCalendar> calendars = roomCalendarRepository.findAndLockByRoomType_IdAndDateBetween(
                     roomType.getId(),
                     request.getCheckInDate(),
@@ -107,21 +100,19 @@ public class BookingServiceImpl implements BookingService {
                     .build();
 
             for (RoomCalendar calendar : calendars) {
-                // Kiểm tra phòng trống
+
                 if (!calendar.getIsAvailable()
                         || (calendar.getTotalRooms() - calendar.getBookedRooms() < roomReq.getQuantity())) {
                     throw new IllegalArgumentException("Loại phòng " + roomType.getTypeName() + " đã hết phòng trống vào ngày "
                             + calendar.getDate());
                 }
 
-                // Trừ phòng (Giữ chỗ)
+
                 calendar.setBookedRooms(calendar.getBookedRooms() + roomReq.getQuantity());
 
-                // Tính tiền đêm đó
                 BigDecimal nightlyCost = calendar.getPrice().multiply(BigDecimal.valueOf(roomReq.getQuantity()));
                 roomTotalCost = roomTotalCost.add(nightlyCost);
 
-                // Lưu lịch sử giá
                 BookingRoomRate rate = BookingRoomRate.builder()
                         .bookingRoom(bookingRoom)
                         .date(calendar.getDate())
@@ -138,7 +129,6 @@ public class BookingServiceImpl implements BookingService {
 
         booking.setSubtotal(grandTotal);
 
-        // 6. Xử lý Mã giảm giá (Promotion)
         BigDecimal discount = BigDecimal.ZERO;
         if (request.getPromotionId() != null) {
             Promotion promo = promotionRepository.findById(request.getPromotionId())
@@ -169,7 +159,6 @@ public class BookingServiceImpl implements BookingService {
         booking.setDiscountAmount(discount);
         booking.setTotalAmount(grandTotal.subtract(discount));
 
-        // 7. Lưu và trả kết quả
         Booking savedBooking = bookingRepository.save(booking);
         Payment payment = Payment.builder()
                 .booking(savedBooking)
@@ -181,15 +170,12 @@ public class BookingServiceImpl implements BookingService {
 
         paymentRepository.save(payment);
 
-        // 9. Map sang Response và xử lý URL thanh toán
         BookingResponse response = bookingMapper.toBookingResponse(savedBooking);
 
-        // Kiểm tra phương thức thanh toán
         if (request.getPaymentMethod() == PaymentMethod.CASH) {
-            // Thanh toán tiền mặt tại khách sạn thì không cần link thanh toán online
+
             response.setPaymentUrl(null);
         }
-        // Sau này bạn có thể thêm logic "else if (VNPAY)" ở đây
 
         return response;
     }
