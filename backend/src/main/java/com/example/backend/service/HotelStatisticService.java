@@ -6,9 +6,6 @@ import com.example.backend.dto.response.HotelStatisticResponse;
 import java.util.List;
 
 public interface HotelStatisticService {
-    List<HotelStatisticResponse> getHotelStatistics(HotelStatisticRequest request);
+    List<HotelStatisticResponse> getStatistics(HotelStatisticRequest request);
 
-    HotelStatisticResponse getHotelStatisticById(Long id);
-
-    void deleteHotelStatistic(Long id);
 }
