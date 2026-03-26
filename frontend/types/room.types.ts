@@ -32,4 +32,5 @@ export interface RoomTypeRequest {
   bedType?: string
   roomSize?: number
   basePrice: number
+  totalRooms: number
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import {
     MapPin, Star, Share2, Heart, Info,
     CheckCircle2, Utensils, Wifi, ParkingCircle,
@@ -13,8 +13,12 @@ import { hotelAmenityApi } from '@/lib/api/amenity.api'
 import policyApi from '@/lib/api/policy.api'
 import reviewApi from '@/lib/api/review.api'
 import SearchBar from '@/components/common/SearchBar'
+import axiosInstance from '@/lib/api/axios'
+type RoomPriceMap = Record<number, number | null>
+
 
 export default function HotelDetailPage() {
+    const router = useRouter()
     const { id } = useParams()
     const hotelId = Number(id)
     const searchParams = useSearchParams()
@@ -22,6 +26,7 @@ export default function HotelDetailPage() {
     const checkIn = searchParams.get('checkIn') || ''
     const checkOut = searchParams.get('checkOut') || ''
     const adults = Number(searchParams.get('adults') || 2)
+    const hasFullDates = !!checkIn && !!checkOut;
 
     // 1. Thông tin khách sạn
     const { data: hotel, isLoading: isHotelLoading } = useQuery({
@@ -57,6 +62,62 @@ export default function HotelDetailPage() {
         enabled: !!hotelId
     })
 
+    const { data: roomPrices = {}, isLoading: isPricingLoading } = useQuery<RoomPriceMap>({
+        queryKey: ['room-prices', hotelId, checkIn, checkOut],
+        queryFn: async () => {
+            if (!hasFullDates || roomTypes.length === 0) return {}
+
+            // Gọi API lấy giá thực tế cho từng loại phòng
+            // Giả sử Backend có endpoint lấy giá cho room type theo ngày
+            // Nếu chưa có endpoint gộp, ta có thể dùng Promise.allSettled
+            const results = await Promise.allSettled(
+                roomTypes.map(room =>
+                    axiosInstance.get(`/api/room-types/${room.id}/price`, {
+                        params: { checkIn, checkOut }
+                    }).then(r => ({ id: room.id, price: r.data }))
+                )
+            )
+
+            const map: RoomPriceMap = {}
+            results.forEach(r => {
+                if (r.status === 'fulfilled') map[r.value.id] = r.value.price
+            })
+            return map
+        },
+        enabled: hasFullDates && roomTypes.length > 0,
+    })
+
+    // Tính số đêm
+    const nights = hasFullDates
+        ? Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000)
+        : 0
+
+    // Hàm xử lý khi nhấn "Hiển thị giá"
+    const handleShowPrice = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Nếu muốn tự động mở lịch của SearchBar, bạn có thể dùng URL param như trang Search
+        const newParams = new URLSearchParams(searchParams.toString());
+        newParams.set('openPicker', 'true');
+        router.replace(`/hotels/${hotelId}?${newParams.toString()}`);
+    };
+
+    const handleBooking = (roomTypeId: number) => {
+        if (!hasFullDates) { handleShowPrice(); return; }
+
+        const actualPrice = roomPrices[roomTypeId] ??
+            roomTypes.find(r => r.id === roomTypeId)?.basePrice ?? 0
+
+        const params = new URLSearchParams({
+            hotelId: hotelId.toString(),
+            roomTypeId: roomTypeId.toString(),
+            checkIn,
+            checkOut,
+            adults: adults.toString(),
+            price: actualPrice.toString(),  // 👈 truyền giá qua URL
+        });
+        router.push(`/booking?${params.toString()}`);
+    };
+
     if (isHotelLoading) return <div className="py-20 text-center">Đang tải...</div>
     if (!hotel) return <div className="py-20 text-center">Không tìm thấy khách sạn</div>
 
@@ -65,8 +126,8 @@ export default function HotelDetailPage() {
     const subImages = images.filter(img => img.imageUrl !== mainImage).slice(0, 4)
 
     // Tính điểm trung bình thật
-    const avgRating = reviews.length > 0 
-        ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) 
+    const avgRating = reviews.length > 0
+        ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
         : "0.0"
 
     const hotelPolicy = policies[0]; // Thường mỗi khách sạn chỉ có 1 bản ghi chính sách
@@ -127,7 +188,7 @@ export default function HotelDetailPage() {
                                             <CheckCircle2 size={20} />
                                         </div>
                                         <span className="text-[11px] font-medium text-gray-700 text-center">{ha.amenityName}</span>
-                                        {ha.isFree ? 
+                                        {ha.isFree ?
                                             <span className="text-[9px] text-emerald-600 font-bold uppercase mt-1">Miễn phí</span> :
                                             <span className="text-[9px] text-amber-600 font-bold uppercase mt-1">Có phí</span>
                                         }
@@ -137,33 +198,112 @@ export default function HotelDetailPage() {
                         </div>
 
                         {/* Room Selection */}
-                        <div id="rooms" className="space-y-4">
-                            <h3 className="text-xl font-bold text-gray-900">Chọn phòng</h3>
-                            {roomTypes.map((room) => (
-                                <div key={room.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden flex shadow-sm hover:border-blue-300 transition-all">
-                                    <div className="w-72 h-52 shrink-0 relative">
-                                        <img src={room.thumbnailUrl || room.images?.[0]?.imageUrl} className="w-full h-full object-cover" alt={room.typeName} />
-                                    </div>
-                                    <div className="p-5 flex-1 flex flex-col justify-between">
-                                        <div>
-                                            <h4 className="font-bold text-lg text-gray-900 mb-2">{room.typeName}</h4>
-                                            <div className="flex gap-4 text-xs text-gray-500 mb-3 font-medium">
-                                                <div className="flex items-center gap-1"><Users size={14}/> {room.maxAdults}L, {room.maxChildren}T</div>
-                                                <div className="flex items-center gap-1"><Maximize2 size={14}/> {room.roomSize} m²</div>
-                                                <div className="flex items-center gap-1"><BedDouble size={14}/> {room.bedType}</div>
-                                            </div>
-                                            <p className="text-sm text-gray-500 line-clamp-2 italic">{room.description}</p>
+                        <div id="rooms" className="space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-xl font-bold text-gray-900">Chọn phòng</h3>
+                                {hasFullDates && (
+                                    <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                                        Thời gian lưu trú: <span className="font-bold text-blue-600">{nights} đêm</span>
+                                    </span>
+                                )}
+                            </div>
+
+                            {roomTypes.map((room) => {
+                                // Lấy giá thực tế từ API, nếu chưa có thì fallback về basePrice
+                                const actualPrice = roomPrices[room.id] ?? room.basePrice;
+                                const totalAmount = actualPrice * nights;
+
+                                return (
+                                    <div key={room.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden flex shadow-sm hover:border-blue-300 transition-all group">
+                                        {/* Ảnh phòng */}
+                                        <div className="w-72 h-56 shrink-0 relative overflow-hidden bg-gray-100">
+                                            <img
+                                                src={room.thumbnailUrl || room.images?.[0]?.imageUrl || '/placeholder-room.jpg'}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                alt={room.typeName}
+                                            />
                                         </div>
-                                        <div className="flex items-end justify-between border-t pt-4">
+
+                                        {/* Thông tin phòng */}
+                                        <div className="p-6 flex-1 flex flex-col justify-between">
                                             <div>
-                                                <span className="text-[10px] text-gray-400 uppercase font-bold">Giá mỗi đêm từ</span>
-                                                <div className="text-2xl font-black text-blue-600">{Number(room.basePrice).toLocaleString('vi-VN')}₫</div>
+                                                <h4 className="font-bold text-xl text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                                                    {room.typeName}
+                                                </h4>
+
+                                                {/* Tags tiện ích */}
+                                                <div className="flex flex-wrap gap-4 text-xs text-gray-500 mb-4 font-medium">
+                                                    <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded">
+                                                        <Users size={14} className="text-blue-500" />
+                                                        {room.maxAdults} Người lớn, {room.maxChildren} Trẻ em
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded">
+                                                        <Maximize2 size={14} className="text-blue-500" />
+                                                        {room.roomSize} m²
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded">
+                                                        <BedDouble size={14} className="text-blue-500" />
+                                                        {room.bedType}
+                                                    </div>
+                                                </div>
+
+                                                <p className="text-sm text-gray-500 line-clamp-2 italic leading-relaxed">
+                                                    {room.description || "Phòng đầy đủ tiện nghi với không gian thoáng mát, sạch sẽ."}
+                                                </p>
                                             </div>
-                                            <button className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-md shadow-blue-100">Đặt phòng</button>
+
+                                            {/* Giá và Nút đặt */}
+                                            <div className="flex items-end justify-between border-t border-gray-100 pt-5 mt-4">
+                                                <div className="space-y-1">
+                                                    {hasFullDates ? (
+                                                        <>
+                                                            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+                                                                Giá trung bình mỗi đêm
+                                                            </span>
+                                                            {isPricingLoading ? (
+                                                                <div className="h-8 w-32 bg-gray-100 animate-pulse rounded-md"></div>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="text-2xl font-black text-blue-600">
+                                                                        {actualPrice.toLocaleString('vi-VN')}₫
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500">
+                                                                        Tổng cộng: <span className="font-semibold text-gray-700">{totalAmount.toLocaleString('vi-VN')}₫</span> cho {nights} đêm
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Giá từ</span>
+                                                            <div className="text-xl font-bold text-gray-400 italic">
+                                                                Vui lòng chọn ngày
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    onClick={() => hasFullDates ? handleBooking(room.id) : handleShowPrice()}
+                                                    className={`px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 shadow-md ${hasFullDates
+                                                        ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100"
+                                                        : "bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 shadow-none"
+                                                        }`}
+                                                >
+                                                    {hasFullDates ? 'Đặt ngay' : 'Nhập ngày để xem giá'}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
+                                );
+                            })}
+
+                            {roomTypes.length === 0 && (
+                                <div className="text-center py-10 bg-white rounded-2xl border-2 border-dashed border-gray-200">
+                                    <Info className="mx-auto text-gray-300 mb-2" size={40} />
+                                    <p className="text-gray-500">Hiện tại không còn phòng trống nào.</p>
                                 </div>
-                            ))}
+                            )}
                         </div>
                     </div>
 
@@ -184,7 +324,7 @@ export default function HotelDetailPage() {
                         {/* Policies - SỬA THEO DTO THẬT */}
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                             <h4 className="font-bold mb-5 flex items-center gap-2 text-gray-900"><ShieldCheck size={20} className="text-blue-600" /> Chính sách chỗ nghỉ</h4>
-                            
+
                             {hotelPolicy ? (
                                 <div className="space-y-5">
                                     <div className="flex gap-3">

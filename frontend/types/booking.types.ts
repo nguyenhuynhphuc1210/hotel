@@ -22,6 +22,7 @@ export interface BookingResponse {
   promotionId: number | null
   promoCode: string | null
   totalAmount: number
+  paymentUrl: string | null
   createdAt: string
   updatedAt: string
   bookingRooms: BookingRoomResponse[]
@@ -33,4 +34,16 @@ export interface BookingRoomResponse {
   roomTypeName: string
   quantity: number
   pricePerNight: number
+}
+
+export interface BookingRequest {
+  hotelId: number;
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string;
+  checkInDate: string; // ISO Date string
+  checkOutDate: string; // ISO Date string
+  promotionId?: number;
+  paymentMethod: string;
+  bookingRooms: { roomTypeId: number; quantity: number }[];
 }
