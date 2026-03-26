@@ -12,7 +12,9 @@ export default function AdminDashboardPage() {
   const { data: users = [] }    = useQuery({ queryKey: ['users'],    queryFn: () => userApi.getAll().then(r => r.data) })
 
   // Tính toán số liệu
-  const totalRevenue     = bookings.reduce((sum, b) => sum + (b.totalAmount ?? 0), 0)
+  const totalRevenue = bookings
+  .filter(b => b.status === 'COMPLETED')
+  .reduce((sum, b) => sum + (b.totalAmount ?? 0), 0)
   const pendingHotels    = hotels.filter(h => !h.isActive).length
   const activeHotels     = hotels.filter(h => h.isActive).length
   const pendingBookings  = bookings.filter(b => b.status === 'PENDING').length

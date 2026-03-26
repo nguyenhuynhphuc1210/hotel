@@ -1,6 +1,6 @@
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
-import { BookingResponse } from '@/types/booking.types'
+import { BookingRequest, BookingResponse, BookingStatus } from '@/types/booking.types'
 
 const bookingApi = {
   // GET /api/bookings → getAllBookings()
@@ -14,6 +14,12 @@ const bookingApi = {
   // DELETE /api/bookings/:id → deleteBooking()
   delete: (id: number | string) =>
     axiosInstance.delete(API_CONFIG.ENDPOINTS.BOOKING_BY_ID(id)),
+
+  create: (data: BookingRequest) => 
+        axiosInstance.post<BookingResponse>(API_CONFIG.ENDPOINTS.BOOKINGS, data),
+
+   updateStatus: (id: number | string, status: BookingStatus) =>
+    axiosInstance.patch<BookingResponse>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/${id}/status`, { status }),
 }
 
 export default bookingApi

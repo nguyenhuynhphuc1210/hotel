@@ -32,6 +32,7 @@ const roomSchema = z.object({
   bedType: z.string().optional(),
   roomSize: z.coerce.number().min(0).optional(),
   basePrice: z.coerce.number().min(1000, 'Giá tối thiểu 1,000₫'),
+  totalRooms: z.coerce.number().min(1, 'Tổng số phòng tối thiểu là 1'),
 })
 
 type RoomForm = z.infer<typeof roomSchema>
@@ -179,7 +180,7 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, isDeleting }: {
   onDelete: () => void
   onManageImages: () => void
   isDeleting: boolean
-}) {  
+}) {
   const displayImage = room.thumbnailUrl || room.images?.find(i => i.isPrimary)?.imageUrl;
 
   return (
@@ -242,6 +243,7 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, isDeleting }: {
             <Users size={13} className="text-gray-400" />
             <span>{room.maxAdults}L {room.maxChildren ? `, ${room.maxChildren}T` : ''}</span>
           </div>
+
           <div className="flex items-center gap-1.5 text-xs text-gray-600">
             <Maximize2 size={13} className="text-gray-400" />
             <span>{room.roomSize}m²</span>
@@ -284,6 +286,8 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
   const saveMutation = useMutation({
     mutationFn: (data: RoomForm) => {
       const req = { ...data, hotelId }
+      console.log('hotelId prop:', hotelId)
+      console.log('Sending request:', req)
       return isEdit
         ? roomApi.update(room.id, req)
         : roomApi.create(req)
@@ -295,6 +299,7 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
     },
     onError: (e: unknown) => {
       const err = e as ApiError
+      console.log('Backend error:', JSON.stringify(err?.response?.data))
       toast.error(err?.response?.data?.message || 'Thất bại!')
     },
   })
@@ -309,6 +314,7 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
       bedType: room?.bedType ?? '',
       roomSize: room?.roomSize ?? undefined,
       basePrice: room?.basePrice ?? 500000,
+      totalRooms: room?.totalRooms ?? 1,
     },
   })
 
@@ -345,6 +351,11 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
               <label className={labelClass}>Tối đa người lớn <span className="text-red-500">*</span></label>
               <input {...register('maxAdults')} type="number" min={1} max={10} className={inputClass} />
               {errors.maxAdults && <p className="text-xs text-red-500 mt-1">{errors.maxAdults.message}</p>}
+            </div>
+            <div>
+              <label className={labelClass}>Tổng số phòng <span className="text-red-500">*</span></label>
+              <input {...register('totalRooms')} type="number" min={1} className={inputClass} placeholder="VD: 10" />
+              {errors.totalRooms && <p className="text-xs text-red-500 mt-1">{errors.totalRooms.message}</p>}
             </div>
             <div>
               <label className={labelClass}>Tối đa trẻ em</label>

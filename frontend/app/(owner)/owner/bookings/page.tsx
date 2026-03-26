@@ -1,24 +1,40 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Search, CheckCircle, XCircle, Clock, Eye, X } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Search, CheckCircle, XCircle, Clock, Eye, X, Loader2, Check, Ban } from 'lucide-react'
 import hotelApi from '@/lib/api/hotel.api'
 import bookingApi from '@/lib/api/booking.api'
 import { BookingResponse, BookingStatus } from '@/types/booking.types'
 import { useOwnerHotel } from '../../owner-hotel-context'
+import toast from 'react-hot-toast'
 
 const STATUS_MAP: Record<BookingStatus, { label: string; class: string; icon: React.ElementType }> = {
-  PENDING:   { label: 'Chờ xác nhận', class: 'bg-amber-50 text-amber-700',  icon: Clock        },
-  CONFIRMED: { label: 'Đã xác nhận',  class: 'bg-green-50 text-green-700',  icon: CheckCircle  },
-  COMPLETED: { label: 'Hoàn thành',   class: 'bg-blue-50 text-blue-700',    icon: CheckCircle  },
-  CANCELLED: { label: 'Đã huỷ',       class: 'bg-red-50 text-red-700',      icon: XCircle      },
+  PENDING: { label: 'Chờ xác nhận', class: 'bg-amber-50 text-amber-700', icon: Clock },
+  CONFIRMED: { label: 'Đã xác nhận', class: 'bg-green-50 text-green-700', icon: CheckCircle },
+  COMPLETED: { label: 'Hoàn thành', class: 'bg-blue-50 text-blue-700', icon: CheckCircle },
+  CANCELLED: { label: 'Đã huỷ', class: 'bg-red-50 text-red-700', icon: XCircle },
 }
 
 export default function OwnerBookingsPage() {
-  const [keyword, setKeyword]         = useState('')
+  const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<BookingStatus | ''>('')
   const [detailBooking, setDetailBooking] = useState<BookingResponse | null>(null)
+  const queryClient = useQueryClient()
+
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: BookingStatus }) =>
+      bookingApi.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner-bookings', activeHotelId] })
+      toast.success('Cập nhật trạng thái thành công')
+      setDetailBooking(null) // Đóng modal sau khi cập nhật
+    },
+    onError: () => {
+      toast.error('Không thể cập nhật trạng thái')
+    }
+  })
 
   // 1. Lấy dữ liệu từ Context
   const { activeHotel, activeHotelId, isLoading: isHotelLoading } = useOwnerHotel()
@@ -45,7 +61,7 @@ export default function OwnerBookingsPage() {
   })
 
   const stats = {
-    PENDING:   allBookings.filter((b: BookingResponse) => b.status === 'PENDING').length,
+    PENDING: allBookings.filter((b: BookingResponse) => b.status === 'PENDING').length,
     CONFIRMED: allBookings.filter((b: BookingResponse) => b.status === 'CONFIRMED').length,
     COMPLETED: allBookings.filter((b: BookingResponse) => b.status === 'COMPLETED').length,
     CANCELLED: allBookings.filter((b: BookingResponse) => b.status === 'CANCELLED').length,
@@ -68,9 +84,8 @@ export default function OwnerBookingsPage() {
           return (
             <button key={s}
               onClick={() => setStatusFilter(statusFilter === s ? '' : s)}
-              className={`rounded-xl border-2 p-4 text-left transition-all ${
-                statusFilter === s ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
+              className={`rounded-xl border-2 p-4 text-left transition-all ${statusFilter === s ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <Icon size={14} className={statusFilter === s ? 'text-blue-600' : 'text-gray-400'} />
@@ -144,18 +159,37 @@ export default function OwnerBookingsPage() {
       </div>
 
       {detailBooking && (
-        <BookingDetailModal booking={detailBooking} onClose={() => setDetailBooking(null)} />
+        <BookingDetailModal
+          booking={detailBooking}
+          onClose={() => setDetailBooking(null)}
+          onUpdateStatus={(status) => updateStatusMutation.mutate({ id: detailBooking.id, status })}
+          isUpdating={updateStatusMutation.isPending}
+        />
       )}
     </div>
   )
 }
 
-function BookingDetailModal({ booking: b, onClose }: { booking: BookingResponse; onClose: () => void }) {
+function BookingDetailModal({
+  booking: b,
+  onClose,
+  onUpdateStatus,
+  isUpdating
+}: {
+  booking: BookingResponse;
+  onClose: () => void;
+  onUpdateStatus: (status: BookingStatus) => void;
+  isUpdating: boolean;
+}) {
   const s = STATUS_MAP[b.status]
   const Icon = s.icon
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      {/* Sửa lại: Thêm flex flex-col và bỏ overflow-y-auto ở đây */}
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        
+        {/* Header - Cố định */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Chi tiết đặt phòng</h2>
@@ -163,21 +197,22 @@ function BookingDetailModal({ booking: b, onClose }: { booking: BookingResponse;
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"><X size={18} /></button>
         </div>
-        <div className="px-6 py-5 space-y-4">
+
+        {/* Content - Chỉ phần này được cuộn (overflow-y-auto flex-1) */}
+        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">Trạng thái</span>
+            <span className="text-sm text-gray-500">Trạng thái hiện tại</span>
             <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${s.class}`}>
               <Icon size={11} /> {s.label}
             </span>
           </div>
+
           {[
             { label: 'Khách', value: b.guestName },
             { label: 'Email', value: b.guestEmail },
             { label: 'SĐT', value: b.guestPhone },
             { label: 'Nhận phòng', value: new Date(b.checkInDate).toLocaleDateString('vi-VN') },
             { label: 'Trả phòng', value: new Date(b.checkOutDate).toLocaleDateString('vi-VN') },
-            { label: 'Tạm tính', value: `${Number(b.subtotal).toLocaleString('vi-VN')}₫` },
-            { label: 'Giảm giá', value: b.discountAmount ? `${Number(b.discountAmount).toLocaleString('vi-VN')}₫` : '—' },
             { label: 'Tổng tiền', value: `${Number(b.totalAmount).toLocaleString('vi-VN')}₫` },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
@@ -185,18 +220,54 @@ function BookingDetailModal({ booking: b, onClose }: { booking: BookingResponse;
               <span className="text-sm font-medium text-gray-900">{value}</span>
             </div>
           ))}
+
           {b.bookingRooms?.length > 0 && (
-            <div>
-              <p className="text-sm font-semibold text-gray-700 mb-2">Phòng đã đặt</p>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-xs font-bold text-gray-400 uppercase mb-2">Phòng đã đặt</p>
               {b.bookingRooms.map(r => (
                 <div key={r.id} className="flex justify-between text-sm text-gray-600 py-1">
                   <span>{r.roomTypeName} × {r.quantity}</span>
-                  <span>{Number(r.pricePerNight).toLocaleString('vi-VN')}₫/đêm</span>
+                  <span className="font-medium text-gray-900">{Number(r.pricePerNight).toLocaleString('vi-VN')}₫</span>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {/* Footer Buttons - Cố định ở dưới cùng */}
+        {b.status !== 'COMPLETED' && b.status !== 'CANCELLED' && (
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-2xl grid grid-cols-2 gap-3">
+            <button
+              disabled={isUpdating}
+              onClick={() => onUpdateStatus('CANCELLED')}
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+            >
+              <Ban size={14} /> Huỷ đơn
+            </button>
+
+            {b.status === 'PENDING' && (
+              <button
+                disabled={isUpdating}
+                onClick={() => onUpdateStatus('CONFIRMED')}
+                className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {isUpdating ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                Xác nhận đơn
+              </button>
+            )}
+
+            {b.status === 'CONFIRMED' && (
+              <button
+                disabled={isUpdating}
+                onClick={() => onUpdateStatus('COMPLETED')}
+                className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {isUpdating ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                Hoàn thành
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

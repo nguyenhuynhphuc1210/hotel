@@ -86,8 +86,10 @@ function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, 
 
   const activeRoomId = selectedRoomId ?? allRooms[0]?.id ?? null
 
-  const firstDay = new Date(calYear, calMonth, 1).toISOString().split('T')[0]
-  const lastDay = new Date(calYear, calMonth + 1, 0).toISOString().split('T')[0]
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const firstMonthStr = String(calMonth + 1).padStart(2, '0');
+  const firstDay = `${calYear}-${firstMonthStr}-01`;
+  const lastDay = `${calYear}-${firstMonthStr}-${String(daysInMonth).padStart(2, '0')}`;
 
   const { data: calendarData = [] } = useQuery({
     queryKey: ['room-calendar', activeRoomId, calYear, calMonth],

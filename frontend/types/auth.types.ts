@@ -11,7 +11,6 @@ export interface RegisterRequest {
   dateOfBirth?: string   
   gender?: 'MALE' | 'FEMALE' | 'OTHER'
   avatarUrl?: string
-  roleId: number
 }
 
 export interface AuthResponse {

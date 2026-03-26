@@ -31,7 +31,7 @@ interface SearchBarProps {
 
 // ── Helpers ────────────────────────────────────────────────
 const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
-const lastDay = new Date(2026, 11, 31) 
+const lastDay = new Date(2026, 11, 31)
 
 const sameDay = (a: Date, b: Date) =>
     a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()
@@ -53,7 +53,7 @@ export default function SearchBar({ variant = 'hero', defaultValues }: SearchBar
     const [keyword, setKeyword] = useState(defaultValues?.keyword || defaultValues?.district || '')
     const [checkIn, setCheckIn] = useState<Date | null>(defaultValues?.checkIn ? new Date(defaultValues.checkIn) : null)
     const [checkOut, setCheckOut] = useState<Date | null>(defaultValues?.checkOut ? new Date(defaultValues.checkOut) : null)
-    
+
     const [showDate, setShowDate] = useState(searchParams.get('openPicker') === 'true')
     const [pickingEnd, setPickingEnd] = useState(false)
     const [showSuggest, setShowSuggest] = useState(false)
@@ -61,10 +61,10 @@ export default function SearchBar({ variant = 'hero', defaultValues }: SearchBar
     const [calMonth, setCalMonth] = useState((checkIn || today()).getMonth())
     const [calYear, setCalYear] = useState((checkIn || today()).getFullYear())
     const [showGuests, setShowGuests] = useState(false)
-    const [rooms, setRooms] = useState<Room[]>([{ 
-        adults: defaultValues?.adults || 2, 
-        children: defaultValues?.children || 0, 
-        childAges: [] 
+    const [rooms, setRooms] = useState<Room[]>([{
+        adults: defaultValues?.adults || 2,
+        children: defaultValues?.children || 0,
+        childAges: []
     }])
 
     const suggestRef = useRef<HTMLDivElement>(null)
@@ -127,6 +127,28 @@ export default function SearchBar({ variant = 'hero', defaultValues }: SearchBar
             else { setCheckOut(d); setPickingEnd(false); setTimeout(() => setShowDate(false), 150) }
         }
     }
+
+    const updateRoom = (index: number, field: 'adults' | 'children', delta: number) => {
+        setRooms(prev => prev.map((room, i) => {
+            if (i !== index) return room;
+            const newValue = Math.max(field === 'adults' ? 1 : 0, room[field] + delta);
+            return { ...room, [field]: newValue };
+        }));
+    };
+
+    const addRoom = () => {
+        if (rooms.length < 8) {
+            setRooms([...rooms, { adults: 2, children: 0, childAges: [] }]);
+        }
+    };
+
+    const removeRoom = (index: number) => {
+        if (rooms.length > 1) {
+            setRooms(rooms.filter((_, i) => i !== index));
+        }
+    };
+
+
 
     const renderCal = (y: number, m: number) => {
         const daysCount = getDaysInMonth(y, m); const firstDay = getFirstDay(y, m); const t = today(); const cells = []
@@ -254,12 +276,12 @@ export default function SearchBar({ variant = 'hero', defaultValues }: SearchBar
                                 </button>
                             </div>
                             <div className="grid grid-cols-2 gap-8">
-                                {[ {y: calYear, m: calMonth}, {y: year2, m: month2} ].map((cal, idx) => (
+                                {[{ y: calYear, m: calMonth }, { y: year2, m: month2 }].map((cal, idx) => (
                                     <div key={idx}>
                                         <div className="flex items-center justify-between mb-3">
-                                            {idx === 0 && <button onClick={prevMonth} disabled={!canPrevMonth}><ChevronLeft size={17}/></button>}
+                                            {idx === 0 && <button onClick={prevMonth} disabled={!canPrevMonth}><ChevronLeft size={17} /></button>}
                                             <span className="text-sm font-bold">{MONTH_NAMES[cal.m]} {cal.y}</span>
-                                            {idx === 1 && <button onClick={nextMonth} disabled={!canNextMonth}><ChevronRight size={17}/></button>}
+                                            {idx === 1 && <button onClick={nextMonth} disabled={!canNextMonth}><ChevronRight size={17} /></button>}
                                         </div>
                                         <div className="grid grid-cols-7 mb-1">
                                             {DAY_NAMES.map(d => <div key={d} className="h-8 flex items-center justify-center text-xs text-gray-400">{d}</div>)}
@@ -274,13 +296,123 @@ export default function SearchBar({ variant = 'hero', defaultValues }: SearchBar
 
                 {/* Guests */}
                 <div className="md:col-span-2 relative" ref={guestRef}>
-                    <button onClick={() => setShowGuests(!showGuests)} className="w-full h-full px-5 pt-4 pb-4 text-left hover:bg-gray-50">
+                    <button
+                        onClick={() => setShowGuests(!showGuests)}
+                        className="w-full h-full px-5 pt-4 pb-4 text-left hover:bg-gray-50 transition-colors"
+                    >
                         <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Khách & Phòng</div>
                         <div className="flex items-center gap-2.5">
                             <Users size={17} className="text-gray-400 shrink-0" />
-                            <div className="text-sm font-semibold">{totalAdults} người, {rooms.length} phòng</div>
+                            <div className="text-sm font-semibold text-gray-900 leading-tight">
+                                {totalAdults + totalChildren} khách, {rooms.length} phòng
+                            </div>
                         </div>
                     </button>
+
+                    {/* Dropdown Guests - Phải nằm TRONG div relative này */}
+                    {showGuests && (
+                        <div className="absolute top-full right-0 mt-2 w-[380px] bg-white border border-gray-200 rounded-xl shadow-2xl z-[200] overflow-hidden flex flex-col">
+                            {/* Header của dropdown (Giống ảnh) */}
+                            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+                                <Users size={20} className="text-gray-600" />
+                                <div>
+                                    <div className="text-xs text-gray-500 font-medium">Travelers</div>
+                                    <div className="text-[15px] font-bold text-gray-900">
+                                        {totalAdults + totalChildren} travelers, {rooms.length} {rooms.length > 1 ? 'rooms' : 'room'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Body: Danh sách phòng */}
+                            <div className="max-h-[400px] overflow-y-auto p-5 space-y-8">
+                                {rooms.map((room, index) => (
+                                    <div key={index} className="space-y-5">
+                                        <h4 className="text-base font-bold text-gray-900">Room {index + 1}</h4>
+
+                                        {/* Hàng Người lớn */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-[15px] font-medium text-gray-700">Adults</div>
+                                            <div className="flex items-center gap-5">
+                                                <button
+                                                    onClick={() => updateRoom(index, 'adults', -1)}
+                                                    disabled={room.adults <= 1}
+                                                    className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-all"
+                                                >
+                                                    <Minus size={18} />
+                                                </button>
+                                                <span className="w-4 text-center font-semibold text-gray-800">{room.adults}</span>
+                                                <button
+                                                    onClick={() => updateRoom(index, 'adults', 1)}
+                                                    className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-all"
+                                                >
+                                                    <Plus size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Hàng Trẻ em */}
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="text-[15px] font-medium text-gray-700">Children</div>
+                                                <div className="text-xs text-gray-500">Ages 0 to 17</div>
+                                            </div>
+                                            <div className="flex items-center gap-5">
+                                                <button
+                                                    onClick={() => updateRoom(index, 'children', -1)}
+                                                    disabled={room.children <= 0}
+                                                    className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-all"
+                                                >
+                                                    <Minus size={18} />
+                                                </button>
+                                                <span className="w-4 text-center font-semibold text-gray-800">{room.children}</span>
+                                                <button
+                                                    onClick={() => updateRoom(index, 'children', 1)}
+                                                    className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-all"
+                                                >
+                                                    <Plus size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Nút Remove Room (Chỉ hiện khi > 1 phòng) */}
+                                        {rooms.length > 1 && (
+                                            <div className="flex justify-end">
+                                                <button
+                                                    onClick={() => removeRoom(index)}
+                                                    className="text-[15px] font-bold text-blue-600 hover:text-blue-700"
+                                                >
+                                                    Remove room
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {/* Nút Add another room */}
+                                <div className="pt-2">
+                                    <button
+                                        onClick={addRoom}
+                                        className="text-[15px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                                    >
+                                        Add another room
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Footer của Dropdown */}
+                            <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-white">
+                                <button className="text-[13px] font-medium text-blue-600 hover:underline">
+                                    Need to book 9 or more rooms?
+                                </button>
+                                <button
+                                    onClick={() => setShowGuests(false)}
+                                    className="bg-[#0057d9] text-white px-8 py-2.5 rounded-full font-bold hover:bg-blue-700 transition-colors shadow-md"
+                                >
+                                    Done
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
