@@ -1,7 +1,9 @@
 package com.example.backend.service.impl;
 
 import static com.example.backend.security.SecurityUtils.*;
+
 import com.example.backend.dto.request.HotelRequest;
+import com.example.backend.dto.response.HotelAdminResponse;
 import com.example.backend.dto.response.HotelResponse;
 import com.example.backend.dto.response.HotelSummaryResponse;
 import com.example.backend.entity.Hotel;
@@ -14,11 +16,13 @@ import com.example.backend.repository.UserRepository;
 import com.example.backend.repository.RoomCalendarRepository;
 import com.example.backend.repository.RoomTypeRepository;
 import com.example.backend.service.HotelService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -45,7 +49,7 @@ public class HotelServiceImpl implements HotelService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<HotelSummaryResponse> getAllHotels() {
+    public List<HotelAdminResponse> getAllHotels() {
         List<Hotel> hotels;
 
         if (isAdmin()) {
@@ -53,21 +57,20 @@ public class HotelServiceImpl implements HotelService {
         } else if (isHotelOwner()) {
             hotels = hotelRepository.findByOwnerEmail(getCurrentUserEmail());
         } else {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập trang quản trị");
+            throw new AccessDeniedException("Bạn không có quyền truy cập trang quản trị");
         }
 
         return hotels.stream()
-                .map(hotelMapper::toHotelSummaryResponse)
+                .map(hotelMapper::toHotelAdminResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public HotelResponse getHotelById(Long id) {
-
         return hotelRepository.findById(id)
                 .map(hotelMapper::toHotelResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
     }
 
     @Override
@@ -75,8 +78,7 @@ public class HotelServiceImpl implements HotelService {
     public HotelResponse createHotel(HotelRequest request) {
 
         if (hotelRepository.existsByEmail(request.getEmail())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Email khách sạn đã tồn tại!");
+            throw new IllegalArgumentException("Email khách sạn đã tồn tại!");
         }
 
         String currentEmail = getCurrentUserEmail();
@@ -84,14 +86,10 @@ public class HotelServiceImpl implements HotelService {
         User owner;
         if (request.getOwnerId() != null) {
             owner = userRepository.findById(request.getOwnerId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Không tìm thấy User với ID: " + request.getOwnerId()));
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy chủ sở hữu với ID: " + request.getOwnerId()));
         } else {
             owner = userRepository.findByEmail(currentEmail)
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Không tìm thấy tài khoản người dùng hiện tại"));
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng hiện tại"));
         }
 
         Hotel hotel = hotelMapper.toHotel(request, owner);
@@ -107,16 +105,13 @@ public class HotelServiceImpl implements HotelService {
     public HotelResponse updateHotel(Long id, HotelRequest request) {
 
         Hotel existing = hotelRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
 
         checkOwnerOrAdmin(existing.getOwner().getEmail());
 
         if (!existing.getEmail().equalsIgnoreCase(request.getEmail())) {
             if (hotelRepository.existsByEmail(request.getEmail())) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Email đã được sử dụng!");
+                throw new IllegalArgumentException("Email đã được sử dụng!");
             }
         }
 
@@ -131,8 +126,7 @@ public class HotelServiceImpl implements HotelService {
 
         if (isAdmin() && request.getOwnerId() != null) {
             User owner = userRepository.findById(request.getOwnerId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST, "Owner not found"));
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản chủ sở hữu"));
 
             existing.setOwner(owner);
         }
@@ -145,13 +139,10 @@ public class HotelServiceImpl implements HotelService {
     public void deleteHotel(Long id) {
 
         Hotel existing = hotelRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
 
         if (!isAdmin()) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Chỉ ADMIN mới được xoá khách sạn!");
+            throw new AccessDeniedException("Chỉ ADMIN mới được xoá khách sạn!");
         }
 
         hotelRepository.delete(existing);
@@ -162,19 +153,14 @@ public class HotelServiceImpl implements HotelService {
     public HotelResponse approveHotel(Long id) {
 
         Hotel hotel = hotelRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
 
         if (!isAdmin()) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Chỉ ADMIN mới được duyệt khách sạn!");
+            throw new AccessDeniedException("Chỉ ADMIN mới được duyệt khách sạn!");
         }
 
         if (Boolean.TRUE.equals(hotel.getIsActive())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Khách sạn đã được duyệt trước đó!");
+            throw new IllegalArgumentException("Khách sạn đã được duyệt trước đó!");
         }
 
         hotel.setIsActive(true);
@@ -187,19 +173,14 @@ public class HotelServiceImpl implements HotelService {
     public HotelResponse disableHotel(Long id) {
 
         Hotel hotel = hotelRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Hotel not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
 
         if (!isAdmin()) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Chỉ ADMIN mới được vô hiệu hóa khách sạn!");
+            throw new AccessDeniedException("Chỉ ADMIN mới được vô hiệu hóa khách sạn!");
         }
 
         if (!Boolean.TRUE.equals(hotel.getIsActive())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Khách sạn đã bị vô hiệu hóa trước đó");
+            throw new IllegalArgumentException("Khách sạn đã bị vô hiệu hóa trước đó");
         }
 
         hotel.setIsActive(false);
@@ -246,5 +227,4 @@ public class HotelServiceImpl implements HotelService {
                 .min(BigDecimal::compareTo)
                 .orElse(null);
     }
-
 }

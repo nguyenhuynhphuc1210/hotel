@@ -1,20 +1,24 @@
 package com.example.backend.service.impl;
 
 import static com.example.backend.security.SecurityUtils.*;
+
 import com.example.backend.dto.request.RoomTypeRequest;
 import com.example.backend.dto.response.RoomTypeResponse;
-import com.example.backend.dto.response.RoomTypeSummaryResponse; // Đã thêm import
+import com.example.backend.dto.response.RoomTypeSummaryResponse;
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.RoomType;
 import com.example.backend.mapper.RoomTypeMapper;
 import com.example.backend.repository.HotelRepository;
 import com.example.backend.repository.RoomTypeRepository;
 import com.example.backend.service.RoomTypeService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+
+// Thêm các import chuẩn
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,7 +41,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         } else if (isHotelOwner()) {
             roomTypes = roomTypeRepository.findByHotelOwnerEmail(getCurrentUserEmail());
         } else {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập trang quản trị");
+            throw new AccessDeniedException("Bạn không có quyền truy cập trang quản trị");
         }
 
         return roomTypes.stream()
@@ -69,7 +73,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
         return roomTypeRepository.findById(id)
                 .map(roomTypeMapper::toRoomTypeResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "RoomType not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
     }
 
     @Override
@@ -77,8 +81,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     public RoomTypeResponse createRoomType(RoomTypeRequest request) {
 
         Hotel hotel = hotelRepository.findById(request.getHotelId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Hotel not found id=" + request.getHotelId()));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
 
         checkOwnerOrAdmin(hotel.getOwner().getEmail());
 
@@ -96,8 +99,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     public RoomTypeResponse updateRoomType(Long id, RoomTypeRequest request) {
 
         RoomType existing = roomTypeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "RoomType not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
 
         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
 
@@ -130,8 +132,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     public void deleteRoomType(Long id) {
 
         RoomType existing = roomTypeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "RoomType not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
 
         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
 

@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.request.HotelRequest;
+import com.example.backend.dto.response.HotelAdminResponse;
 import com.example.backend.dto.response.HotelResponse;
 import com.example.backend.dto.response.HotelSummaryResponse;
 
@@ -10,7 +11,7 @@ import java.util.List;
 
 public interface HotelService {
     List<HotelSummaryResponse> getActiveHotels();
-    List<HotelSummaryResponse> getAllHotels();
+    List<HotelAdminResponse> getAllHotels();
     HotelResponse getHotelById(Long id);
     HotelResponse createHotel(HotelRequest request);
     HotelResponse updateHotel(Long id, HotelRequest request);

@@ -25,9 +25,14 @@ public class BookingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping
-    public ResponseEntity<List<BookingResponse>> getAllBookings() {
-        return ResponseEntity.ok(bookingService.getAllBookings());
+    @GetMapping("/owner")
+    public ResponseEntity<List<BookingResponse>> getBookingsForOwner() {
+        return ResponseEntity.ok(bookingService.getBookingsForOwner());
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<List<BookingResponse>> getMyPersonalBookings() {
+        return ResponseEntity.ok(bookingService.getMyPersonalBookings());
     }
 
     @GetMapping("/lookup")

@@ -12,12 +12,13 @@ import com.example.backend.mapper.BookingMapper;
 import com.example.backend.repository.*;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.BookingService;
+
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
+
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -50,22 +51,20 @@ public class BookingServiceImpl implements BookingService {
         }
 
         User user = null;
-
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
             String currentUserEmail = auth.getName();
-
             user = userRepository.findByEmail(currentUserEmail)
                     .orElseThrow(() -> new EntityNotFoundException("Tài khoản không tồn tại hoặc đã bị khóa"));
         }
 
         if (user == null) {
             if (request.getGuestEmail() == null || request.getGuestEmail().trim().isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khách vãng lai bắt buộc phải nhập Email");
+                throw new IllegalArgumentException("Khách vãng lai bắt buộc phải nhập Email"); // Đã sửa
             }
             if (request.getGuestName() == null || request.getGuestName().trim().isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khách vãng lai bắt buộc phải nhập Tên");
+                throw new IllegalArgumentException("Khách vãng lai bắt buộc phải nhập Tên"); // Đã sửa
             }
         }
 
@@ -99,13 +98,12 @@ public class BookingServiceImpl implements BookingService {
                     .build();
 
             for (RoomCalendar calendar : calendars) {
-
                 if (!calendar.getIsAvailable()
                         || (calendar.getTotalRooms() - calendar.getBookedRooms() < roomReq.getQuantity())) {
-                    throw new IllegalArgumentException("Loại phòng " + roomType.getTypeName() + " đã hết phòng trống vào ngày "
-                            + calendar.getDate());
+                    throw new IllegalArgumentException(
+                            "Loại phòng " + roomType.getTypeName() + " đã hết phòng trống vào ngày "
+                                    + calendar.getDate());
                 }
-
 
                 calendar.setBookedRooms(calendar.getBookedRooms() + roomReq.getQuantity());
 
@@ -134,8 +132,7 @@ public class BookingServiceImpl implements BookingService {
                     .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy mã giảm giá"));
 
             LocalDateTime now = LocalDateTime.now();
-            if (!promo.getIsActive() || now.isBefore(promo.getStartDate())
-                    || now.isAfter(promo.getEndDate())) {
+            if (!promo.getIsActive() || now.isBefore(promo.getStartDate()) || now.isAfter(promo.getEndDate())) {
                 throw new IllegalArgumentException("Mã giảm giá đã hết hạn hoặc không hợp lệ");
             }
 
@@ -145,6 +142,7 @@ public class BookingServiceImpl implements BookingService {
 
             BigDecimal calculatedDiscount = grandTotal
                     .multiply(promo.getDiscountPercent().divide(BigDecimal.valueOf(100)));
+
             if (promo.getMaxDiscountAmount() != null
                     && calculatedDiscount.compareTo(promo.getMaxDiscountAmount()) > 0) {
                 discount = promo.getMaxDiscountAmount();
@@ -164,7 +162,6 @@ public class BookingServiceImpl implements BookingService {
                 .paymentMethod(request.getPaymentMethod())
                 .amount(savedBooking.getTotalAmount())
                 .status(PaymentStatus.PENDING)
-
                 .build();
 
         paymentRepository.save(payment);
@@ -172,7 +169,6 @@ public class BookingServiceImpl implements BookingService {
         BookingResponse response = bookingMapper.toBookingResponse(savedBooking);
 
         if (request.getPaymentMethod() == PaymentMethod.CASH) {
-
             response.setPaymentUrl(null);
         }
 
@@ -185,23 +181,20 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn đặt phòng"));
 
-        if (SecurityUtils.isAdmin()) {
+        if (!SecurityUtils.isAdmin()) {
+            String currentUserEmail = SecurityUtils.getCurrentUserEmail();
 
-        } else if (SecurityUtils.isHotelOwner()) {
-            String ownerEmail = SecurityUtils.getCurrentUserEmail();
-            if (!booking.getHotel().getOwner().getEmail().equals(ownerEmail)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                        "Bạn không có quyền hủy đơn của khách sạn khác.");
-            }
-        } else {
-            String userEmail = SecurityUtils.getCurrentUserEmail();
-            if (booking.getUser() == null || !booking.getUser().getEmail().equals(userEmail)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền hủy đơn đặt phòng này.");
+            boolean isOwnerOfThisHotel = booking.getHotel().getOwner().getEmail().equals(currentUserEmail);
+            boolean isGuestOfThisBooking = booking.getUser() != null
+                    && booking.getUser().getEmail().equals(currentUserEmail);
+
+            if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
+                throw new AccessDeniedException("Bạn không có quyền hủy đơn đặt phòng này.");
             }
         }
 
         if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.COMPLETED) {
-            throw new IllegalStateException("Không thể hủy đơn đặt phòng ở trạng thái hiện tại");
+            throw new IllegalArgumentException("Không thể hủy đơn đặt phòng ở trạng thái hiện tại");
         }
 
         restoreRoomInventory(booking);
@@ -210,10 +203,8 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.save(booking);
 
         paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
-
             if (payment.getPaymentMethod() == PaymentMethod.CASH
                     && payment.getStatus() == PaymentStatus.PENDING) {
-
                 payment.setStatus(PaymentStatus.CANCELLED);
                 paymentRepository.save(payment);
             }
@@ -232,34 +223,26 @@ public class BookingServiceImpl implements BookingService {
 
         BookingStatus newStatus = request.getStatus();
 
-        // 1. Chặn phục hồi đơn đã hủy
         if (booking.getStatus() == BookingStatus.CANCELLED && newStatus != BookingStatus.CANCELLED) {
-            throw new IllegalStateException("Đơn đã hủy không thể phục hồi trạng thái.");
+            throw new IllegalArgumentException("Đơn đã hủy không thể phục hồi trạng thái."); // Đã sửa
         }
 
-        // 2. Xử lý khi HỦY đơn (CANCELLED)
         if (newStatus == BookingStatus.CANCELLED && booking.getStatus() != BookingStatus.CANCELLED) {
-            restoreRoomInventory(booking); // Hoàn trả tồn kho phòng
+            restoreRoomInventory(booking);
 
-            // Hủy thanh toán tiền mặt đang chờ
             paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
                 if (payment.getPaymentMethod() == PaymentMethod.CASH
                         && payment.getStatus() == PaymentStatus.PENDING) {
-
                     payment.setStatus(PaymentStatus.CANCELLED);
                     paymentRepository.save(payment);
                 }
             });
         }
 
-        // 3. Xử lý khi HOÀN TẤT đơn (COMPLETED)
         if (newStatus == BookingStatus.COMPLETED && booking.getStatus() != BookingStatus.COMPLETED) {
-
-            // Nếu là tiền mặt và chưa thanh toán -> Đánh dấu là đã thu tiền (SUCCESS)
             paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
                 if (payment.getPaymentMethod() == PaymentMethod.CASH
                         && payment.getStatus() == PaymentStatus.PENDING) {
-
                     payment.setStatus(PaymentStatus.SUCCESS);
                     payment.setPaymentDate(LocalDateTime.now());
                     paymentRepository.save(payment);
@@ -267,32 +250,33 @@ public class BookingServiceImpl implements BookingService {
             });
         }
 
-        // 4. Lưu thay đổi
         booking.setStatus(newStatus);
         return bookingMapper.toBookingResponse(bookingRepository.save(booking));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<BookingResponse> getAllBookings() {
-        List<Booking> bookings;
-
-        if (SecurityUtils.isAdmin()) {
-
-            bookings = bookingRepository.findAllByOrderByCreatedAtDesc();
-        } else if (SecurityUtils.isHotelOwner()) {
-
-            String ownerEmail = SecurityUtils.getCurrentUserEmail();
-            bookings = bookingRepository.findByHotelOwnerEmailOrderByCreatedAtDesc(ownerEmail);
-        } else {
-
-            String userEmail = SecurityUtils.getCurrentUserEmail();
-            User currentUser = userRepository.findByEmail(userEmail)
-                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng"));
-
-            bookings = bookingRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getId());
+    public List<BookingResponse> getBookingsForOwner() {
+        if (!SecurityUtils.isHotelOwner() && !SecurityUtils.isAdmin()) {
+            throw new AccessDeniedException("Chỉ chủ khách sạn hoặc Admin mới được xem danh sách này");
         }
+        String ownerEmail = SecurityUtils.getCurrentUserEmail();
+        List<Booking> bookings = bookingRepository.findByHotelOwnerEmailOrderByCreatedAtDesc(ownerEmail);
+        
+        return bookings.stream()
+                .map(bookingMapper::toBookingResponse)
+                .collect(Collectors.toList());
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingResponse> getMyPersonalBookings() {
+        String userEmail = SecurityUtils.getCurrentUserEmail();
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng"));
+
+        List<Booking> bookings = bookingRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getId());
+        
         return bookings.stream()
                 .map(bookingMapper::toBookingResponse)
                 .collect(Collectors.toList());
@@ -304,22 +288,16 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
 
-        if (SecurityUtils.isAdmin()) {
+        if (!SecurityUtils.isAdmin()) {
+            String currentUserEmail = SecurityUtils.getCurrentUserEmail();
 
-        } else if (SecurityUtils.isHotelOwner()) {
+            boolean isOwnerOfThisHotel = booking.getHotel().getOwner().getEmail().equals(currentUserEmail);
 
-            String ownerEmail = SecurityUtils.getCurrentUserEmail();
-            if (!booking.getHotel().getOwner().getEmail().equals(ownerEmail)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                        "Bạn không có quyền xem đơn đặt phòng của khách sạn khác.");
-            }
+            boolean isGuestOfThisBooking = booking.getUser() != null
+                    && booking.getUser().getEmail().equals(currentUserEmail);
 
-        } else {
-
-            String userEmail = SecurityUtils.getCurrentUserEmail();
-
-            if (booking.getUser() == null || !booking.getUser().getEmail().equals(userEmail)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem đơn đặt phòng này.");
+            if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
+                throw new AccessDeniedException("Bạn không có quyền truy cập đơn đặt phòng này.");
             }
         }
 

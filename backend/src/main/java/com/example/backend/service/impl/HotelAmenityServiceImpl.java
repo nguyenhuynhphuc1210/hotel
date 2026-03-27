@@ -1,6 +1,7 @@
 package com.example.backend.service.impl;
 
 import static com.example.backend.security.SecurityUtils.*;
+
 import com.example.backend.dto.request.HotelAmenityRequest;
 import com.example.backend.dto.response.HotelAmenityResponse;
 import com.example.backend.entity.*;
@@ -9,12 +10,11 @@ import com.example.backend.repository.AmenityRepository;
 import com.example.backend.repository.HotelAmenityRepository;
 import com.example.backend.repository.HotelRepository;
 import com.example.backend.service.HotelAmenityService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.http.HttpStatus;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityNotFoundException;
 
 import java.util.List;
 
@@ -53,12 +53,13 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
                 HotelAmenityId id = new HotelAmenityId(hotelId, amenityId);
 
                 HotelAmenity entity = hotelAmenityRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Không tìm thấy"));
+                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tiện ích của khách sạn này"));
 
                 return mapper.toHotelAmenityResponse(entity);
         }
 
         @Override
+        @Transactional(readOnly = true)
         public List<HotelAmenityResponse> getByHotel(Long hotelId) {
                 return hotelAmenityRepository.findByHotel_Id(hotelId)
                                 .stream()
@@ -72,22 +73,18 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
 
                 if (hotelAmenityRepository.existsByHotel_IdAndAmenity_Id(
                                 request.getHotelId(), request.getAmenityId())) {
-                        throw new ResponseStatusException(
-                                        HttpStatus.BAD_REQUEST,
-                                        "Tiện ích đã tồn tại trong khách sạn");
+                        throw new IllegalArgumentException("Tiện ích này đã tồn tại trong khách sạn");
                 }
 
                 Hotel hotel = hotelRepository.findById(request.getHotelId())
-                                .orElseThrow(() -> new ResponseStatusException(
-                                                HttpStatus.NOT_FOUND, "Không tìm thấy Hotel"));
+                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn"));
 
                 if (!isAdmin()) {
                         checkOwnerOrAdmin(hotel.getOwner().getEmail());
                 }
 
                 Amenity amenity = amenityRepository.findById(request.getAmenityId())
-                                .orElseThrow(() -> new ResponseStatusException(
-                                                HttpStatus.NOT_FOUND, "Không tìm thấy Amenity"));
+                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tiện ích (Amenity)"));
 
                 HotelAmenity entity = mapper.toHotelAmenity(request, hotel, amenity);
 
@@ -104,8 +101,7 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
                                 request.getAmenityId());
 
                 HotelAmenity existing = hotelAmenityRepository.findById(id)
-                                .orElseThrow(() -> new ResponseStatusException(
-                                                HttpStatus.NOT_FOUND, "Không tìm thấy"));
+                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tiện ích của khách sạn này"));
 
                 if (!isAdmin()) {
                         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
@@ -123,17 +119,14 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
         public void delete(Long hotelId, Long amenityId) {
 
                 Hotel hotel = hotelRepository.findById(hotelId)
-                                .orElseThrow(() -> new ResponseStatusException(
-                                                HttpStatus.NOT_FOUND, "Không tìm thấy Hotel"));
+                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn"));
 
                 if (!isAdmin()) {
                         checkOwnerOrAdmin(hotel.getOwner().getEmail());
                 }
 
                 if (!hotelAmenityRepository.existsByHotel_IdAndAmenity_Id(hotelId, amenityId)) {
-                        throw new ResponseStatusException(
-                                        HttpStatus.NOT_FOUND,
-                                        "Không tìm thấy tiện ích trong khách sạn");
+                        throw new EntityNotFoundException("Không tìm thấy tiện ích trong khách sạn để xóa");
                 }
 
                 hotelAmenityRepository.deleteByHotel_IdAndAmenity_Id(hotelId, amenityId);

@@ -1,6 +1,7 @@
 package com.example.backend.service.impl;
 
 import static com.example.backend.security.SecurityUtils.*;
+
 import com.example.backend.dto.request.PromotionRequest;
 import com.example.backend.dto.response.PromotionResponse;
 import com.example.backend.entity.Hotel;
@@ -9,11 +10,13 @@ import com.example.backend.mapper.PromotionMapper;
 import com.example.backend.repository.HotelRepository;
 import com.example.backend.repository.PromotionRepository;
 import com.example.backend.service.PromotionService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,7 +31,8 @@ public class PromotionServiceImpl implements PromotionService {
     @Override
     @Transactional(readOnly = true)
     public List<PromotionResponse> getAllPromotions() {
-        return promotionRepository.findAll().stream().map(promotionMapper::toPromotionResponse)
+        return promotionRepository.findAll().stream()
+                .map(promotionMapper::toPromotionResponse)
                 .collect(Collectors.toList());
     }
 
@@ -37,7 +41,7 @@ public class PromotionServiceImpl implements PromotionService {
     public PromotionResponse getPromotionById(Long id) {
         return promotionRepository.findById(id)
                 .map(promotionMapper::toPromotionResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Promotion not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy mã giảm giá với ID = " + id));
     }
 
     @Override
@@ -48,25 +52,18 @@ public class PromotionServiceImpl implements PromotionService {
         boolean owner = isHotelOwner();
 
         if (!admin && !owner) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Bạn không có quyền tạo mã giảm giá!");
+            throw new AccessDeniedException("Bạn không có quyền tạo mã giảm giá!");
         }
 
         Hotel hotel = null;
 
         if (owner && !admin) {
-
             if (request.getHotelId() == null) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Chủ khách sạn phải chọn hotel");
+                throw new IllegalArgumentException("Chủ khách sạn bắt buộc phải chọn khách sạn để áp dụng mã giảm giá");
             }
 
             hotel = hotelRepository.findById(request.getHotelId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Hotel not found id=" + request.getHotelId()));
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
 
             checkOwnerOrAdmin(hotel.getOwner().getEmail());
         }
@@ -74,9 +71,7 @@ public class PromotionServiceImpl implements PromotionService {
         if (admin) {
             if (request.getHotelId() != null) {
                 hotel = hotelRepository.findById(request.getHotelId())
-                        .orElseThrow(() -> new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Hotel not found id=" + request.getHotelId()));
+                        .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
             }
             // nếu hotel = null → global promotion
         }
@@ -92,16 +87,13 @@ public class PromotionServiceImpl implements PromotionService {
     public PromotionResponse updatePromotion(Long id, PromotionRequest request) {
 
         Promotion existing = promotionRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Promotion not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy mã giảm giá với ID = " + id));
 
         boolean admin = isAdmin();
 
         if (!admin) {
             if (existing.getHotel() == null) {
-                throw new ResponseStatusException(
-                        HttpStatus.FORBIDDEN,
-                        "Bạn không có quyền sửa mã giảm giá toàn hệ thống!");
+                throw new AccessDeniedException("Bạn không có quyền sửa mã giảm giá toàn hệ thống!");
             }
 
             checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
@@ -109,9 +101,7 @@ public class PromotionServiceImpl implements PromotionService {
 
         if (request.getHotelId() != null) {
             Hotel hotel = hotelRepository.findById(request.getHotelId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Hotel not found id=" + request.getHotelId()));
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
             existing.setHotel(hotel);
         }
 
@@ -136,14 +126,11 @@ public class PromotionServiceImpl implements PromotionService {
     public void deletePromotion(Long id) {
 
         Promotion existing = promotionRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Promotion not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy mã giảm giá với ID = " + id));
 
         if (!isAdmin()) {
             if (existing.getHotel() == null) {
-                throw new ResponseStatusException(
-                        HttpStatus.FORBIDDEN,
-                        "Bạn không có quyền xoá mã giảm giá toàn hệ thống!");
+                throw new AccessDeniedException("Bạn không có quyền xoá mã giảm giá toàn hệ thống!");
             }
 
             checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());

@@ -7,10 +7,12 @@ import com.example.backend.repository.HotelRepository;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.CloudinaryService;
 import com.example.backend.service.HotelImageService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.persistence.EntityNotFoundException; // Thêm import chuẩn
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +31,7 @@ public class HotelImageServiceImpl implements HotelImageService {
     public List<String> uploadImagesForHotel(Long hotelId, List<MultipartFile> files) {
 
         Hotel hotel = hotelRepository.findById(hotelId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách sạn với ID: " + hotelId));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID: " + hotelId));
 
         SecurityUtils.checkOwnerOrAdmin(hotel.getOwner().getEmail());
 
@@ -54,7 +56,7 @@ public class HotelImageServiceImpl implements HotelImageService {
                 uploadedUrls.add(imageUrl);
             }
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi trong quá trình upload ảnh: " + e.getMessage());
+            throw new IllegalArgumentException("Lỗi trong quá trình upload ảnh: " + e.getMessage());
         }
 
         return uploadedUrls;
@@ -65,7 +67,7 @@ public class HotelImageServiceImpl implements HotelImageService {
     public void deleteImageByPublicId(String publicId) {
 
         HotelImage hotelImage = hotelImageRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy ảnh với Public ID: " + publicId));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy ảnh với Public ID: " + publicId));
 
         SecurityUtils.checkOwnerOrAdmin(
                 hotelImage.getHotel().getOwner().getEmail());
@@ -75,7 +77,7 @@ public class HotelImageServiceImpl implements HotelImageService {
 
             hotelImageRepository.delete(hotelImage);
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi xóa ảnh: " + e.getMessage());
+            throw new IllegalArgumentException("Lỗi khi xóa ảnh: " + e.getMessage());
         }
     }
 
@@ -84,7 +86,7 @@ public class HotelImageServiceImpl implements HotelImageService {
     public void setPrimaryImage(Long imageId) {
 
         HotelImage targetImage = hotelImageRepository.findById(imageId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy ảnh với ID: " + imageId));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy ảnh với ID: " + imageId));
 
         SecurityUtils.checkOwnerOrAdmin(
                 targetImage.getHotel().getOwner().getEmail());

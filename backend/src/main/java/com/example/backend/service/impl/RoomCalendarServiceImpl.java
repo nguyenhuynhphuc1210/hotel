@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.backend.mapper.RoomCalendarMapper;
 
+import jakarta.persistence.EntityNotFoundException;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -79,7 +81,7 @@ public class RoomCalendarServiceImpl implements RoomCalendarService {
         }
 
         RoomType roomType = roomTypeRepository.findById(roomTypeId)
-                .orElseThrow(() -> new RuntimeException("RoomType không tồn tại"));
+                .orElseThrow(() -> new EntityNotFoundException("Loại phòng không tồn tại"));
 
         SecurityUtils.checkOwnerOrAdmin(
                 roomType.getHotel().getOwner().getEmail());
@@ -88,7 +90,7 @@ public class RoomCalendarServiceImpl implements RoomCalendarService {
                 .findByRoomType_IdAndDateBetween(roomTypeId, request.getStartDate(), request.getEndDate());
 
         if (calendarsToUpdate.isEmpty()) {
-            throw new RuntimeException("Không tìm thấy dữ liệu lịch cho khoảng thời gian này. Vui lòng kiểm tra lại.");
+            throw new IllegalArgumentException("Không tìm thấy dữ liệu lịch cho khoảng thời gian này. Vui lòng kiểm tra lại.");
         }
 
         for (RoomCalendar calendar : calendarsToUpdate) {

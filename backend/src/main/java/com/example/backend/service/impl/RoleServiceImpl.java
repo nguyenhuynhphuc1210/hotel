@@ -6,11 +6,12 @@ import com.example.backend.entity.Role;
 import com.example.backend.mapper.RoleMapper;
 import com.example.backend.repository.RoleRepository;
 import com.example.backend.service.RoleService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityNotFoundException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,7 +25,9 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional(readOnly = true)
     public List<RoleResponse> getAllRoles() {
-        return roleRepository.findAll().stream().map(roleMapper::toRoleResponse).collect(Collectors.toList());
+        return roleRepository.findAll().stream()
+                .map(roleMapper::toRoleResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -32,7 +35,7 @@ public class RoleServiceImpl implements RoleService {
     public RoleResponse getRoleById(Long id) {
         return roleRepository.findById(id)
                 .map(roleMapper::toRoleResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy quyền với ID = " + id));
     }
 
     @Override
@@ -42,7 +45,7 @@ public class RoleServiceImpl implements RoleService {
         String formattedName = formatRoleName(request.getRoleName());
 
         if (roleRepository.existsByRoleName(formattedName)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quyền " + formattedName + " đã tồn tại!");
+            throw new IllegalArgumentException("Quyền " + formattedName + " đã tồn tại!");
         }
 
         Role role = roleMapper.toRole(request);
@@ -55,12 +58,12 @@ public class RoleServiceImpl implements RoleService {
     @Transactional
     public RoleResponse updateRole(Long id, RoleRequest request) {
         Role existing = roleRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy quyền với ID = " + id));
 
         String formattedName = formatRoleName(request.getRoleName());
 
         if (!existing.getRoleName().equals(formattedName) && roleRepository.existsByRoleName(formattedName)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tên quyền mới đã tồn tại!");
+            throw new IllegalArgumentException("Tên quyền mới đã tồn tại!");
         }
 
         existing.setRoleName(formattedName);
@@ -79,9 +82,10 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
+    @Transactional
     public void deleteRole(Long id) {
         Role existing = roleRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found id=" + id));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy quyền với ID = " + id));
         roleRepository.delete(existing);
     }
 }

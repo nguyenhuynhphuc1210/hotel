@@ -3,6 +3,7 @@ package com.example.backend.mapper;
 import com.example.backend.dto.request.HotelRequest;
 import com.example.backend.dto.response.HotelResponse;
 import com.example.backend.dto.response.HotelSummaryResponse;
+import com.example.backend.dto.response.HotelAdminResponse;
 import com.example.backend.dto.response.HotelImageResponse;
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.User;
@@ -20,9 +21,9 @@ public class HotelMapper {
 
     private final HotelImageMapper hotelImageMapper;
 
-
     public Hotel toHotel(HotelRequest req, User owner) {
-        if (req == null) return null;
+        if (req == null)
+            return null;
         return Hotel.builder()
                 .hotelName(req.getHotelName())
                 .description(req.getDescription())
@@ -39,8 +40,9 @@ public class HotelMapper {
     }
 
     public HotelResponse toHotelResponse(Hotel hotel) {
-        if (hotel == null) return null;
-        
+        if (hotel == null)
+            return null;
+
         List<HotelImageResponse> imageResponses = hotel.getImages() == null
                 ? Collections.emptyList()
                 : hotel.getImages().stream().map(hotelImageMapper::toHotelImageResponse).collect(Collectors.toList());
@@ -66,7 +68,8 @@ public class HotelMapper {
     }
 
     public HotelSummaryResponse toHotelSummaryResponse(Hotel hotel) {
-        if (hotel == null) return null;
+        if (hotel == null)
+            return null;
 
         String thumbnail = null;
         if (hotel.getImages() != null && !hotel.getImages().isEmpty()) {
@@ -81,6 +84,39 @@ public class HotelMapper {
                 .city(hotel.getCity())
                 .isActive(hotel.getIsActive())
                 .thumbnailUrl(thumbnail)
+                .build();
+    }
+
+    public HotelAdminResponse toHotelAdminResponse(Hotel hotel) {
+        if (hotel == null)
+            return null;
+
+        String thumbnail = null;
+        if (hotel.getImages() != null && !hotel.getImages().isEmpty()) {
+            thumbnail = hotel.getImages().get(0).getImageUrl();
+        }
+
+        int roomTypeCount = (hotel.getRoomTypes() != null) ? hotel.getRoomTypes().size() : 0;
+
+        return HotelAdminResponse.builder()
+                .id(hotel.getId())
+                .hotelName(hotel.getHotelName())
+                .addressLine(hotel.getAddressLine())
+                .district(hotel.getDistrict())
+                .city(hotel.getCity())
+                .phone(hotel.getPhone())
+                .email(hotel.getEmail())
+                .starRating(hotel.getStarRating())
+
+                .ownerId(hotel.getOwner() != null ? hotel.getOwner().getId() : null)
+                .ownerName(hotel.getOwner() != null ? hotel.getOwner().getFullName() : null)
+                .ownerEmail(hotel.getOwner() != null ? hotel.getOwner().getEmail() : null)
+
+                .isActive(hotel.getIsActive())
+                .createdAt(hotel.getCreatedAt())
+
+                .thumbnailUrl(thumbnail)
+                .totalRoomTypes(roomTypeCount)
                 .build();
     }
 }

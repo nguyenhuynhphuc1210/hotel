@@ -14,7 +14,9 @@ public interface BookingService {
 
     BookingResponse updateBookingStatus(Long bookingId, UpdateBookingStatusRequest request);
 
-    List<BookingResponse> getAllBookings();
+    List<BookingResponse> getBookingsForOwner();
+
+    List<BookingResponse> getMyPersonalBookings();
 
     BookingResponse getBookingById(Long bookingId);
 

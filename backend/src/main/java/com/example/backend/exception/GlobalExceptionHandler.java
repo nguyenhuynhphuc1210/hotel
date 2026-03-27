@@ -85,7 +85,7 @@ public class GlobalExceptionHandler {
 
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.NOT_FOUND.value())
-                .message("Không tìm thấy dữ liệu")
+                .message(ex.getMessage())
                 .timestamp(LocalDateTime.now())
                 .build();
 

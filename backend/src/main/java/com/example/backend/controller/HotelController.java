@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.request.HotelRequest;
+import com.example.backend.dto.response.HotelAdminResponse;
 import com.example.backend.dto.response.HotelResponse;
 import com.example.backend.dto.response.HotelSummaryResponse;
 import com.example.backend.service.HotelService;
@@ -29,7 +30,7 @@ public class HotelController {
     }
 
     @GetMapping
-    public ResponseEntity<List<HotelSummaryResponse>> getAllHotels() {
+    public ResponseEntity<List<HotelAdminResponse>> getAllHotels() {
         return ResponseEntity.ok(hotelService.getAllHotels());
     }
 

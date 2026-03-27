@@ -89,7 +89,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/hotel-amenities/**")
                         .hasAnyRole("ADMIN", "HOTEL_OWNER")
 
-                        .requestMatchers(HttpMethod.GET, "/api/promotions/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/promotions/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/promotions").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/promotions/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/promotions/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
@@ -112,7 +112,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/room-calendars/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/bookings/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/lookup").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/owner").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/history").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/*").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/status").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.POST, "/api/bookings/*/cancel").authenticated()
 

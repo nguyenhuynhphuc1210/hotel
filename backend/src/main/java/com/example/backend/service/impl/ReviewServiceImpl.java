@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 
@@ -52,7 +53,11 @@ public class ReviewServiceImpl implements ReviewService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn đặt phòng"));
 
         if (booking.getUser() == null || !booking.getUser().getId().equals(currentUser.getId())) {
-            throw new IllegalArgumentException("Bạn không có quyền đánh giá đơn đặt phòng này");
+            throw new AccessDeniedException("Bạn không có quyền đánh giá đơn đặt phòng này");
+        }
+
+        if (booking.getHotel().getOwner().getEmail().equals(currentUser.getEmail())) {
+            throw new AccessDeniedException("Chủ khách sạn không được phép tự đánh giá khách sạn của mình!");
         }
 
         if (booking.getStatus() != BookingStatus.COMPLETED) {
@@ -76,15 +81,8 @@ public class ReviewServiceImpl implements ReviewService {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đánh giá với ID: " + reviewId));
 
-        if (SecurityUtils.isAdmin()) {
-
-        } else if (SecurityUtils.isHotelOwner()) {
-            String currentOwnerEmail = SecurityUtils.getCurrentUserEmail();
-            if (!review.getHotel().getOwner().getEmail().equals(currentOwnerEmail)) {
-                throw new IllegalArgumentException("Bạn không có quyền ẩn đánh giá của khách sạn khác!");
-            }
-        } else {
-            throw new IllegalArgumentException("Khách hàng không có quyền thực hiện thao tác này");
+        if (!SecurityUtils.isAdmin()) {
+            throw new AccessDeniedException("Chỉ Admin hệ thống mới có quyền ẩn hoặc hiện đánh giá!");
         }
 
         review.setIsPublished(!review.getIsPublished());
@@ -110,10 +108,10 @@ public class ReviewServiceImpl implements ReviewService {
         if (SecurityUtils.isHotelOwner()) {
             String ownerEmail = SecurityUtils.getCurrentUserEmail();
             if (!hotel.getOwner().getEmail().equals(ownerEmail)) {
-                throw new IllegalArgumentException("Bạn không có quyền quản lý đánh giá của khách sạn khác!");
+                throw new AccessDeniedException("Bạn không có quyền xem dữ liệu quản trị của khách sạn khác!");
             }
         } else if (!SecurityUtils.isAdmin()) {
-            throw new IllegalArgumentException("Bạn không có quyền truy cập dữ liệu này");
+            throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu này");
         }
 
         Pageable pageable = PageRequest.of(page, size);
