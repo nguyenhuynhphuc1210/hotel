@@ -25,7 +25,7 @@ public class BookingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/owner")
+    @GetMapping("/admin")
     public ResponseEntity<List<BookingResponse>> getBookingsForOwner() {
         return ResponseEntity.ok(bookingService.getBookingsForOwner());
     }
