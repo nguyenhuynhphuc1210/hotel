@@ -114,7 +114,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/lookup").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/owner").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.GET, "/api/bookings/history").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/*").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/status").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.POST, "/api/bookings/*/cancel").authenticated()

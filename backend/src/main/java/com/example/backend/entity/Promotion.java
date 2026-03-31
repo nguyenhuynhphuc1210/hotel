@@ -41,7 +41,7 @@ public class Promotion {
     @Builder.Default
     private BigDecimal minOrderValue = BigDecimal.ZERO;
 
-    @Column(name = "is_active")
+    @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
 

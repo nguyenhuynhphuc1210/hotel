@@ -32,10 +32,14 @@ public class Hotel {
     @Column(name = "address_line", nullable = false)
     private String addressLine;
 
+    @Column(nullable = false)
     private String ward;
+
+    @Column(nullable = false)
     private String district;
 
     @Builder.Default
+    @Column(nullable = false)
     private String city = "TP Hồ Chí Minh";
 
     @Column(nullable = false)
@@ -45,11 +49,11 @@ public class Hotel {
     private String email;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id")
+    @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
     @Builder.Default
-    @Column(name = "is_active")
+    @Column(name = "is_active", nullable = false)
     private Boolean isActive = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)

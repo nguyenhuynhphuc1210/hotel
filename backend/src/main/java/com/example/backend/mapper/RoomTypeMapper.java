@@ -66,7 +66,11 @@ public class RoomTypeMapper {
 
         String thumbnail = null;
         if (rt.getImages() != null && !rt.getImages().isEmpty()) {
-            thumbnail = rt.getImages().get(0).getImageUrl();
+            thumbnail = rt.getImages().stream()
+                    .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                    .findFirst()
+                    .map(img -> img.getImageUrl())
+                    .orElseGet(() -> rt.getImages().get(0).getImageUrl());
         }
 
         return RoomTypeSummaryResponse.builder()

@@ -30,7 +30,7 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getBookingsForOwner());
     }
 
-    @GetMapping("/history")
+    @GetMapping("/me")
     public ResponseEntity<List<BookingResponse>> getMyPersonalBookings() {
         return ResponseEntity.ok(bookingService.getMyPersonalBookings());
     }

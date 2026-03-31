@@ -82,12 +82,15 @@ public class HotelServiceImpl implements HotelService {
         }
 
         String currentEmail = getCurrentUserEmail();
-
         User owner;
-        if (request.getOwnerId() != null) {
+
+        if (isAdmin() && request.getOwnerId() != null) {
             owner = userRepository.findById(request.getOwnerId())
-                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy chủ sở hữu với ID: " + request.getOwnerId()));
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Không tìm thấy chủ sở hữu với ID: " + request.getOwnerId()));
+
         } else {
+
             owner = userRepository.findByEmail(currentEmail)
                     .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng hiện tại"));
         }
@@ -111,7 +114,7 @@ public class HotelServiceImpl implements HotelService {
 
         if (!existing.getEmail().equalsIgnoreCase(request.getEmail())) {
             if (hotelRepository.existsByEmail(request.getEmail())) {
-                throw new IllegalArgumentException("Email đã được sử dụng!");
+                throw new IllegalArgumentException("Email này đã được đăng ký cho một khách sạn khác!");
             }
         }
 
@@ -125,10 +128,14 @@ public class HotelServiceImpl implements HotelService {
         existing.setEmail(request.getEmail());
 
         if (isAdmin() && request.getOwnerId() != null) {
-            User owner = userRepository.findById(request.getOwnerId())
-                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản chủ sở hữu"));
 
-            existing.setOwner(owner);
+            if (!existing.getOwner().getId().equals(request.getOwnerId())) {
+                User newOwner = userRepository.findById(request.getOwnerId())
+                        .orElseThrow(() -> new EntityNotFoundException(
+                                "Không tìm thấy tài khoản chủ sở hữu mới với ID: " + request.getOwnerId()));
+
+                existing.setOwner(newOwner);
+            }
         }
 
         return hotelMapper.toHotelResponse(hotelRepository.save(existing));

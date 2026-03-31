@@ -24,9 +24,9 @@ public class HotelImage {
     private String imageUrl;
 
     @Builder.Default
-    @Column(name = "is_primary")
+    @Column(name = "is_primary", nullable = false)
     private Boolean isPrimary = false;
 
-    @Column(name = "public_id")
+    @Column(name = "public_id", nullable = false)
     private String publicId;
 }

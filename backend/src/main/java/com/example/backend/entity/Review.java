@@ -37,7 +37,7 @@ public class Review {
     private String comment;
 
     @Builder.Default
-    @Column(name = "is_published")
+    @Column(name = "is_published", nullable = false)
     private Boolean isPublished = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)

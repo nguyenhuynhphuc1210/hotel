@@ -25,7 +25,7 @@ public class HotelAmenity {
     private Amenity amenity;
 
     @Builder.Default
-    @Column(name = "is_free")
+    @Column(name = "is_free", nullable = false)
     private Boolean isFree = true;
 
     @Builder.Default

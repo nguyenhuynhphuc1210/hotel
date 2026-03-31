@@ -24,6 +24,7 @@ public class HotelMapper {
     public Hotel toHotel(HotelRequest req, User owner) {
         if (req == null)
             return null;
+            
         return Hotel.builder()
                 .hotelName(req.getHotelName())
                 .description(req.getDescription())
@@ -73,7 +74,11 @@ public class HotelMapper {
 
         String thumbnail = null;
         if (hotel.getImages() != null && !hotel.getImages().isEmpty()) {
-            thumbnail = hotel.getImages().get(0).getImageUrl();
+            thumbnail = hotel.getImages().stream()
+                    .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                    .findFirst()
+                    .map(img -> img.getImageUrl())
+                    .orElseGet(() -> hotel.getImages().get(0).getImageUrl());
         }
 
         return HotelSummaryResponse.builder()
@@ -93,7 +98,11 @@ public class HotelMapper {
 
         String thumbnail = null;
         if (hotel.getImages() != null && !hotel.getImages().isEmpty()) {
-            thumbnail = hotel.getImages().get(0).getImageUrl();
+            thumbnail = hotel.getImages().stream()
+                    .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                    .findFirst()
+                    .map(img -> img.getImageUrl())
+                    .orElseGet(() -> hotel.getImages().get(0).getImageUrl());
         }
 
         int roomTypeCount = (hotel.getRoomTypes() != null) ? hotel.getRoomTypes().size() : 0;
