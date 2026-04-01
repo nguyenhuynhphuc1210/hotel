@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -33,6 +34,7 @@ public class BookingRoom {
     @Column(name = "price_per_night", precision = 10, scale = 2, nullable = false)
     private BigDecimal pricePerNight;
 
+    @Builder.Default
     @OneToMany(mappedBy = "bookingRoom", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BookingRoomRate> rates;
+    private List<BookingRoomRate> rates = new ArrayList<>();
 }

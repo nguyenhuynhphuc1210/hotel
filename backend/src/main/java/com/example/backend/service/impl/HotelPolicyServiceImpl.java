@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// Thêm các import chuẩn
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 
@@ -103,7 +102,6 @@ public class HotelPolicyServiceImpl implements HotelPolicyService {
             Hotel hotel = hotelRepository.findById(request.getHotelId())
                     .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
 
-            // Nếu đổi sang khách sạn khác mà khách sạn đó đã có policy rồi thì báo lỗi
             if (!hotel.getId().equals(existing.getHotel().getId()) &&
                     hotelPolicyRepository.existsByHotel_Id(request.getHotelId())) {
                 throw new IllegalArgumentException("Khách sạn này đã có chính sách!");

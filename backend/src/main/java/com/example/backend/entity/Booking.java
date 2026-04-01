@@ -6,6 +6,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import com.example.backend.enums.BookingStatus;
 
@@ -73,8 +74,9 @@ public class Booking {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
-    private List<BookingRoom> bookingRooms;
+    @Builder.Default
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BookingRoom> bookingRooms = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

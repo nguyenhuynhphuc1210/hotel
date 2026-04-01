@@ -31,7 +31,6 @@ public class BookingResponse {
     private Long promotionId;
     private String promoCode;
     private BigDecimal totalAmount;
-    private String paymentUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<BookingRoomResponse> bookingRooms;

@@ -53,7 +53,8 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
                 HotelAmenityId id = new HotelAmenityId(hotelId, amenityId);
 
                 HotelAmenity entity = hotelAmenityRepository.findById(id)
-                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tiện ích của khách sạn này"));
+                                .orElseThrow(() -> new EntityNotFoundException(
+                                                "Không tìm thấy tiện ích của khách sạn này"));
 
                 return mapper.toHotelAmenityResponse(entity);
         }
@@ -88,8 +89,18 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
 
                 HotelAmenity entity = mapper.toHotelAmenity(request, hotel, amenity);
 
-                return mapper.toHotelAmenityResponse(
-                                hotelAmenityRepository.save(entity));
+                if (Boolean.TRUE.equals(entity.getIsFree())) {
+                        entity.setAdditionalFee(java.math.BigDecimal.ZERO);
+                } else {
+
+                        if (entity.getAdditionalFee() == null
+                                        || entity.getAdditionalFee().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                                throw new IllegalArgumentException(
+                                                "Tiện ích thu phí bắt buộc phải nhập giá trị phí phụ thu lớn hơn 0");
+                        }
+                }
+
+                return mapper.toHotelAmenityResponse(hotelAmenityRepository.save(entity));
         }
 
         @Override
@@ -101,17 +112,27 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
                                 request.getAmenityId());
 
                 HotelAmenity existing = hotelAmenityRepository.findById(id)
-                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tiện ích của khách sạn này"));
+                                .orElseThrow(() -> new EntityNotFoundException(
+                                                "Không tìm thấy tiện ích của khách sạn này"));
 
                 if (!isAdmin()) {
                         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
                 }
 
                 existing.setIsFree(request.getIsFree());
-                existing.setAdditionalFee(request.getAdditionalFee());
 
-                return mapper.toHotelAmenityResponse(
-                                hotelAmenityRepository.save(existing));
+                if (Boolean.TRUE.equals(request.getIsFree())) {
+                        existing.setAdditionalFee(java.math.BigDecimal.ZERO);
+                } else {
+                        if (request.getAdditionalFee() == null
+                                        || request.getAdditionalFee().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                                throw new IllegalArgumentException(
+                                                "Tiện ích thu phí bắt buộc phải nhập giá trị phí phụ thu lớn hơn 0");
+                        }
+                        existing.setAdditionalFee(request.getAdditionalFee());
+                }
+
+                return mapper.toHotelAmenityResponse(hotelAmenityRepository.save(existing));
         }
 
         @Override

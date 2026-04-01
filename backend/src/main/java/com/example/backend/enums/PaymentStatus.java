@@ -1,10 +1,10 @@
 package com.example.backend.enums;
 
 public enum PaymentStatus {
-
+    UNPAID,
     PENDING,
-    SUCCESS,
+    PAID,
     FAILED,
-    REFUNDED,
-    CANCELLED
+    CANCELLED,
+    REFUNDED
 }
