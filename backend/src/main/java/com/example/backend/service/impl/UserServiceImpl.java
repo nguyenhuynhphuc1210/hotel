@@ -109,7 +109,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với ID=" + id));
 
         if (!Boolean.TRUE.equals(user.getIsActive())) {
-            throw new IllegalArgumentException("Người dùng này đã bị vô hiệu hóa trước đó."); // Dùng IllegalArgumentException
+            throw new IllegalArgumentException("Người dùng này đã bị vô hiệu hóa trước đó.");
         }
 
         user.setIsActive(false);

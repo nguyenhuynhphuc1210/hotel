@@ -61,10 +61,10 @@ public class BookingServiceImpl implements BookingService {
 
         if (user == null) {
             if (request.getGuestEmail() == null || request.getGuestEmail().trim().isEmpty()) {
-                throw new IllegalArgumentException("Khách vãng lai bắt buộc phải nhập Email"); // Đã sửa
+                throw new IllegalArgumentException("Khách vãng lai bắt buộc phải nhập Email");
             }
             if (request.getGuestName() == null || request.getGuestName().trim().isEmpty()) {
-                throw new IllegalArgumentException("Khách vãng lai bắt buộc phải nhập Tên"); // Đã sửa
+                throw new IllegalArgumentException("Khách vãng lai bắt buộc phải nhập Tên");
             }
         }
 
@@ -156,23 +156,23 @@ public class BookingServiceImpl implements BookingService {
         booking.setDiscountAmount(discount);
         booking.setTotalAmount(grandTotal.subtract(discount));
 
+        booking.setStatus(BookingStatus.PENDING);
         Booking savedBooking = bookingRepository.save(booking);
+
+        PaymentStatus initialPaymentStatus = (request.getPaymentMethod() == PaymentMethod.CASH)
+                ? PaymentStatus.UNPAID
+                : PaymentStatus.PENDING;
+
         Payment payment = Payment.builder()
                 .booking(savedBooking)
                 .paymentMethod(request.getPaymentMethod())
                 .amount(savedBooking.getTotalAmount())
-                .status(PaymentStatus.PENDING)
+                .status(initialPaymentStatus)
                 .build();
 
         paymentRepository.save(payment);
 
-        BookingResponse response = bookingMapper.toBookingResponse(savedBooking);
-
-        if (request.getPaymentMethod() == PaymentMethod.CASH) {
-            response.setPaymentUrl(null);
-        }
-
-        return response;
+        return bookingMapper.toBookingResponse(savedBooking);
     }
 
     @Override
@@ -203,11 +203,12 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.save(booking);
 
         paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
-            if (payment.getPaymentMethod() == PaymentMethod.CASH
-                    && payment.getStatus() == PaymentStatus.PENDING) {
+            if (payment.getStatus() == PaymentStatus.PAID) {
+                payment.setStatus(PaymentStatus.REFUNDED);
+            } else if (payment.getStatus() == PaymentStatus.UNPAID || payment.getStatus() == PaymentStatus.PENDING) {
                 payment.setStatus(PaymentStatus.CANCELLED);
-                paymentRepository.save(payment);
             }
+            paymentRepository.save(payment);
         });
 
         return bookingMapper.toBookingResponse(booking);
@@ -222,31 +223,48 @@ public class BookingServiceImpl implements BookingService {
         SecurityUtils.checkOwnerOrAdmin(booking.getHotel().getOwner().getEmail());
 
         BookingStatus newStatus = request.getStatus();
+        BookingStatus currentStatus = booking.getStatus();
+
+        if (!isValidTransition(currentStatus, newStatus)) {
+            throw new IllegalArgumentException(
+                    "Không thể chuyển trạng thái từ " + currentStatus + " sang " + newStatus);
+        }
 
         if (booking.getStatus() == BookingStatus.CANCELLED && newStatus != BookingStatus.CANCELLED) {
-            throw new IllegalArgumentException("Đơn đã hủy không thể phục hồi trạng thái."); // Đã sửa
+            throw new IllegalArgumentException("Đơn đã hủy không thể phục hồi trạng thái.");
         }
 
         if (newStatus == BookingStatus.CANCELLED && booking.getStatus() != BookingStatus.CANCELLED) {
             restoreRoomInventory(booking);
-
             paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
-                if (payment.getPaymentMethod() == PaymentMethod.CASH
-                        && payment.getStatus() == PaymentStatus.PENDING) {
+                if (payment.getStatus() == PaymentStatus.PAID) {
+                    payment.setStatus(PaymentStatus.REFUNDED);
+                } else {
                     payment.setStatus(PaymentStatus.CANCELLED);
+                }
+                paymentRepository.save(payment);
+            });
+        }
+
+        if (newStatus == BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.CHECKED_IN) {
+            paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
+
+                if (payment.getPaymentMethod() == PaymentMethod.CASH && payment.getStatus() == PaymentStatus.UNPAID) {
+                    payment.setStatus(PaymentStatus.PAID);
+                    payment.setPaymentDate(LocalDateTime.now());
                     paymentRepository.save(payment);
                 }
             });
         }
 
-        if (newStatus == BookingStatus.COMPLETED && booking.getStatus() != BookingStatus.COMPLETED) {
+        if (newStatus == BookingStatus.NO_SHOW && booking.getStatus() != BookingStatus.NO_SHOW) {
+            restoreRoomInventory(booking);
             paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
-                if (payment.getPaymentMethod() == PaymentMethod.CASH
-                        && payment.getStatus() == PaymentStatus.PENDING) {
-                    payment.setStatus(PaymentStatus.SUCCESS);
-                    payment.setPaymentDate(LocalDateTime.now());
-                    paymentRepository.save(payment);
+                if (payment.getStatus() == PaymentStatus.PENDING
+                        || payment.getStatus() == PaymentStatus.UNPAID) {
+                    payment.setStatus(PaymentStatus.CANCELLED);
                 }
+                paymentRepository.save(payment);
             });
         }
 
@@ -262,7 +280,7 @@ public class BookingServiceImpl implements BookingService {
         }
         String ownerEmail = SecurityUtils.getCurrentUserEmail();
         List<Booking> bookings = bookingRepository.findByHotelOwnerEmailOrderByCreatedAtDesc(ownerEmail);
-        
+
         return bookings.stream()
                 .map(bookingMapper::toBookingResponse)
                 .collect(Collectors.toList());
@@ -276,7 +294,7 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng"));
 
         List<Booking> bookings = bookingRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getId());
-        
+
         return bookings.stream()
                 .map(bookingMapper::toBookingResponse)
                 .collect(Collectors.toList());
@@ -324,5 +342,29 @@ public class BookingServiceImpl implements BookingService {
                 roomCalendarRepository.save(calendar);
             }
         }
+    }
+
+    private boolean isValidTransition(BookingStatus current, BookingStatus next) {
+        if (current == next)
+            return true;
+
+        return switch (current) {
+            case PENDING ->
+                next == BookingStatus.CONFIRMED
+                        || next == BookingStatus.CANCELLED;
+
+            case CONFIRMED ->
+                next == BookingStatus.CHECKED_IN
+                        || next == BookingStatus.CANCELLED
+                        || next == BookingStatus.NO_SHOW;
+
+            case CHECKED_IN ->
+                next == BookingStatus.COMPLETED;
+
+            case COMPLETED, CANCELLED, NO_SHOW ->
+                false;
+
+            default -> false;
+        };
     }
 }

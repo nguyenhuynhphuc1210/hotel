@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -38,9 +39,8 @@ public class Hotel {
     @Column(nullable = false)
     private String district;
 
-    @Builder.Default
     @Column(nullable = false)
-    private String city = "TP Hồ Chí Minh";
+    private String city;
 
     @Column(nullable = false)
     private String phone;
@@ -62,11 +62,13 @@ public class Hotel {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Builder.Default
     @OneToMany(mappedBy = "hotel", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<HotelImage> images;
+    private List<HotelImage> images = new ArrayList<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "hotel", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<RoomType> roomTypes;
+    private List<RoomType> roomTypes = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

@@ -111,6 +111,7 @@ public class HotelMapper {
                 .id(hotel.getId())
                 .hotelName(hotel.getHotelName())
                 .addressLine(hotel.getAddressLine())
+                .ward(hotel.getWard())
                 .district(hotel.getDistrict())
                 .city(hotel.getCity())
                 .phone(hotel.getPhone())

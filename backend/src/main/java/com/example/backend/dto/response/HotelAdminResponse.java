@@ -12,6 +12,7 @@ public class HotelAdminResponse {
     private Long id;
     private String hotelName;
     private String addressLine;
+    private String ward;
     private String district;
     private String city;
     private String phone;
