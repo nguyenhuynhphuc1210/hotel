@@ -12,6 +12,7 @@ import com.example.backend.mapper.BookingMapper;
 import com.example.backend.repository.*;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.BookingService;
+import com.example.backend.service.HotelStatisticService;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +43,7 @@ public class BookingServiceImpl implements BookingService {
     private final PromotionRepository promotionRepository;
     private final BookingMapper bookingMapper;
     private final PaymentRepository paymentRepository;
+    private final HotelStatisticService hotelStatisticService;
 
     @Override
     @Transactional
@@ -201,7 +204,13 @@ public class BookingServiceImpl implements BookingService {
         restoreRoomInventory(booking);
 
         booking.setStatus(BookingStatus.CANCELLED);
-        bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+
+        hotelStatisticService.recordRealtimeStatistic(
+                savedBooking.getHotel(),
+                savedBooking.getTotalAmount(),
+                LocalDate.now(),
+                BookingStatus.CANCELLED);
 
         paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
             if (payment.getStatus() == PaymentStatus.PAID) {
@@ -212,7 +221,7 @@ public class BookingServiceImpl implements BookingService {
             paymentRepository.save(payment);
         });
 
-        return bookingMapper.toBookingResponse(booking);
+        return bookingMapper.toBookingResponse(savedBooking);
     }
 
     @Override
@@ -270,7 +279,19 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(newStatus);
-        return bookingMapper.toBookingResponse(bookingRepository.save(booking));
+        Booking savedBooking = bookingRepository.save(booking);
+
+        if (currentStatus != newStatus &&
+                (newStatus == BookingStatus.COMPLETED || newStatus == BookingStatus.CANCELLED
+                        || newStatus == BookingStatus.NO_SHOW)) {
+
+            hotelStatisticService.recordRealtimeStatistic(
+                    savedBooking.getHotel(),
+                    savedBooking.getTotalAmount(),
+                    LocalDate.now(),
+                    newStatus);
+        }
+        return bookingMapper.toBookingResponse(savedBooking);
     }
 
     @Override

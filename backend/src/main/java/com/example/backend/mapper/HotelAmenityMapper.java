@@ -26,6 +26,7 @@ public class HotelAmenityMapper {
                 .hotelName(h.getHotel() != null ? h.getHotel().getHotelName() : null)
                 .amenityId(h.getAmenity() != null ? h.getAmenity().getId() : null)
                 .amenityName(h.getAmenity() != null ? h.getAmenity().getAmenityName() : null)
+                .iconUrl(h.getAmenity() != null ? h.getAmenity().getIconUrl() : null)
                 .isFree(h.getIsFree())
                 .additionalFee(h.getAdditionalFee())
                 .build();

@@ -1,17 +1,17 @@
 package com.example.backend.service.impl;
 
-import com.example.backend.dto.request.PaymentRequest;
 import com.example.backend.dto.response.PaymentResponse;
-import com.example.backend.entity.Booking;
 import com.example.backend.entity.Payment;
 import com.example.backend.mapper.PaymentMapper;
-import com.example.backend.repository.BookingRepository;
 import com.example.backend.repository.PaymentRepository;
+import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.PaymentService;
+
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,49 +19,64 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
+
     private final PaymentRepository paymentRepository;
-    private final BookingRepository bookingRepository;
     private final PaymentMapper paymentMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public List<PaymentResponse> getAllPayments() {
-        return paymentRepository.findAll().stream().map(paymentMapper::toPaymentResponse).collect(Collectors.toList());
-    }
+        List<Payment> payments;
 
-    @Override
-    public PaymentResponse getPaymentById(Long id) {
-        return paymentRepository.findById(id)
-                .map(paymentMapper::toPaymentResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found id=" + id));
-    }
-
-    @Override
-    public PaymentResponse createPayment(PaymentRequest request) {
-        Booking booking = bookingRepository.findById(request.getBookingId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Booking not found id=" + request.getBookingId()));
-        Payment saved = paymentRepository.save(paymentMapper.toPayment(request, booking));
-        return paymentMapper.toPaymentResponse(saved);
-    }
-
-    @Override
-    public PaymentResponse updatePayment(Long id, PaymentRequest request) {
-        Payment existing = paymentRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found id=" + id));
-        if (request.getBookingId() != null) {
-            Booking booking = bookingRepository.findById(request.getBookingId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Booking not found id=" + request.getBookingId()));
-            existing.setBooking(booking);
+        if (SecurityUtils.isAdmin()) {
+            payments = paymentRepository.findAll();
+        } else if (SecurityUtils.isHotelOwner()) {
+            String ownerEmail = SecurityUtils.getCurrentUserEmail();
+            payments = paymentRepository.findByBooking_Hotel_Owner_EmailOrderByPaymentDateDesc(ownerEmail);
+        } else {
+            throw new AccessDeniedException("Bạn không có quyền truy cập danh sách thanh toán");
         }
-        if (request.getPaymentMethod() != null) existing.setPaymentMethod(request.getPaymentMethod());
-        if (request.getTransactionId() != null) existing.setTransactionId(request.getTransactionId());
-        if (request.getAmount() != null) existing.setAmount(request.getAmount());
-        return paymentMapper.toPaymentResponse(paymentRepository.save(existing));
+
+        return payments.stream()
+                .map(paymentMapper::toPaymentResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public void deletePayment(Long id) {
-        Payment existing = paymentRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found id=" + id));
-        paymentRepository.delete(existing);
+    @Transactional(readOnly = true)
+    public PaymentResponse getPaymentById(Long id) {
+        Payment payment = paymentRepository.findById(id)
+
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy giao dịch thanh toán với ID = " + id));
+
+        checkPaymentAccess(payment);
+        return paymentMapper.toPaymentResponse(payment);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentResponse getPaymentByBookingId(Long bookingId) {
+        Payment payment = paymentRepository.findByBookingId(bookingId)
+
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy giao dịch thanh toán cho đơn đặt phòng ID = " + bookingId));
+
+        checkPaymentAccess(payment);
+        return paymentMapper.toPaymentResponse(payment);
+    }
+
+    private void checkPaymentAccess(Payment payment) {
+        if (SecurityUtils.isAdmin()) {
+            return;
+        }
+
+        String currentUserEmail = SecurityUtils.getCurrentUserEmail();
+        boolean isOwnerOfThisHotel = payment.getBooking().getHotel().getOwner().getEmail().equals(currentUserEmail);
+        boolean isGuestOfThisBooking = payment.getBooking().getUser() != null
+                && payment.getBooking().getUser().getEmail().equals(currentUserEmail);
+
+        if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
+            throw new AccessDeniedException("Bạn không có quyền xem chi tiết giao dịch thanh toán này");
+        }
     }
 }

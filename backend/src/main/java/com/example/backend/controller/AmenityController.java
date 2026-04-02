@@ -2,6 +2,7 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.request.AmenityRequest;
 import com.example.backend.dto.response.AmenityResponse;
+import com.example.backend.enums.AmenityType;
 import com.example.backend.service.AmenityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,11 @@ public class AmenityController {
     @GetMapping
     public ResponseEntity<List<AmenityResponse>> getAll() {
         return ResponseEntity.ok(amenityService.getAllAmenities());
+    }
+
+    @GetMapping("/type/{type}")
+    public ResponseEntity<List<AmenityResponse>> getByType(@PathVariable AmenityType type) {
+        return ResponseEntity.ok(amenityService.getAmenitiesByType(type));
     }
 
     @GetMapping("/{id}")

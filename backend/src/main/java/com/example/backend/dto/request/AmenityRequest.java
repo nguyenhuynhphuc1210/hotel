@@ -1,7 +1,11 @@
 package com.example.backend.dto.request;
 
 import lombok.*;
+
+import com.example.backend.enums.AmenityType;
+
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Data
 @Builder
@@ -13,4 +17,7 @@ public class AmenityRequest {
     private String amenityName;
     
     private String iconUrl;
+
+    @NotNull(message = "Loại tiện ích (HOTEL hoặc ROOM) không được để trống")
+    private AmenityType type;
 }

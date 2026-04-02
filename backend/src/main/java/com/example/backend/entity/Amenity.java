@@ -1,5 +1,6 @@
 package com.example.backend.entity;
 
+import com.example.backend.enums.AmenityType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,6 +24,10 @@ public class Amenity {
 
     @Column(name = "icon_url")
     private String iconUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private AmenityType type;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

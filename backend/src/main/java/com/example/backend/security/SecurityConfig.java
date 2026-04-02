@@ -90,6 +90,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/hotel-amenities/**")
                         .hasAnyRole("ADMIN", "HOTEL_OWNER")
 
+                        .requestMatchers(HttpMethod.GET, "/api/room-type-amenities/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/room-type-amenities").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/room-type-amenities/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/room-type-amenities/**")
+                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
+
                         .requestMatchers(HttpMethod.GET, "/api/promotions/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/promotions").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/promotions/**").hasAnyRole("ADMIN", "HOTEL_OWNER")

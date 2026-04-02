@@ -12,6 +12,7 @@ public class AmenityMapper {
         return Amenity.builder()
                 .amenityName(req.getAmenityName())
                 .iconUrl(req.getIconUrl())
+                .type(req.getType())
                 .build();
     }
 
@@ -21,6 +22,7 @@ public class AmenityMapper {
                 .id(a.getId())
                 .amenityName(a.getAmenityName())
                 .iconUrl(a.getIconUrl())
+                .type(a.getType())
                 .createdAt(a.getCreatedAt())
                 .updatedAt(a.getUpdatedAt())
                 .build();

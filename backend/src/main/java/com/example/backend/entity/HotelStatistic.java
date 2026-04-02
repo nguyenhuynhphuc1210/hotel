@@ -30,6 +30,14 @@ public class HotelStatistic {
     private Integer totalBookings = 0;
 
     @Builder.Default
+    @Column(name = "total_cancelled")
+    private Integer totalCancelled = 0;
+
+    @Builder.Default
+    @Column(name = "total_no_show")
+    private Integer totalNoShow = 0;
+
+    @Builder.Default
     @Column(name = "total_revenue", precision = 12, scale = 2)
     private BigDecimal totalRevenue = BigDecimal.ZERO;
 }

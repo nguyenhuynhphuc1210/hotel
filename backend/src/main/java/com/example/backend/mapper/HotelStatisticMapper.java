@@ -12,12 +12,15 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class HotelStatisticMapper {
+    
     public HotelStatistic toHotelStatistic(
             HotelStatisticRequest req,
             Hotel hotel,
             LocalDate statDate,
             Integer totalBookings,
-            BigDecimal totalRevenue) {
+            BigDecimal totalRevenue,
+            Integer totalCancelled,
+            Integer totalNoShow) {
 
         if (req == null)
             return null;
@@ -27,18 +30,23 @@ public class HotelStatisticMapper {
                 .statDate(statDate)
                 .totalBookings(totalBookings != null ? totalBookings : 0)
                 .totalRevenue(totalRevenue != null ? totalRevenue : BigDecimal.ZERO)
+                .totalCancelled(totalCancelled != null ? totalCancelled : 0)
+                .totalNoShow(totalNoShow != null ? totalNoShow : 0)
                 .build();
     }
 
     public HotelStatisticResponse toHotelStatisticResponse(HotelStatistic s) {
         if (s == null)
             return null;
+            
         return HotelStatisticResponse.builder()
                 .id(s.getId())
                 .hotelId(s.getHotel() != null ? s.getHotel().getId() : null)
                 .statDate(s.getStatDate())
                 .totalBookings(s.getTotalBookings())
                 .totalRevenue(s.getTotalRevenue())
+                .totalCancelled(s.getTotalCancelled())
+                .totalNoShow(s.getTotalNoShow())
                 .build();
     }
 }

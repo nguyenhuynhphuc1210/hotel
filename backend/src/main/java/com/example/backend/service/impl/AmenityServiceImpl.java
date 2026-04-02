@@ -5,6 +5,7 @@ import static com.example.backend.security.SecurityUtils.*;
 import com.example.backend.dto.request.AmenityRequest;
 import com.example.backend.dto.response.AmenityResponse;
 import com.example.backend.entity.Amenity;
+import com.example.backend.enums.AmenityType;
 import com.example.backend.mapper.AmenityMapper;
 import com.example.backend.repository.AmenityRepository;
 import com.example.backend.service.AmenityService;
@@ -31,6 +32,15 @@ public class AmenityServiceImpl implements AmenityService {
         return amenityRepository.findAll().stream()
                 .map(amenityMapper::toAmenityResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AmenityResponse> getAmenitiesByType(AmenityType type) {
+        return amenityRepository.findByType(type)
+                .stream()
+                .map(amenityMapper::toAmenityResponse)
+                .toList();
     }
 
     @Override
@@ -74,6 +84,7 @@ public class AmenityServiceImpl implements AmenityService {
 
         existing.setAmenityName(request.getAmenityName());
         existing.setIconUrl(request.getIconUrl());
+        existing.setType(request.getType());
 
         return amenityMapper.toAmenityResponse(amenityRepository.save(existing));
     }

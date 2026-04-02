@@ -3,52 +3,95 @@ package com.example.backend.service.impl;
 import com.example.backend.dto.request.HotelStatisticRequest;
 import com.example.backend.dto.response.HotelStatisticResponse;
 import com.example.backend.entity.Hotel;
-import jakarta.persistence.EntityNotFoundException;
+import com.example.backend.entity.HotelStatistic;
+import com.example.backend.enums.BookingStatus;
 import com.example.backend.mapper.HotelStatisticMapper;
 import com.example.backend.repository.HotelRepository;
 import com.example.backend.repository.HotelStatisticRepository;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.HotelStatisticService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class HotelStatisticServiceImpl implements HotelStatisticService {
 
     private final HotelStatisticRepository statisticRepository;
     private final HotelRepository hotelRepository;
-    private final HotelStatisticMapper mapper;
+    private final HotelStatisticMapper statisticMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public List<HotelStatisticResponse> getStatistics(HotelStatisticRequest request) {
-        
-        Long hotelId = request.getHotelId();
-        LocalDate fromDate = request.getFromDate();
-        LocalDate toDate = request.getToDate();
 
-        Hotel hotel = hotelRepository.findById(hotelId)
+        if (request.getFromDate().isAfter(request.getToDate())) {
+            throw new IllegalArgumentException("Ngày bắt đầu không thể sau ngày kết thúc");
+        }
+
+        Hotel hotel = hotelRepository.findById(request.getHotelId())
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn"));
 
-        if (SecurityUtils.isHotelOwner()) {
-            if (!hotel.getOwner().getEmail().equals(SecurityUtils.getCurrentUserEmail())) {
-                throw new IllegalArgumentException("Không có quyền xem doanh thu khách sạn này!");
-            }
-        } else if (!SecurityUtils.isAdmin()) {
-            throw new IllegalArgumentException("Khách hàng không được truy cập trang này!");
-        }
+        SecurityUtils.checkOwnerOrAdmin(hotel.getOwner().getEmail());
 
-        if (fromDate.isAfter(toDate)) {
-            throw new IllegalArgumentException("Ngày bắt đầu không được lớn hơn ngày kết thúc!");
-        }
+        List<HotelStatistic> stats = statisticRepository.findByHotelIdAndStatDateBetweenOrderByStatDateAsc(
+                request.getHotelId(),
+                request.getFromDate(),
+                request.getToDate());
 
-        return statisticRepository.findByHotelIdAndStatDateBetweenOrderByStatDateAsc(hotelId, fromDate, toDate)
-                .stream()
-                .map(mapper::toHotelStatisticResponse)
+        return stats.stream()
+                .map(statisticMapper::toHotelStatisticResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void recordRealtimeStatistic(Hotel hotel, BigDecimal totalAmount, LocalDate date, BookingStatus status) {
+        int updatedRows = 0;
+
+        switch (status) {
+            case COMPLETED:
+                updatedRows = statisticRepository.incrementSuccessfulBooking(hotel.getId(), date, totalAmount);
+                break;
+            case CANCELLED:
+                updatedRows = statisticRepository.incrementCancelledBooking(hotel.getId(), date);
+                break;
+            case NO_SHOW:
+                updatedRows = statisticRepository.incrementNoShowBooking(hotel.getId(), date);
+                break;
+            default:
+                log.info("Bỏ qua thống kê cho trạng thái: {}", status);
+                return;
+        }
+
+        if (updatedRows == 0) {
+            try {
+                HotelStatistic newStat = HotelStatistic.builder()
+                        .hotel(hotel)
+                        .statDate(date)
+                        .totalBookings(status == BookingStatus.COMPLETED ? 1 : 0)
+                        .totalRevenue(status == BookingStatus.COMPLETED ? totalAmount : BigDecimal.ZERO)
+                        .totalCancelled(status == BookingStatus.CANCELLED ? 1 : 0)
+                        .totalNoShow(status == BookingStatus.NO_SHOW ? 1 : 0)
+                        .build();
+
+                statisticRepository.save(newStat);
+
+            } catch (DataIntegrityViolationException e) {
+                log.warn("Phát hiện xung đột luồng khi tạo HotelStatistic, đang thực hiện lại...");
+                recordRealtimeStatistic(hotel, totalAmount, date, status);
+            }
+        }
     }
 }
