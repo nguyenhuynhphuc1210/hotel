@@ -1,13 +1,15 @@
+'use client'
+
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 
-export const useLogout = () => {
-  const router = useRouter()
-  const clearAuth = useAuthStore((s) => s.clearAuth)
+export function useLogout() {
+  const router    = useRouter()
+  const clearAuth = useAuthStore(s => s.clearAuth)
 
-  const logout = () => {
+  const logout = (redirectTo = '/login') => {
     clearAuth()
-    router.push('/login')
+    router.push(redirectTo)
   }
 
   return { logout }

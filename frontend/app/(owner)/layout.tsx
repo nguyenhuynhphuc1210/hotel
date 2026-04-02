@@ -1,24 +1,27 @@
 // @/app/(owner)/layout.tsx
 'use client'
 
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Hotel, BedDouble, CalendarDays,
-  CalendarCheck, Star, Tag, LogOut, ChevronRight, ChevronDown
+  CalendarCheck, Star, Tag, LogOut, ChevronRight, ChevronDown,
+  Building2,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useLogout'
 import { OwnerHotelProvider, useOwnerHotel } from './owner-hotel-context'
 
 const navItems = [
-  { href: '/owner',            label: 'Dashboard',     icon: LayoutDashboard, exact: true },
-  { href: '/owner/hotel',      label: 'Khách sạn',     icon: Hotel },
-  { href: '/owner/rooms',      label: 'Loại phòng',    icon: BedDouble },
-  { href: '/owner/calendar',   label: 'Lịch & Giá',    icon: CalendarDays },
-  { href: '/owner/bookings',   label: 'Đặt phòng',     icon: CalendarCheck },
-  { href: '/owner/reviews',    label: 'Đánh giá',      icon: Star },
-  { href: '/owner/promotions', label: 'Khuyến mãi',    icon: Tag },
+  { href: '/owner', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/owner/hotel', label: 'Khách sạn', icon: Hotel },
+  { href: '/owner/hotels', label: 'Khách sạn của tôi', icon: Building2 },
+  { href: '/owner/rooms', label: 'Loại phòng', icon: BedDouble },
+  { href: '/owner/calendar', label: 'Lịch & Giá', icon: CalendarDays },
+  { href: '/owner/bookings', label: 'Đặt phòng', icon: CalendarCheck },
+  { href: '/owner/reviews', label: 'Đánh giá', icon: Star },
+  { href: '/owner/promotions', label: 'Khuyến mãi', icon: Tag },
 ]
 
 // Component nội dung Layout để có thể dùng được Hook từ Context
@@ -26,7 +29,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { user } = useAuthStore()
   const { logout } = useLogout()
-  
+
   // Lấy dữ liệu khách sạn từ Context toàn cục
   const { hotels, activeHotelId, setActiveHotelId, isLoading } = useOwnerHotel()
 
@@ -48,9 +51,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             const active = exact ? pathname === href : pathname.startsWith(href)
             return (
               <Link key={href} href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${
-                  active ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${active ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 <Icon size={17} className="shrink-0" />
                 <span className="flex-1">{label}</span>
@@ -71,7 +73,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               <div className="text-xs text-gray-400 truncate">{user?.email ?? ''}</div>
             </div>
           </div>
-          <button onClick={logout}
+          <button onClick={() => logout()}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
             <LogOut size={17} />Đăng xuất
           </button>
@@ -124,10 +126,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 }
 
 // Export mặc định bao bọc bởi Provider
-export default function OwnerLayout({ children }: { children: React.ReactNode }) {
+export default dynamic(() => Promise.resolve(function OwnerLayout({ children }: { children: React.ReactNode }) {
   return (
     <OwnerHotelProvider>
       <LayoutContent>{children}</LayoutContent>
     </OwnerHotelProvider>
   )
-}
+}), { ssr: false })

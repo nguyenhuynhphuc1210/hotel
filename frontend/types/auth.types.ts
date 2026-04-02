@@ -24,6 +24,7 @@ export interface UserResponse {
   fullName: string
   email: string
   phone: string | null
+  dateOfBirth: string | null
   avatarUrl: string | null
   gender: string | null
   isActive: boolean

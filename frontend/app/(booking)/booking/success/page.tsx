@@ -19,7 +19,7 @@ export default function BookingSuccessPage() {
                     Mã đặt phòng của bạn: <span className="font-bold text-blue-600">#{bookingId}</span>
                 </p>
                 <div className="flex gap-3">
-                    <button onClick={() => router.push('/profile/bookings')}
+                    <button onClick={() => router.push('/profile')}
                         className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700">
                         Xem đơn của tôi
                     </button>

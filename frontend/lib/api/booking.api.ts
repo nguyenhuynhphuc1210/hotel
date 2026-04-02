@@ -5,7 +5,7 @@ import { BookingRequest, BookingResponse, BookingStatus } from '@/types/booking.
 const bookingApi = {
   // GET /api/bookings → getAllBookings()
   getAll: () =>
-    axiosInstance.get<BookingResponse[]>(API_CONFIG.ENDPOINTS.BOOKINGS),
+    axiosInstance.get<BookingResponse[]>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/admin`), 
 
   // GET /api/bookings/:id → getBookingById()
   getById: (id: number | string) =>
@@ -20,6 +20,10 @@ const bookingApi = {
 
    updateStatus: (id: number | string, status: BookingStatus) =>
     axiosInstance.patch<BookingResponse>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/${id}/status`, { status }),
+
+   getMyBookings: () => 
+    axiosInstance.get<BookingResponse[]>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/me`),
+   
 }
 
 export default bookingApi

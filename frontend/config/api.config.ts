@@ -52,7 +52,7 @@ const API_CONFIG = {
     HOTEL_IMAGE_SET_PRIMARY: (id: number | string) => `/api/hotel-images/${id}/set-primary`,
 
     // Hotel Statistics
-    HOTEL_STATISTICS: '/api/hotel-statistics',
+    HOTEL_STATISTICS: '/api/statistics',
     HOTEL_STATISTIC_BY_ID: (id: number | string) => `/api/hotel-statistics/${id}`,
 
     // Room Types by Hotel

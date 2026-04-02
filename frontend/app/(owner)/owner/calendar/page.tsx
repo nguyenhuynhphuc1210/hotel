@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,7 +9,6 @@ import {
   ChevronLeft, ChevronRight, Save, Loader2,
   X, AlertCircle, CheckCircle,
 } from 'lucide-react'
-import hotelApi from '@/lib/api/hotel.api'
 import roomApi from '@/lib/api/room.api'
 import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
@@ -281,6 +280,7 @@ function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, 
         <UpdateModal
           roomId={activeRoomId}
           selectedDates={selectedDates}
+          calendarData={calendarData}
           qc={qc}
           calYear={calYear}
           calMonth={calMonth}
@@ -294,9 +294,10 @@ function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, 
   )
 }
 
-function UpdateModal({ roomId, selectedDates, qc, calYear, calMonth, onClose }: {
+function UpdateModal({ roomId, selectedDates, calendarData, qc, calYear, calMonth, onClose }: {
   roomId: number
   selectedDates: string[]
+  calendarData: RoomCalendarResponse[]
   qc: ReturnType<typeof useQueryClient>
   calYear: number
   calMonth: number
@@ -323,13 +324,17 @@ function UpdateModal({ roomId, selectedDates, qc, calYear, calMonth, onClose }: 
     },
   })
 
+  const firstCal = calendarData.find((c: RoomCalendarResponse) => c.date === startDate)
+  const defaultPrice = firstCal ? Number(firstCal.price) : 500000
+  const defaultTotalRooms = firstCal ? firstCal.totalRooms : 1
+
   const { register, handleSubmit, watch, formState: { errors } } = useForm<UpdateForm>({
     resolver: zodResolver(updateSchema) as Resolver<UpdateForm>,
     defaultValues: {
       startDate,
       endDate,
-      price: 500000,
-      totalRooms: 1,
+      price: defaultPrice,           
+      totalRooms: defaultTotalRooms,  
       isAvailable: true,
     },
   })

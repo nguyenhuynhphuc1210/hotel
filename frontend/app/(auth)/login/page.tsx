@@ -35,21 +35,15 @@ export default function LoginPage() {
             const res = await authApi.login(data)
             const { token, user } = res.data
 
-            // Lưu vào store + localStorage
             setAuth(token, user)
-
             toast.success(`Chào mừng, ${user.fullName}!`)
 
-            // Redirect theo role
-            const role = user.roleName
-            if (role === 'ROLE_ADMIN') router.push('/admin')
-            else if (role === 'ROLE_HOTEL_OWNER') router.push('/owner')
-            else router.push('/')
+            // Tất cả role đều về home — dùng như user bình thường
+            router.push('/home')
 
         } catch (err) {
             const error = err as { response?: { data?: { message?: string } } }
-            const msg = error?.response?.data?.message || 'Email hoặc mật khẩu không đúng'
-            toast.error(msg)
+            toast.error(error?.response?.data?.message || 'Email hoặc mật khẩu không đúng')
         } finally {
             setLoading(false)
         }

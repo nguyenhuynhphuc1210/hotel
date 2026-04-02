@@ -8,6 +8,7 @@ import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
 import { HotelResponse } from '@/lib/api/hotel.api'
 
+
 // ── Constants ──────────────────────────────────────────────
 const DISTRICTS = [
     'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7',
@@ -41,7 +42,14 @@ const fmtFull = (d: Date | null) => {
     return `${d.getDate()} tháng ${d.getMonth() + 1} ${d.getFullYear()}`
 }
 
-const toISO = (d: Date | null) => d ? d.toISOString().split('T')[0] : ''
+const toISO = (d: Date | null) => {
+    if (!d) return ''
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+}
+
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
 function getFirstDay(y: number, m: number) { const d = new Date(y, m, 1).getDay(); return d === 0 ? 6 : d - 1 }
 
@@ -51,8 +59,10 @@ export default function SearchBar({ variant = 'hero', defaultValues }: SearchBar
 
     // ── State Initialization (Tránh lỗi Cascading Render bằng cách gán trực tiếp) ──
     const [keyword, setKeyword] = useState(defaultValues?.keyword || defaultValues?.district || '')
-    const [checkIn, setCheckIn] = useState<Date | null>(defaultValues?.checkIn ? new Date(defaultValues.checkIn) : null)
-    const [checkOut, setCheckOut] = useState<Date | null>(defaultValues?.checkOut ? new Date(defaultValues.checkOut) : null)
+    const parseDate = (s?: string) => s ? new Date(s + 'T00:00:00') : null
+
+    const [checkIn, setCheckIn] = useState<Date | null>(parseDate(defaultValues?.checkIn))
+    const [checkOut, setCheckOut] = useState<Date | null>(parseDate(defaultValues?.checkOut))
 
     const [showDate, setShowDate] = useState(searchParams.get('openPicker') === 'true')
     const [pickingEnd, setPickingEnd] = useState(false)
@@ -84,7 +94,7 @@ export default function SearchBar({ variant = 'hero', defaultValues }: SearchBar
 
     const { data: allHotels = [] } = useQuery<HotelResponse[]>({
         queryKey: ['hotels-public'],
-        queryFn: () => axiosInstance.get<HotelResponse[]>(API_CONFIG.ENDPOINTS.HOTELS).then(r => r.data),
+        queryFn: () => axiosInstance.get<HotelResponse[]>(`${API_CONFIG.ENDPOINTS.HOTELS}/active`).then(r => r.data),
     })
 
     // ── Suggestions ──

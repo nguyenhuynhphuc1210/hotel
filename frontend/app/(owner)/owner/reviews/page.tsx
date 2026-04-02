@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Star, Search, MessageSquare } from 'lucide-react'
-import hotelApi from '@/lib/api/hotel.api'
 import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
 import { ReviewResponse } from '@/types/review.types'
@@ -20,9 +19,13 @@ export default function OwnerReviewsPage() {
   const { data: allReviews = [], isLoading: isReviewsLoading } = useQuery({
     queryKey: ['owner-reviews', activeHotelId],
     queryFn: () => axiosInstance
-      .get<ReviewResponse[]>(API_CONFIG.ENDPOINTS.REVIEWS)
-      .then(r => r.data.filter((rv: ReviewResponse) => rv.hotelId === activeHotelId)),
+      .get<{ content: ReviewResponse[] }>(
+        `/api/reviews/hotel/${activeHotelId}/admin`,
+        { params: { page: 0, size: 100 } }
+      )
+      .then(r => r.data.content), // ← backend trả Page<>, phải lấy .content
     enabled: !!activeHotelId,
+    retry: false,
   })
 
   // Đặt lại tên biến để tương thích UI bên dưới
@@ -30,7 +33,7 @@ export default function OwnerReviewsPage() {
   const isLoading = isReviewsLoading || isHotelLoading
 
   if (!hotel && !isHotelLoading) return <div className="py-20 text-center text-gray-400">Chưa chọn khách sạn</div>
-  
+
 
   const filtered = allReviews.filter((rv: ReviewResponse) => {
     const matchKeyword = !keyword ||
@@ -62,7 +65,7 @@ export default function OwnerReviewsPage() {
           <div className="text-center mb-4">
             <div className="text-5xl font-bold text-gray-900">{avgRating}</div>
             <div className="flex items-center justify-center gap-1 mt-2">
-              {[1,2,3,4,5].map(s => (
+              {[1, 2, 3, 4, 5].map(s => (
                 <Star key={s} size={16}
                   fill={s <= Math.round(Number(avgRating)) ? '#f59e0b' : 'none'}
                   className={s <= Math.round(Number(avgRating)) ? 'text-amber-400' : 'text-gray-300'} />
@@ -74,9 +77,8 @@ export default function OwnerReviewsPage() {
             {starCounts.map(({ star, count }) => (
               <button key={star}
                 onClick={() => setStarFilter(starFilter === star ? null : star)}
-                className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${
-                  starFilter === star ? 'bg-amber-50' : 'hover:bg-gray-50'
-                }`}
+                className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${starFilter === star ? 'bg-amber-50' : 'hover:bg-gray-50'
+                  }`}
               >
                 <span className="text-xs text-gray-500 w-4">{star}</span>
                 <Star size={12} fill="#f59e0b" className="text-amber-400 shrink-0" />
@@ -124,7 +126,7 @@ export default function OwnerReviewsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    {[1,2,3,4,5].map(s => (
+                    {[1, 2, 3, 4, 5].map(s => (
                       <Star key={s} size={13}
                         fill={s <= Number(rv.rating) ? '#f59e0b' : 'none'}
                         className={s <= Number(rv.rating) ? 'text-amber-400' : 'text-gray-200'} />
