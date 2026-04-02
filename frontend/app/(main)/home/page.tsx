@@ -21,7 +21,7 @@ const DISTRICTS = [
 ]
 
 const DISTRICT_IMAGES: Record<string, string> = {
-    'Quận 1': 'https://disantrangan.vn/wp-content/uploads/2021/06/cho_ben_thanh_01-1.jpeg',
+    'Quận 1': 'https://ticotravel.com.vn/wp-content/uploads/2022/05/Cho-Ben-Thanh-1.jpg',
     'Quận 2': 'https://kientrucvadoisong.net/ckeditor/plugins/fileman/Uploads/Bandoc/XUAN%202023-1/cau%20ba%20son-7.jpg',
     'Quận 3': 'https://cdn3.ivivu.com/2020/06/nha-tho-mau-hong-viet-nam-len-bao-my-ivivu-1.jpg',
     'Quận 4': 'https://owa.bestprice.vn/images/media/3a13e27f-9197-4a73-9457-100ea67fdc8b-61ef603f31244.png',

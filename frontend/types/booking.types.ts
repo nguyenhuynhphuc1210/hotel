@@ -22,6 +22,7 @@ export interface BookingResponse {
   promotionId: number | null
   promoCode: string | null
   totalAmount: number
+  paymentMethod: string | null 
   paymentUrl: string | null
   createdAt: string
   updatedAt: string

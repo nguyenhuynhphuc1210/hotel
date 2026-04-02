@@ -17,6 +17,8 @@ const authApi = {
     window.location.href = '/login'
   },
 
+  
+
 }
 
 export default authApi

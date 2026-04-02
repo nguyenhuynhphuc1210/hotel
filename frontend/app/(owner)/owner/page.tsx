@@ -32,13 +32,15 @@ export default function OwnerDashboardPage() {
       API_CONFIG.ENDPOINTS.HOTEL_STATISTICS,
       { params: { hotelId: activeHotelId, fromDate, toDate } }
     ).then(r => r.data),
-    enabled: !!activeHotelId,
+    enabled: !!activeHotelId && hotels.length > 0,
+    retry: false,        
+    throwOnError: false, 
   })
 
   // Tính tổng
   const totalBookings = stats.reduce((s, r) => s + (r.totalBookings ?? 0), 0)
   const totalRevenue = stats.reduce((s, r) => s + Number(r.totalRevenue ?? 0), 0)
-  const selectedHotel = hotels.find(h => h.id === selectedHotelId)
+  const selectedHotel = hotels.find(h => h.id === activeHotelId)
 
   return (
     <div className="space-y-6">

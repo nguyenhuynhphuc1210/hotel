@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Hotel, CalendarCheck, Users, LogOut, ChevronRight, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 
 const navItems = [
   { href: '/admin',          label: 'Dashboard',    icon: LayoutDashboard, exact: true },
@@ -14,14 +15,14 @@ const navItems = [
   { href: '/admin/amenities', label: 'Tiện ích', icon: Sparkles },
 ]
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, clearAuth } = useAuthStore()
 
   const handleLogout = () => {
     clearAuth()
-    router.push('/login')
+    router.push('/admin/login')
   }
 
   return (
@@ -108,3 +109,5 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   )
 }
+
+export default dynamic(() => Promise.resolve(AdminLayout), { ssr: false })

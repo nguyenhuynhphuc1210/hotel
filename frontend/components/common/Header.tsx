@@ -5,8 +5,9 @@ import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useLogout'
 import { LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 
-export default function Header() {
+function Header() {
   const { user, isAuthenticated } = useAuthStore()
   const { logout } = useLogout()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -43,14 +44,20 @@ export default function Header() {
                   Owner Portal
                 </Link>
               )}
-              <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full">
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full hover:bg-green-50 hover:ring-1 hover:ring-green-300 transition-all"
+              >
                 <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-xs font-semibold">
-                  {user.fullName.charAt(0).toUpperCase()}
+                  {user.avatarUrl
+                    ? <img src={user.avatarUrl} className="w-full h-full rounded-full object-cover" />
+                    : user.fullName.charAt(0).toUpperCase()
+                  }
                 </div>
                 <span className="text-sm text-gray-700 font-medium">{user.fullName}</span>
-              </div>
+              </Link>
               <button
-                onClick={logout}
+                onClick={() => logout()}
                 className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 transition-colors"
               >
                 <LogOut size={15} />
@@ -80,8 +87,13 @@ export default function Header() {
         <div className="md:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-2">
           <Link href="/home" className="block py-2 text-sm text-gray-700 hover:text-green-600">Trang chủ</Link>
           <Link href="/hotels" className="block py-2 text-sm text-gray-700 hover:text-green-600">Khách sạn</Link>
+          {isAuthenticated && (
+            <Link href="/profile" className="block py-2 text-sm text-gray-700 hover:text-green-600">
+              Tài khoản của tôi
+            </Link>
+          )}
           {isAuthenticated ? (
-            <button onClick={logout} className="block py-2 text-sm text-red-600 w-full text-left">
+            <button onClick={() => logout()} className="block py-2 text-sm text-red-600 w-full text-left">
               Đăng xuất
             </button>
           ) : (
@@ -95,3 +107,5 @@ export default function Header() {
     </header>
   )
 }
+
+export default dynamic(() => Promise.resolve(Header), { ssr: false })

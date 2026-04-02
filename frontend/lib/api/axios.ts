@@ -3,24 +3,42 @@ import API_CONFIG from '@/config/api.config'
 
 const axiosInstance = axios.create({
   baseURL: API_CONFIG.BASE_URL,
-  timeout: API_CONFIG.TIMEOUT,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 15000,
 })
 
-// Tự động gắn JWT token vào mỗi request
-axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
+// ── Request interceptor: gắn token từ sessionStorage ──
+axiosInstance.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
 
-// 401 → xoá token và về trang login
+// ── Response interceptor: xử lý 401 ──
 axiosInstance.interceptors.response.use(
-  (res) => res,
+  (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      // Xoá session
       localStorage.removeItem('access_token')
-      window.location.href = '/login'
+      localStorage.removeItem('user')
+      document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+      document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+
+      // Redirect về đúng trang login
+      const path = window.location.pathname
+      if (path.startsWith('/admin') || path.startsWith('/owner')) {
+        window.location.href = '/admin/login'
+      } else {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
