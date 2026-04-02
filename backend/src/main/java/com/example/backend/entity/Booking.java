@@ -78,6 +78,9 @@ public class Booking {
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BookingRoom> bookingRooms = new ArrayList<>();
 
+    @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Payment payment;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

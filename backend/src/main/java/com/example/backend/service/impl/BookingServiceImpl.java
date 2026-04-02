@@ -170,6 +170,7 @@ public class BookingServiceImpl implements BookingService {
                 .status(initialPaymentStatus)
                 .build();
 
+        savedBooking.setPayment(payment);
         paymentRepository.save(payment);
 
         return bookingMapper.toBookingResponse(savedBooking);
@@ -275,11 +276,20 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsForOwner() {
+
         if (!SecurityUtils.isHotelOwner() && !SecurityUtils.isAdmin()) {
             throw new AccessDeniedException("Chỉ chủ khách sạn hoặc Admin mới được xem danh sách này");
         }
-        String ownerEmail = SecurityUtils.getCurrentUserEmail();
-        List<Booking> bookings = bookingRepository.findByHotelOwnerEmailOrderByCreatedAtDesc(ownerEmail);
+
+        List<Booking> bookings;
+
+        if (SecurityUtils.isAdmin()) {
+
+            bookings = bookingRepository.findAllByOrderByCreatedAtDesc();
+        } else {
+            String ownerEmail = SecurityUtils.getCurrentUserEmail();
+            bookings = bookingRepository.findByHotelOwnerEmailOrderByCreatedAtDesc(ownerEmail);
+        }
 
         return bookings.stream()
                 .map(bookingMapper::toBookingResponse)

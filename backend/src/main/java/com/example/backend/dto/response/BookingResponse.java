@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.example.backend.enums.BookingStatus;
+import com.example.backend.enums.PaymentMethod;
+import com.example.backend.enums.PaymentStatus;
 
 @Data
 @Builder
@@ -34,4 +36,6 @@ public class BookingResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<BookingRoomResponse> bookingRooms;
+    private PaymentMethod paymentMethod;
+    private PaymentStatus paymentStatus;
 }
