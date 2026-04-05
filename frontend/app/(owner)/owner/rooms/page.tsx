@@ -8,15 +8,20 @@ import { z } from 'zod'
 import {
   Plus, Pencil, Trash2, X, Loader2, Save,
   BedDouble, Users, Maximize2, Upload, Star,
-  ChevronRight,
+  ChevronRight, Sparkles, CheckCircle2, Settings2,
 } from 'lucide-react'
 import hotelApi from '@/lib/api/hotel.api'
 import roomApi from '@/lib/api/room.api'
+import { roomTypeAmenityApi } from '@/lib/api/amenity.api'
+import { useAmenities } from '@/hooks/useAmenity'
 import { RoomTypeResponse, RoomImageResponse } from '@/types/room.types'
+import { RoomTypeAmenityResponse } from '@/types/amenity.types'
 import toast from 'react-hot-toast'
 import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
 import { useOwnerHotel } from '../../owner-hotel-context'
+import { RoomImageModal } from './RoomImageModal'
+
 
 type ApiError = { response?: { data?: { message?: string } } }
 
@@ -41,28 +46,20 @@ export default function OwnerRoomsPage() {
   const qc = useQueryClient()
   const [modalRoom, setModalRoom] = useState<RoomTypeResponse | null | 'new'>(null)
   const [imageRoom, setImageRoom] = useState<RoomTypeResponse | null>(null)
+  const [amenityRoom, setAmenityRoom] = useState<RoomTypeResponse | null>(null)
 
-  // 1. Lấy thông tin khách sạn đang được chọn từ Context toàn cục
   const { activeHotel, activeHotelId, isLoading: isHotelLoading } = useOwnerHotel()
 
-  // 2. Lấy danh sách room types dựa trên activeHotelId từ Context
   const { data: allRooms = [], isLoading: isRoomsLoading } = useQuery({
     queryKey: ['owner-rooms', activeHotelId],
     queryFn: async () => {
-      // 1. Kiểm tra nếu chưa có ID thì trả về mảng rỗng ngay lập tức
-      if (!activeHotelId) return [];
-
-      // 2. Lúc này TypeScript hiểu activeHotelId chắc chắn là number
-      const r = await roomApi.getByHotelId(activeHotelId);
-      return r.data;
+      if (!activeHotelId) return []
+      const r = await roomApi.getByHotelId(activeHotelId)
+      return r.data
     },
-    // Giữ nguyên enabled để query không tự chạy khi chưa có ID
     enabled: !!activeHotelId,
   })
 
-
-
-  // 3. Xử lý xóa phòng
   const deleteMutation = useMutation({
     mutationFn: (id: number) => roomApi.delete(id),
     onSuccess: () => {
@@ -81,7 +78,6 @@ export default function OwnerRoomsPage() {
     }
   }
 
-  // Loading tổng hợp
   if (isHotelLoading) {
     return (
       <div className="flex items-center justify-center py-20 text-gray-400">
@@ -90,7 +86,6 @@ export default function OwnerRoomsPage() {
     )
   }
 
-  // Trường hợp owner chưa có khách sạn nào
   if (!activeHotel) {
     return (
       <div className="flex items-center justify-center py-20 text-gray-400">
@@ -99,15 +94,11 @@ export default function OwnerRoomsPage() {
     )
   }
 
-  // Gán biến hotel bằng activeHotel để các phần code bên dưới (phần return) không bị lỗi reference
-  const hotel = activeHotel;
-  const isLoading = isRoomsLoading;
-
-
+  const hotel = activeHotel
+  const isLoading = isRoomsLoading
 
   return (
     <div className="space-y-5">
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -144,6 +135,7 @@ export default function OwnerRoomsPage() {
               onEdit={() => setModalRoom(room)}
               onDelete={() => handleDelete(room)}
               onManageImages={() => setImageRoom(room)}
+              onManageAmenities={() => setAmenityRoom(room)}
               isDeleting={deleteMutation.isPending}
             />
           ))}
@@ -164,28 +156,36 @@ export default function OwnerRoomsPage() {
       {imageRoom && (
         <RoomImageModal
           room={imageRoom}
-          qc={qc}
           onClose={() => setImageRoom(null)}
         />
       )}
 
+      {/* ── Amenity Modal (NEW) ── */}
+      {amenityRoom && (
+        <RoomTypeAmenityModal
+          room={amenityRoom}
+          qc={qc}
+          onClose={() => setAmenityRoom(null)}
+        />
+      )}
     </div>
   )
 }
 
 // ─── Room Card ────────────────────────────────────────────
-function RoomCard({ room, onEdit, onDelete, onManageImages, isDeleting }: {
+function RoomCard({ room, onEdit, onDelete, onManageImages, onManageAmenities, isDeleting }: {
   room: RoomTypeResponse
   onEdit: () => void
   onDelete: () => void
   onManageImages: () => void
+  onManageAmenities: () => void
   isDeleting: boolean
 }) {
-  const displayImage = room.thumbnailUrl || room.images?.find(i => i.isPrimary)?.imageUrl;
+  const displayImage = room.thumbnailUrl || room.images?.find(i => i.isPrimary)?.imageUrl
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all group flex flex-col">
-      {/* ── Phần ảnh (Giống Home) ── */}
+      {/* ── Ảnh ── */}
       <div
         className="relative h-48 bg-gray-100 overflow-hidden cursor-pointer"
         onClick={onManageImages}
@@ -203,21 +203,16 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, isDeleting }: {
           </div>
         )}
 
-        {/* Badge số lượng ảnh (Overlay) */}
-        {/* <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-lg text-[10px] font-medium flex items-center gap-1">
-          <Upload size={10} /> {room.images?.length || 0} ảnh
-        </div> */}
-
-        {/* Nút thao tác nhanh khi hover */}
+        {/* Action buttons on hover */}
         <div className="absolute top-3 right-3 flex gap-2 translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
           <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            onClick={(e) => { e.stopPropagation(); onEdit() }}
             className="p-2 bg-white/90 hover:bg-white text-blue-600 rounded-full shadow-sm"
           >
             <Pencil size={14} />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            onClick={(e) => { e.stopPropagation(); onDelete() }}
             disabled={isDeleting}
             className="p-2 bg-white/90 hover:bg-red-50 text-red-600 rounded-full shadow-sm disabled:opacity-50"
           >
@@ -226,7 +221,7 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, isDeleting }: {
         </div>
       </div>
 
-      {/* ── Phần nội dung ── */}
+      {/* ── Nội dung ── */}
       <div className="p-4 flex-1 flex flex-col">
         <div className="mb-2">
           <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">
@@ -237,13 +232,12 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, isDeleting }: {
           </p>
         </div>
 
-        {/* Tags tiện ích nhỏ */}
+        {/* Tags */}
         <div className="flex flex-wrap gap-3 py-3 border-y border-gray-50 my-2">
           <div className="flex items-center gap-1.5 text-xs text-gray-600">
             <Users size={13} className="text-gray-400" />
             <span>{room.maxAdults}L {room.maxChildren ? `, ${room.maxChildren}T` : ''}</span>
           </div>
-
           <div className="flex items-center gap-1.5 text-xs text-gray-600">
             <Maximize2 size={13} className="text-gray-400" />
             <span>{room.roomSize}m²</span>
@@ -254,7 +248,7 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, isDeleting }: {
           </div>
         </div>
 
-        {/* Giá và Nút chi tiết */}
+        {/* Giá + Actions */}
         <div className="mt-auto pt-2 flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Giá mỗi đêm</span>
@@ -262,11 +256,234 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, isDeleting }: {
               {Number(room.basePrice).toLocaleString('vi-VN')}₫
             </div>
           </div>
+
+          {/* ── 2 nút quản lý ── */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onManageAmenities}
+              className="flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-700 uppercase tracking-tighter border border-violet-200 hover:border-violet-400 rounded-lg px-2.5 py-1.5 bg-violet-50 hover:bg-violet-100 transition-all"
+            >
+              <Sparkles size={11} />
+              Tiện ích
+            </button>
+            <button
+              onClick={onManageImages}
+              className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-tighter border border-blue-200 hover:border-blue-400 rounded-lg px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 transition-all"
+            >
+              <Upload size={11} />
+              Ảnh
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Room Type Amenity Modal (NEW) ────────────────────────
+function RoomTypeAmenityModal({
+  room,
+  qc,
+  onClose,
+}: {
+  room: RoomTypeResponse
+  qc: QueryClient
+  onClose: () => void
+}) {
+  // Tất cả tiện ích hệ thống loại ROOM
+  const { data: allAmenities = [] } = useAmenities()
+  const roomAmenities = allAmenities.filter(a => a.type === 'ROOM')
+
+  // Tiện ích đã gắn với loại phòng này
+  const { data: linked = [], isLoading } = useQuery<RoomTypeAmenityResponse[]>({
+    queryKey: ['room-type-amenities', room.id],
+    queryFn: () => roomTypeAmenityApi.getByRoomType(room.id).then(r => r.data),
+  })
+
+  const linkedIds = new Set(linked.map(a => String(a.amenityId)))
+
+  const selectedAmenities = roomAmenities.filter(a => linkedIds.has(String(a.id)))
+  const availableAmenities = roomAmenities.filter(a => !linkedIds.has(String(a.id)))
+
+  // Thêm tiện ích
+  const addMutation = useMutation({
+    mutationFn: (amenityId: number) =>
+      roomTypeAmenityApi.create({ roomTypeId: room.id, amenityId, isFree: true }),
+    onSuccess: () => {
+      toast.success('Đã thêm tiện ích!')
+      qc.invalidateQueries({ queryKey: ['room-type-amenities', room.id] })
+    },
+    onError: (e: unknown) => {
+      const err = e as ApiError
+      toast.error(err?.response?.data?.message || 'Thêm thất bại!')
+    },
+  })
+
+  // Gỡ tiện ích
+  const removeMutation = useMutation({
+    mutationFn: (amenityId: number) =>
+      roomTypeAmenityApi.delete(room.id, amenityId),
+    onSuccess: () => {
+      toast.success('Đã gỡ tiện ích!')
+      qc.invalidateQueries({ queryKey: ['room-type-amenities', room.id] })
+    },
+    onError: (e: unknown) => {
+      const err = e as ApiError
+      toast.error(err?.response?.data?.message || 'Gỡ thất bại!')
+    },
+  })
+
+  const isMutating = addMutation.isPending || removeMutation.isPending
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
+              <Sparkles size={16} className="text-violet-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Tiện ích loại phòng</h2>
+              <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{room.typeName}</p>
+            </div>
+          </div>
           <button
-            onClick={onManageImages}
-            className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-tighter flex items-center gap-1"
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors"
           >
-            Quản lý ảnh <ChevronRight size={12} />
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* ── Scrollable Body ── */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
+              <Loader2 size={18} className="animate-spin" />
+              <span className="text-sm">Đang tải...</span>
+            </div>
+          ) : (
+            <>
+              {/* ── Tiện ích ĐANG CÓ ── */}
+              <div className="rounded-2xl border-2 border-violet-400 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-violet-50 border-b border-violet-100">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-violet-600" />
+                    <span className="text-sm font-bold text-violet-900">Đang áp dụng</span>
+                  </div>
+                  <span className="text-xs font-black text-white bg-violet-600 px-2.5 py-0.5 rounded-full">
+                    {selectedAmenities.length} tiện ích
+                  </span>
+                </div>
+
+                <div className="p-4">
+                  {selectedAmenities.length === 0 ? (
+                    <div className="py-8 text-center border-2 border-dashed border-gray-100 rounded-xl flex flex-col items-center gap-2 bg-gray-50">
+                      <Sparkles className="text-gray-200" size={28} />
+                      <p className="text-sm text-gray-400">Chưa có tiện ích nào cho loại phòng này</p>
+                      <p className="text-xs text-gray-300">Thêm từ kho bên dưới</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {selectedAmenities.map(a => (
+                        <div
+                          key={a.id}
+                          className="flex items-center justify-between p-3 bg-white border border-violet-100 rounded-xl shadow-sm hover:shadow-md transition-all group ring-1 ring-violet-50"
+                        >
+                          <div className="flex items-center gap-2.5 overflow-hidden">
+                            <div className="w-9 h-9 bg-violet-600 rounded-xl flex items-center justify-center shrink-0 text-white">
+                              {a.iconUrl
+                                ? <img src={a.iconUrl} alt="" className="w-5 h-5 object-contain" />
+                                : <Sparkles size={14} />
+                              }
+                            </div>
+                            <span className="font-semibold text-gray-800 text-sm truncate">{a.amenityName}</span>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              if (confirm(`Gỡ "${a.amenityName}" khỏi loại phòng này?`)) {
+                                removeMutation.mutate(a.id)
+                              }
+                            }}
+                            disabled={isMutating}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all text-xs font-bold border border-red-100 shrink-0 ml-2"
+                          >
+                            {removeMutation.isPending
+                              ? <Loader2 size={11} className="animate-spin" />
+                              : <Trash2 size={11} />
+                            }
+                            Gỡ
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Kho tiện ích ── */}
+              <div className="rounded-2xl border border-gray-200 overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <Settings2 size={14} className="text-gray-400" />
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      Kho tiện ích phòng — Nhấn để thêm
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-4">
+                  {availableAmenities.length === 0 ? (
+                    <div className="text-center py-5 text-gray-400 text-sm italic">
+                      Đã thêm tất cả tiện ích phòng có sẵn ✓
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                      {availableAmenities.map(a => (
+                        <button
+                          key={a.id}
+                          onClick={() => addMutation.mutate(a.id)}
+                          disabled={isMutating}
+                          className="flex flex-col items-center gap-2 p-3.5 rounded-xl border border-gray-100 bg-white hover:border-violet-400 hover:bg-violet-50/40 transition-all group relative active:scale-95 disabled:opacity-50"
+                        >
+                          <div className="w-9 h-9 rounded-xl bg-gray-50 group-hover:bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
+                            {a.iconUrl ? (
+                              <img src={a.iconUrl} alt="" className="w-5 h-5 object-contain grayscale group-hover:grayscale-0" />
+                            ) : (
+                              <Sparkles size={14} className="text-gray-300 group-hover:text-violet-500" />
+                            )}
+                          </div>
+                          <span className="text-[10px] font-bold text-gray-500 group-hover:text-violet-700 uppercase text-center line-clamp-2 leading-tight">
+                            {a.amenityName}
+                          </span>
+                          <div className="px-2 py-0.5 bg-gray-100 group-hover:bg-violet-600 group-hover:text-white rounded text-[9px] font-black text-gray-400 transition-colors uppercase">
+                            {addMutation.isPending ? '...' : '+ Thêm'}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Footer ── */}
+        <div className="px-6 py-3 border-t border-gray-100 bg-gray-50/60 flex items-center justify-between shrink-0">
+          <p className="text-xs text-gray-400">
+            {selectedAmenities.length}/{roomAmenities.length} tiện ích đã chọn
+          </p>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            Đóng
           </button>
         </div>
       </div>
@@ -286,8 +503,6 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
   const saveMutation = useMutation({
     mutationFn: (data: RoomForm) => {
       const req = { ...data, hotelId }
-      console.log('hotelId prop:', hotelId)
-      console.log('Sending request:', req)
       return isEdit
         ? roomApi.update(room.id, req)
         : roomApi.create(req)
@@ -299,7 +514,6 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
     },
     onError: (e: unknown) => {
       const err = e as ApiError
-      console.log('Backend error:', JSON.stringify(err?.response?.data))
       toast.error(err?.response?.data?.message || 'Thất bại!')
     },
   })
@@ -322,7 +536,6 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
 
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-base font-semibold text-gray-900">
             {isEdit ? `Sửa: ${room.typeName}` : 'Thêm loại phòng mới'}
@@ -333,7 +546,6 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
         </div>
 
         <form onSubmit={handleSubmit(d => saveMutation.mutate(d))} className="px-6 py-5 space-y-4">
-
           <div>
             <label className={labelClass}>Tên loại phòng <span className="text-red-500">*</span></label>
             <input {...register('typeName')} className={inputClass} placeholder="VD: Deluxe Double, Superior Twin..." />
@@ -407,111 +619,3 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
   )
 }
 
-// ─── Room Image Modal ─────────────────────────────────────
-function RoomImageModal({ room, qc, onClose }: {
-  room: RoomTypeResponse
-  qc: QueryClient
-  onClose: () => void
-}) {
-  const [uploading, setUploading] = useState(false)
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? [])
-    if (!files.length) return
-    setUploading(true)
-    try {
-      const form = new FormData()
-      form.append('roomTypeId', String(room.id))
-      files.forEach(f => form.append('files', f))
-      await axiosInstance.post(API_CONFIG.ENDPOINTS.ROOM_IMAGES_UPLOAD, form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      toast.success('Upload ảnh thành công!')
-      qc.invalidateQueries({ queryKey: ['owner-rooms'] })
-    } catch {
-      toast.error('Upload thất bại!')
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const handleDelete = async (publicId: string) => {
-    if (!confirm('Xoá ảnh này?')) return
-    try {
-      await axiosInstance.delete(API_CONFIG.ENDPOINTS.ROOM_IMAGES_DELETE, {
-        params: { publicId }
-      })
-      toast.success('Đã xoá ảnh!')
-      qc.invalidateQueries({ queryKey: ['owner-rooms'] })
-    } catch {
-      toast.error('Xoá thất bại!')
-    }
-  }
-
-  const handleSetPrimary = async (id: number) => {
-    try {
-      await axiosInstance.put(API_CONFIG.ENDPOINTS.ROOM_IMAGE_SET_PRIMARY(id))
-      toast.success('Đã đặt làm ảnh chính!')
-      qc.invalidateQueries({ queryKey: ['owner-rooms'] })
-    } catch {
-      toast.error('Thất bại!')
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">Ảnh phòng: {room.typeName}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{room.images?.length ?? 0} ảnh</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className={`flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer transition-colors ${uploading ? 'opacity-60 pointer-events-none' : ''}`}>
-              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              Upload
-              <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload} />
-            </label>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6">
-          {!room.images?.length ? (
-            <div className="border-2 border-dashed border-gray-200 rounded-xl py-12 text-center text-gray-400 text-sm">
-              Chưa có ảnh nào
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3">
-              {room.images.map((img: RoomImageResponse) => (
-                <div key={img.id} className="relative group rounded-xl overflow-hidden aspect-square border border-gray-200">
-                  <img src={img.imageUrl} alt="" className="w-full h-full object-cover" />
-                  {img.isPrimary && (
-                    <div className="absolute top-1.5 left-1.5 bg-yellow-500 text-white text-xs px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                      <Star size={9} fill="white" /> Chính
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    {!img.isPrimary && (
-                      <button onClick={() => handleSetPrimary(img.id)}
-                        className="p-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">
-                        <Star size={13} />
-                      </button>
-                    )}
-                    <button onClick={() => handleDelete(String(img.id))}
-                      className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}

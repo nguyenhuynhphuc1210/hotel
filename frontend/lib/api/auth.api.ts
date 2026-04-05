@@ -10,14 +10,20 @@ const authApi = {
   register: (data: RegisterRequest) =>
     axiosInstance.post(API_CONFIG.ENDPOINTS.REGISTER, data),
 
-  // POST /api/auth/logout (chỉ xoá token phía FE, BE stateless)
+  forgotPassword: (email: string) =>
+    axiosInstance.post(API_CONFIG.ENDPOINTS.FORGOT_PASSWORD, { email }),
+
+  verifyOtp: (email: string, otp: string) =>
+    axiosInstance.post(API_CONFIG.ENDPOINTS.VERIFY_OTP, { email, otp }),
+
+  resetPassword: (email: string, otp: string, newPassword: string) =>
+    axiosInstance.post(API_CONFIG.ENDPOINTS.RESET_PASSWORD, { email, otp, newPassword }),
+
   logout: () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('user')
     window.location.href = '/login'
   },
-
-  
 
 }
 

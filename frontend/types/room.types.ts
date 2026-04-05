@@ -2,6 +2,7 @@ export interface RoomImageResponse {
   id: number
   imageUrl: string
   isPrimary: boolean
+  publicId: string
 }
 
 export interface RoomTypeResponse {

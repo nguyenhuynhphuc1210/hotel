@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import amenityApi, { hotelAmenityApi } from '@/lib/api/amenity.api'
-import { AmenityRequest, HotelAmenityRequest } from '@/types/amenity.types'
+import amenityApi, { hotelAmenityApi, roomTypeAmenityApi  } from '@/lib/api/amenity.api'
+import { AmenityRequest, HotelAmenityRequest, RoomTypeAmenityRequest  } from '@/types/amenity.types'
 import toast from 'react-hot-toast'
 
 const KEY = 'amenities'
 const HOTEL_AMENITY_KEY = 'hotel-amenities'
-
+const ROOM_TYPE_AMENITY_KEY = 'room-type-amenities'
 // ─── Amenity ───────────────────────────────────────────
 
 export const useAmenities = () =>
@@ -113,3 +113,59 @@ export const useDeleteHotelAmenity = () => {
     },
   })
 }
+
+// ─── Room Type Amenity ──────────────────────────────────
+
+export const useRoomTypeAmenities = (roomTypeId: number | string) =>
+  useQuery({
+    queryKey: [ROOM_TYPE_AMENITY_KEY, roomTypeId],
+    queryFn: () => roomTypeAmenityApi.getByRoomType(roomTypeId).then(r => r.data),
+    enabled: !!roomTypeId,
+  })
+
+export const useCreateRoomTypeAmenity = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: RoomTypeAmenityRequest) => roomTypeAmenityApi.create(data),
+    onSuccess: (_, vars) => {
+      toast.success('Đã thêm tiện ích cho loại phòng!')
+      qc.invalidateQueries({ queryKey: [ROOM_TYPE_AMENITY_KEY, vars.roomTypeId] })
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { message?: string } } }
+      toast.error(e?.response?.data?.message || 'Thêm thất bại!')
+    },
+  })
+}
+
+export const useUpdateRoomTypeAmenity = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: RoomTypeAmenityRequest) => roomTypeAmenityApi.update(data),
+    onSuccess: (_, vars) => {
+      toast.success('Cập nhật tiện ích phòng thành công!')
+      qc.invalidateQueries({ queryKey: [ROOM_TYPE_AMENITY_KEY, vars.roomTypeId] })
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { message?: string } } }
+      toast.error(e?.response?.data?.message || 'Cập nhật thất bại!')
+    },
+  })
+}
+
+export const useDeleteRoomTypeAmenity = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ roomTypeId, amenityId }: { roomTypeId: number; amenityId: number }) =>
+      roomTypeAmenityApi.delete(roomTypeId, amenityId),
+    onSuccess: (_, vars) => {
+      toast.success('Đã xoá tiện ích khỏi loại phòng!')
+      qc.invalidateQueries({ queryKey: [ROOM_TYPE_AMENITY_KEY, vars.roomTypeId] })
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { message?: string } } }
+      toast.error(e?.response?.data?.message || 'Xoá thất bại!')
+    },
+  })
+}
+

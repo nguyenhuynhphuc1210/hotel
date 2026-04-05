@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Hotel, CalendarCheck, Users, LogOut, ChevronRight, Sparkles } from 'lucide-react'
+import { LayoutDashboard, Hotel, CalendarCheck, Users, LogOut, ChevronRight, Sparkles, Star } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/admin/bookings', label: 'Đặt phòng',    icon: CalendarCheck },
   { href: '/admin/users',    label: 'Người dùng',   icon: Users },
   { href: '/admin/amenities', label: 'Tiện ích', icon: Sparkles },
+  { href: '/admin/reviews', label: 'Đánh giá', icon: Star },
 ]
 
 function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -35,6 +35,16 @@ const reviewApi = {
    */
   delete: (id: number | string) =>
     axiosInstance.delete(API_CONFIG.ENDPOINTS.REVIEW_BY_ID(id)),
+
+  toggleVisibility: (id: number | string) =>
+    axiosInstance.patch<ReviewResponse>(`${API_CONFIG.ENDPOINTS.REVIEWS}/${id}/toggle-visibility`),
+
+  // GET /api/reviews/hotel/:hotelId/admin
+  getAdminReviewsByHotel: (hotelId: number | string, page = 0, size = 10) =>
+    axiosInstance.get<{ content: ReviewResponse[], totalElements: number }>(
+      `/api/reviews/hotel/${hotelId}/admin`,
+      { params: { page, size } }
+    ),
 }
 
 export default reviewApi

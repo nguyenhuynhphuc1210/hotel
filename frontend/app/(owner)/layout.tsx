@@ -10,7 +10,7 @@ import {
   Building2,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { useLogout } from '@/hooks/useLogout'
+import { useRouter } from 'next/navigation'
 import { OwnerHotelProvider, useOwnerHotel } from './owner-hotel-context'
 
 const navItems = [
@@ -27,8 +27,13 @@ const navItems = [
 // Component nội dung Layout để có thể dùng được Hook từ Context
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { user } = useAuthStore()
-  const { logout } = useLogout()
+  const router = useRouter()
+  const { user, clearAuth } = useAuthStore()
+
+  const handleLogout = () => {
+    clearAuth()
+    router.push('/admin/login')
+  }
 
   // Lấy dữ liệu khách sạn từ Context toàn cục
   const { hotels, activeHotelId, setActiveHotelId, isLoading } = useOwnerHotel()
@@ -73,7 +78,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               <div className="text-xs text-gray-400 truncate">{user?.email ?? ''}</div>
             </div>
           </div>
-          <button onClick={() => logout()}
+          <button  onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
             <LogOut size={17} />Đăng xuất
           </button>

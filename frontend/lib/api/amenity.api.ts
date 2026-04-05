@@ -1,6 +1,10 @@
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
-import { AmenityResponse, AmenityRequest, HotelAmenityResponse, HotelAmenityRequest } from '@/types/amenity.types'
+import { 
+  AmenityResponse, AmenityRequest, 
+  HotelAmenityResponse, HotelAmenityRequest,
+  RoomTypeAmenityResponse, RoomTypeAmenityRequest 
+} from '@/types/amenity.types'
 
 const amenityApi = {
   // GET /api/amenities
@@ -44,6 +48,28 @@ export const hotelAmenityApi = {
   // DELETE /api/hotel-amenities/:hotelId/:amenityId
   delete: (hotelId: number | string, amenityId: number | string) =>
     axiosInstance.delete(API_CONFIG.ENDPOINTS.HOTEL_AMENITY_BY_ID(hotelId, amenityId)),
+}
+
+export const roomTypeAmenityApi = {
+  // GET /api/room-type-amenities
+  getAll: () =>
+    axiosInstance.get<RoomTypeAmenityResponse[]>(API_CONFIG.ENDPOINTS.ROOM_TYPE_AMENITIES),
+
+  // GET /api/room-type-amenities/room-type/:roomTypeId
+  getByRoomType: (roomTypeId: number | string) =>
+    axiosInstance.get<RoomTypeAmenityResponse[]>(API_CONFIG.ENDPOINTS.ROOM_TYPE_AMENITIES_BY_ROOM_TYPE(roomTypeId)),
+
+  // POST /api/room-type-amenities
+  create: (data: RoomTypeAmenityRequest) =>
+    axiosInstance.post<RoomTypeAmenityResponse>(API_CONFIG.ENDPOINTS.ROOM_TYPE_AMENITIES, data),
+
+  // PUT /api/room-type-amenities
+  update: (data: RoomTypeAmenityRequest) =>
+    axiosInstance.put<RoomTypeAmenityResponse>(API_CONFIG.ENDPOINTS.ROOM_TYPE_AMENITIES, data),
+
+  // DELETE /api/room-type-amenities/:roomTypeId/:amenityId
+  delete: (roomTypeId: number | string, amenityId: number | string) =>
+    axiosInstance.delete(API_CONFIG.ENDPOINTS.ROOM_TYPE_AMENITY_BY_ID(roomTypeId, amenityId)),
 }
 
 export default amenityApi

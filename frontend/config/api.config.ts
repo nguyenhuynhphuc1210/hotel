@@ -5,6 +5,9 @@ const API_CONFIG = {
     // Auth
     LOGIN: '/api/auth/login',
     REGISTER: '/api/auth/register',
+    FORGOT_PASSWORD: '/api/auth/forgot-password',
+    VERIFY_OTP: '/api/auth/verify-otp',
+    RESET_PASSWORD: '/api/auth/reset-password',
 
     // Hotels
     HOTELS: '/api/hotels',
@@ -62,6 +65,11 @@ const API_CONFIG = {
     ROOM_IMAGES_UPLOAD: '/api/room-images/upload',
     ROOM_IMAGES_DELETE: '/api/room-images/delete',
     ROOM_IMAGE_SET_PRIMARY: (id: number | string) => `/api/room-images/${id}/set-primary`,
+
+    // Room Type Amenities
+    ROOM_TYPE_AMENITIES: '/api/room-type-amenities',
+    ROOM_TYPE_AMENITIES_BY_ROOM_TYPE: (roomTypeId: number | string) => `/api/room-type-amenities/room-type/${roomTypeId}`,
+    ROOM_TYPE_AMENITY_BY_ID: (roomTypeId: number | string, amenityId: number | string) => `/api/room-type-amenities/${roomTypeId}/${amenityId}`,
 
   },
 }

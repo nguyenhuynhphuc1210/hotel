@@ -5,9 +5,9 @@ import { useQuery, useMutation, useQueryClient, QueryClient } from '@tanstack/re
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { 
-  Save, Loader2, Upload, Trash2, Star, Hotel, 
-  Shield, Sparkles, Link as LinkIcon, Plus , CheckCircle2, X
+import {
+  Save, Loader2, Upload, Trash2, Star, Hotel,
+  Shield, Sparkles, Link as LinkIcon, Plus, CheckCircle2, X
 } from 'lucide-react'
 import hotelApi, { HotelResponse, HotelImageResponse } from '@/lib/api/hotel.api'
 import policyApi from '@/lib/api/policy.api'
@@ -88,9 +88,9 @@ export default function OwnerHotelPage() {
         ))}
       </div>
 
-      {tab === 'info' && <InfoTab hotel={hotel} qc={qc} />}
-      {tab === 'policy' && <PolicyTab hotel={hotel} qc={qc} />}
-      {tab === 'amenity' && <AmenityTab hotel={hotel} qc={qc} />}
+      {tab === 'info' && <InfoTab key={activeHotel.id} hotel={activeHotel} qc={qc} />}
+      {tab === 'policy' && <PolicyTab key={activeHotel.id} hotel={activeHotel} qc={qc} />}
+      {tab === 'amenity' && <AmenityTab key={activeHotel.id} hotel={activeHotel} qc={qc} />}
     </div>
   )
 }
@@ -202,7 +202,7 @@ function ImageSection({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) 
   const [uploading, setUploading] = useState(false)
   const [urlInput, setUrlInput] = useState('')
 
-  
+
 
   // Mutation: Upload file
   const uploadMutation = useMutation({
@@ -267,21 +267,21 @@ function ImageSection({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) 
     <div className="bg-white rounded-xl border border-gray-200 p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <h2 className="text-sm font-semibold text-gray-900">Ảnh khách sạn</h2>
-        
+
         <div className="flex flex-wrap items-center gap-3">
           {/* Nhập URL */}
           <div className="relative flex items-center min-w-[280px]">
             <div className="absolute left-3 text-gray-400">
               <LinkIcon size={14} />
             </div>
-            <input 
-              type="text" 
-              placeholder="Dán URL ảnh vào đây..." 
+            <input
+              type="text"
+              placeholder="Dán URL ảnh vào đây..."
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               className="pl-9 pr-20 w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button 
+            <button
               onClick={handleAddByUrl}
               disabled={isProcessing || !urlInput.trim()}
               className="absolute right-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold uppercase hover:bg-blue-100 disabled:opacity-50 transition-colors"
@@ -483,14 +483,14 @@ export function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClien
   // CHÍNH SỬA LOGIC: Lấy danh sách ID đã chọn 
   // Sử dụng ép kiểu (cast) sang ExtendedHotelAmenity để tránh lỗi 'any' mà vẫn đọc được amenity_id
   const linkedIds = new Set(
-    (hotelAmenities as ExtendedHotelAmenity[]).map((a) => 
+    (hotelAmenities as ExtendedHotelAmenity[]).map((a) =>
       String(a.amenityId || a.amenity_id)
     )
   );
 
   // Lọc ra các tiện ích ĐANG CÓ (nằm trong bảng trung gian)
   const selectedAmenities = allAmenities.filter(a => linkedIds.has(String(a.id)))
-  
+
   // Lọc ra các tiện ích CHƯA CÓ (để hiển thị ở kho thêm mới)
   const availableAmenities = allAmenities.filter(a => !linkedIds.has(String(a.id)))
 
@@ -505,7 +505,7 @@ export function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClien
 
   return (
     <div className="space-y-6">
-      
+
       {/* ── PHẦN 1: TIỆN ÍCH ĐANG CÓ (Danh sách xanh) ── */}
       <div className="bg-white rounded-2xl border-2 border-blue-500 shadow-md overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-blue-100 bg-blue-50">
@@ -538,7 +538,7 @@ export function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClien
 
                   <button
                     onClick={() => {
-                      if(confirm(`Gỡ bỏ "${a.amenityName}" khỏi danh sách dịch vụ khách sạn?`)) {
+                      if (confirm(`Gỡ bỏ "${a.amenityName}" khỏi danh sách dịch vụ khách sạn?`)) {
                         deleteMutation.mutate(a.id)
                       }
                     }}
@@ -584,7 +584,7 @@ export function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClien
                   </div>
                   <span className="text-[10px] font-bold text-gray-500 group-hover:text-blue-700 uppercase text-center line-clamp-1">{a.amenityName}</span>
                   <div className="mt-1 px-2 py-0.5 bg-gray-100 rounded text-[8px] font-black text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                     {addMutation.isPending ? '...' : '+ THÊM'}
+                    {addMutation.isPending ? '...' : '+ THÊM'}
                   </div>
                 </button>
               ))}
