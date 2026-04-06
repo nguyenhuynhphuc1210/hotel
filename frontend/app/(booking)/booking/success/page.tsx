@@ -6,7 +6,7 @@ import { CheckCircle2 } from 'lucide-react'
 export default function BookingSuccessPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const bookingId = searchParams.get('bookingId')
+    const bookingCode = searchParams.get('bookingCode')
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -16,7 +16,7 @@ export default function BookingSuccessPage() {
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Đặt phòng thành công!</h1>
                 <p className="text-gray-500 text-sm mb-6">
-                    Mã đặt phòng của bạn: <span className="font-bold text-blue-600">#{bookingId}</span>
+                    Mã đặt phòng của bạn: <span className="font-bold text-blue-600">#{bookingCode}</span>
                 </p>
                 <div className="flex gap-3">
                     <button onClick={() => router.push('/profile')}

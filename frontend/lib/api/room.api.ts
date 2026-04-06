@@ -20,6 +20,8 @@ const roomApi = {
 
   delete: (id: number | string) =>
     axiosInstance.delete(API_CONFIG.ENDPOINTS.ROOM_TYPE_BY_ID(id)),
+
+  
 }
 
 export default roomApi

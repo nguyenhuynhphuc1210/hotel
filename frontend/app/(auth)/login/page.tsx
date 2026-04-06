@@ -85,7 +85,7 @@ export default function LoginPage() {
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
                             <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
-                            <a href="/forgot-password" className="text-xs text-[#1A56DB] hover:underline">Quên mật khẩu?</a>
+                            
                         </div>
                         <div className="relative">
                             <input
@@ -108,6 +108,7 @@ export default function LoginPage() {
                                 {errors.password.message}
                             </p>
                         )}
+                        <a href="/forgot-password" className="text-xs text-[#1A56DB] hover:underline">Quên mật khẩu?</a>
                     </div>
 
                     {/* Submit */}

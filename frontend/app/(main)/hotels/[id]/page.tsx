@@ -19,6 +19,8 @@ import { useAuthStore } from '@/store/authStore'
 import bookingApi from '@/lib/api/booking.api'
 import { ReviewResponse } from '@/types/review.types'
 import toast from 'react-hot-toast'
+import HotelGallery from '@/components/layout/HotelGallery'
+
 
 type RoomPriceMap = Record<number, number | null>
 
@@ -171,26 +173,14 @@ export default function HotelDetailPage() {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 py-6">
-                {/* Gallery */}
-                <div className="grid grid-cols-4 grid-rows-2 gap-2 h-[450px] rounded-xl overflow-hidden mb-8 shadow-sm">
-                    <div className="col-span-2 row-span-2 relative group cursor-pointer bg-gray-200">
-                        {mainImage && <img src={mainImage} className="w-full h-full object-cover" alt="Main" />}
-                    </div>
-                    {subImages.map((img, idx) => (
-                        <div key={idx} className="relative group cursor-pointer bg-gray-200">
-                            <img src={img.imageUrl} className="w-full h-full object-cover" alt={`Sub ${idx}`} />
-                            {idx === 3 && images.length > 5 && (
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white font-bold text-lg">
-                                    + {images.length - 5} ảnh
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                {/* Gallery */}               
+                <div className="mb-8">
+                    <HotelGallery images={hotel.images || []} />
                 </div>
 
                 <div className="grid grid-cols-12 gap-8">
                     <div className="col-span-8 space-y-8">
-                        {/* Hotel Info */}
+                        {/* 1. Hotel Info (Name, Address, Stars) */}
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Khách sạn</span>
@@ -207,7 +197,20 @@ export default function HotelDetailPage() {
                             </div>
                         </div>
 
-                        {/* Tiện ích */}
+                        {/* 2. MÔ TẢ KHÁCH SẠN (Description) - PHẦN MỚI THÊM */}
+                        {hotel.description && (
+                            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-gray-900">
+                                    <Info size={20} className="text-blue-500" />
+                                    Giới thiệu về chỗ nghỉ
+                                </h3>
+                                <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                                    {hotel.description}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3. Tiện ích */}
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                             <h3 className="font-bold text-lg mb-6">Tiện ích tại chỗ nghỉ</h3>
                             <div className="grid grid-cols-4 gap-4">
@@ -226,7 +229,7 @@ export default function HotelDetailPage() {
                             </div>
                         </div>
 
-                        {/* Chọn phòng */}
+                        {/* 4. Chọn phòng */}
                         <div id="rooms" className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-xl font-bold text-gray-900">Chọn phòng</h3>
@@ -317,7 +320,7 @@ export default function HotelDetailPage() {
                             )}
                         </div>
 
-                        {/* ── SECTION ĐÁNH GIÁ ── */}
+                        {/* 5. SECTION ĐÁNH GIÁ  */}
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">

@@ -105,7 +105,7 @@ export default function BookingPage() {
                 window.location.assign(paymentUrl)
             } else {
                 toast.success('Đặt phòng thành công!')
-                router.push(`/booking/success?bookingId=${res.data.id}`)
+                router.push(`/booking/success?bookingCode=${res.data.bookingCode}`)
             }
         } catch (err) {
             const error = err as AxiosError<{ message: string, errors: Record<string, string> }>
@@ -277,9 +277,8 @@ export default function BookingPage() {
                                                 {...register('paymentMethod')}
                                                 className="hidden"
                                             />
-                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                                                opt.value === 'VNPAY' ? 'bg-blue-50' : 'bg-emerald-50'
-                                            }`}>
+                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${opt.value === 'VNPAY' ? 'bg-blue-50' : 'bg-emerald-50'
+                                                }`}>
                                                 {opt.icon}
                                             </div>
                                             <div className="flex-1">

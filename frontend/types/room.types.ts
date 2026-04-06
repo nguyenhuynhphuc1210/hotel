@@ -20,6 +20,8 @@ export interface RoomTypeResponse {
   isActive: boolean | null
   createdAt: string
   updatedAt: string
+  checkIn: string | null
+  checkOut: string | null
   thumbnailUrl?: string;
   images?: RoomImageResponse[]
 }
