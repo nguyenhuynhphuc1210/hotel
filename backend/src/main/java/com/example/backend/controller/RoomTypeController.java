@@ -57,4 +57,9 @@ public class RoomTypeController {
         roomTypeService.deleteRoomType(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<RoomTypeResponse> restoreRoomType(@PathVariable Long id) {
+        return ResponseEntity.ok(roomTypeService.restoreRoomType(id));
+    }
 }

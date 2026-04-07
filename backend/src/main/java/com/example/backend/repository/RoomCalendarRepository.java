@@ -36,6 +36,10 @@ public interface RoomCalendarRepository extends JpaRepository<RoomCalendar, Long
         @Query("UPDATE RoomCalendar c SET c.isAvailable = false WHERE c.roomType.id = :roomTypeId AND c.date >= CURRENT_DATE")
         void stopFutureSales(@Param("roomTypeId") Long roomTypeId);
 
+        @Modifying
+        @Query("UPDATE RoomCalendar c SET c.isAvailable = true WHERE c.roomType.id = :roomTypeId AND c.date >= :today")
+        void resumeFutureSales(@Param("roomTypeId") Long roomTypeId, @Param("today") LocalDate today);
+
         @Lock(LockModeType.PESSIMISTIC_WRITE)
         @Query("SELECT c FROM RoomCalendar c WHERE c.roomType.id = :roomTypeId AND c.date >= :startDate AND c.date <= :endDate")
         List<RoomCalendar> findAndLockByRoomType_IdAndDateBetween(

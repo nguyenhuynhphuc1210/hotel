@@ -30,8 +30,6 @@ public class UserRequest {
 
     private Gender gender;
 
-    private String avatarUrl;
-
     @NotNull(message = "Role ID không được để trống")
     private Long roleId;
 

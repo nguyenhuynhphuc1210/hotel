@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// Thêm các import chuẩn
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 
@@ -140,5 +139,22 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         roomTypeRepository.save(existing);
 
         roomCalendarService.deactivateFutureCalendar(id);
+    }
+
+    @Override
+    @Transactional
+    public RoomTypeResponse restoreRoomType(Long id) {
+        RoomType existing = roomTypeRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
+
+        checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
+
+        existing.setIsActive(true);
+        
+        RoomType savedRoomType = roomTypeRepository.save(existing);
+
+        roomCalendarService.reactivateFutureCalendar(id);
+
+        return roomTypeMapper.toRoomTypeResponse(savedRoomType);
     }
 }

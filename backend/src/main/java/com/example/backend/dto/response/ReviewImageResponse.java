@@ -1,14 +1,12 @@
 package com.example.backend.dto.response;
 
-import lombok.*;
+import lombok.Builder;
+import lombok.Data;
 
 @Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class HotelImageResponse {
+public class ReviewImageResponse {
     private Long id;
     private String imageUrl;
-    private Boolean isPrimary;
     private String publicId;
 }

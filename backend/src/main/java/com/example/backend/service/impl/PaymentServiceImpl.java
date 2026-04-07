@@ -78,5 +78,5 @@ public class PaymentServiceImpl implements PaymentService {
         if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
             throw new AccessDeniedException("Bạn không có quyền xem chi tiết giao dịch thanh toán này");
         }
-    }
+    }  
 }

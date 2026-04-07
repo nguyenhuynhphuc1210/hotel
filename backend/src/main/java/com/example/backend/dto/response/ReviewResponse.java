@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List; 
 
 @Data
 @Builder
@@ -20,4 +21,10 @@ public class ReviewResponse {
     private String comment;
     private Boolean isPublished;
     private LocalDateTime createdAt;
+
+    private String ownerReply;
+
+    private LocalDateTime replyDate;
+
+    private List<ReviewImageResponse> images;
 }

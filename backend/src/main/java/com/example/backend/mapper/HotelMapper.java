@@ -37,6 +37,7 @@ public class HotelMapper {
                 .email(req.getEmail())
                 .owner(owner)
                 .isActive(false)
+                .isDeleted(false)
                 .build();
     }
 
@@ -62,6 +63,7 @@ public class HotelMapper {
                 .ownerId(hotel.getOwner() != null ? hotel.getOwner().getId() : null)
                 .ownerName(hotel.getOwner() != null ? hotel.getOwner().getFullName() : null)
                 .isActive(hotel.getIsActive())
+                .isDeleted(hotel.getIsDeleted())
                 .createdAt(hotel.getCreatedAt())
                 .updatedAt(hotel.getUpdatedAt())
                 .images(imageResponses)
@@ -110,6 +112,7 @@ public class HotelMapper {
         return HotelAdminResponse.builder()
                 .id(hotel.getId())
                 .hotelName(hotel.getHotelName())
+                .description(hotel.getDescription())
                 .addressLine(hotel.getAddressLine())
                 .ward(hotel.getWard())
                 .district(hotel.getDistrict())
@@ -123,6 +126,7 @@ public class HotelMapper {
                 .ownerEmail(hotel.getOwner() != null ? hotel.getOwner().getEmail() : null)
 
                 .isActive(hotel.getIsActive())
+                .isDeleted(hotel.getIsDeleted())
                 .createdAt(hotel.getCreatedAt())
 
                 .thumbnailUrl(thumbnail)

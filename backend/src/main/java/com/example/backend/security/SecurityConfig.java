@@ -36,7 +36,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://192.168.*.*:3000"));
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:3000", "http://192.168.*.*:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -65,10 +65,10 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        
                         .requestMatchers(HttpMethod.GET, "/api/room-types").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/room-types/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/room-types").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/room-types/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/room-types/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/room-types/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
 
@@ -92,7 +92,8 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/room-type-amenities/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/room-type-amenities").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.PUT, "/api/room-type-amenities/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/room-type-amenities/**")
+                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/room-type-amenities/**")
                         .hasAnyRole("ADMIN", "HOTEL_OWNER")
 
@@ -106,7 +107,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/hotel-policies/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/hotel-policies/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
 
-                        
                         .requestMatchers(HttpMethod.POST, "/api/hotel-images/upload").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/hotel-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/hotel-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
@@ -127,6 +127,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/bookings/*/cancel").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/api/reviews").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/*/reply").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PATCH, "/api/reviews/*/toggle-visibility").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/reviews/hotel/*/public").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/hotel/*/admin")
@@ -134,6 +135,10 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/favorites/**").authenticated()
 
+                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/change-password").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/users/avatar").authenticated()
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/roles/**").hasRole("ADMIN")
 

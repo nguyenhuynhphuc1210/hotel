@@ -14,4 +14,5 @@ public interface RoomTypeService {
     RoomTypeResponse createRoomType(RoomTypeRequest request);
     RoomTypeResponse updateRoomType(Long id, RoomTypeRequest request);
     void deleteRoomType(Long id);
+    RoomTypeResponse restoreRoomType(Long id);
 }

@@ -58,6 +58,11 @@ public class HotelController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<HotelResponse> restoreHotel(@PathVariable Long id) {
+        return ResponseEntity.ok(hotelService.restoreHotel(id));
+    }
+
     @PatchMapping("/{id}/approve")
     public ResponseEntity<HotelResponse> approveHotel(@PathVariable Long id) {
         return ResponseEntity.ok(hotelService.approveHotel(id));

@@ -21,7 +21,6 @@ public class UserMapper {
                 .phone(req.getPhone())
                 .dateOfBirth(req.getDateOfBirth())
                 .gender(req.getGender())
-                .avatarUrl(req.getAvatarUrl())
                 .role(role)
                 .isActive(true)
                 .build();
@@ -37,7 +36,6 @@ public class UserMapper {
                 .phone(req.getPhone())
                 .dateOfBirth(req.getDateOfBirth())
                 .gender(req.getGender())
-                .avatarUrl(req.getAvatarUrl())
                 .role(role)
                 .isActive(true)
                 .build();
@@ -54,6 +52,7 @@ public class UserMapper {
                 .dateOfBirth(u.getDateOfBirth())
                 .gender(u.getGender())
                 .avatarUrl(u.getAvatarUrl())
+                .avatarPublicId(u.getAvatarPublicId())
                 .roleId(u.getRole() != null ? u.getRole().getId() : null)
                 .roleName(u.getRole() != null ? u.getRole().getRoleName() : null)
                 .isActive(u.getIsActive())

@@ -21,8 +21,6 @@ public class HotelImageMapper {
         if (image == null) return null;
         return HotelImageResponse.builder()
                 .id(image.getId())
-                .hotelId(image.getHotel() != null ? image.getHotel().getId() : null)
-                .hotelName(image.getHotel() != null ? image.getHotel().getHotelName() : null)
                 .imageUrl(image.getImageUrl())
                 .publicId(image.getPublicId())
                 .isPrimary(image.getIsPrimary())

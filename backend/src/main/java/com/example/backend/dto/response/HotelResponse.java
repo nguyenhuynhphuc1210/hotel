@@ -24,6 +24,7 @@ public class HotelResponse {
     private Long ownerId;
     private String ownerName;
     private Boolean isActive;
+    private Boolean isDeleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

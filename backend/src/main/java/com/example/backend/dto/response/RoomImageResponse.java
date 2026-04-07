@@ -8,8 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 public class RoomImageResponse {
     private Long id;
-    private Long roomTypeId;
-    private String roomTypeName;
     private String imageUrl;
     private Boolean isPrimary;
     private String publicId;

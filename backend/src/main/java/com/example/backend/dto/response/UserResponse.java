@@ -18,6 +18,7 @@ public class UserResponse {
     private LocalDate dateOfBirth;
     private Gender gender;
     private String avatarUrl;
+    private String avatarPublicId;
     private Long roleId;
     private String roleName;
     private Boolean isActive;

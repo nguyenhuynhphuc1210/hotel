@@ -43,6 +43,9 @@ public class User {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    @Column(name = "avatar_public_id")
+    private String avatarPublicId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
@@ -65,7 +68,8 @@ public class User {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        if (this.isActive == null) this.isActive = true;
+        if (this.isActive == null)
+            this.isActive = true;
     }
 
     @PreUpdate

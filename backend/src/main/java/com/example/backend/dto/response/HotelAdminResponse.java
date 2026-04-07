@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class HotelAdminResponse {
     private Long id;
     private String hotelName;
+    private String description;
     private String addressLine;
     private String ward;
     private String district;
@@ -24,6 +25,7 @@ public class HotelAdminResponse {
     private String ownerEmail;
 
     private Boolean isActive;
+    private Boolean isDeleted;
     private LocalDateTime createdAt;
 
     private String thumbnailUrl;

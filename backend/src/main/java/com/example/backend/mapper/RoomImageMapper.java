@@ -21,8 +21,6 @@ public class RoomImageMapper {
         if (roomImage == null) return null;
         return RoomImageResponse.builder()
                 .id(roomImage.getId())
-                .roomTypeId(roomImage.getRoomType() != null ? roomImage.getRoomType().getId() : null)
-                .roomTypeName(roomImage.getRoomType() != null ? roomImage.getRoomType().getTypeName() : null)
                 .imageUrl(roomImage.getImageUrl())
                 .publicId(roomImage.getPublicId())
                 .isPrimary(roomImage.getIsPrimary())

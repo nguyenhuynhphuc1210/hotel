@@ -16,6 +16,7 @@ public interface HotelService {
     HotelResponse createHotel(HotelRequest request);
     HotelResponse updateHotel(Long id, HotelRequest request);
     void deleteHotel(Long id);
+    HotelResponse restoreHotel(Long id);
     HotelResponse approveHotel(Long id);
     HotelResponse disableHotel(Long id);
     BigDecimal getMinPriceForHotel(Long hotelId, LocalDate checkIn, LocalDate checkOut);

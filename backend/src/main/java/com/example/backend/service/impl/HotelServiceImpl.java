@@ -43,6 +43,7 @@ public class HotelServiceImpl implements HotelService {
     public List<HotelSummaryResponse> getActiveHotels() {
         return hotelRepository.findByIsActiveTrue()
                 .stream()
+                .filter(hotel -> !hotel.getIsDeleted())
                 .map(hotelMapper::toHotelSummaryResponse)
                 .collect(Collectors.toList());
     }
@@ -144,7 +145,6 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional
     public void deleteHotel(Long id) {
-
         Hotel existing = hotelRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
 
@@ -152,7 +152,29 @@ public class HotelServiceImpl implements HotelService {
             throw new AccessDeniedException("Chỉ ADMIN mới được xoá khách sạn!");
         }
 
-        hotelRepository.delete(existing);
+        existing.setIsDeleted(true);
+        existing.setIsActive(false);
+
+        hotelRepository.save(existing);
+    }
+
+    @Override
+    @Transactional
+    public HotelResponse restoreHotel(Long id) {
+        Hotel hotel = hotelRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
+
+        if (!isAdmin()) {
+            throw new AccessDeniedException("Chỉ ADMIN mới được khôi phục khách sạn!");
+        }
+
+        if (!Boolean.TRUE.equals(hotel.getIsDeleted())) {
+            throw new IllegalArgumentException("Khách sạn này chưa bị xóa!");
+        }
+
+        hotel.setIsDeleted(false);
+
+        return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
     }
 
     @Override
@@ -216,6 +238,7 @@ public class HotelServiceImpl implements HotelService {
                             checkOut);
                     return availableDays >= days;
                 })
+                .filter(hotel -> !hotel.getIsDeleted())
                 .map(hotelMapper::toHotelSummaryResponse)
                 .collect(Collectors.toList());
     }

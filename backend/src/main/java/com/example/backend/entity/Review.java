@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "reviews")
@@ -36,12 +38,22 @@ public class Review {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
+    @Column(name = "owner_reply", columnDefinition = "TEXT")
+    private String ownerReply;
+
+    @Column(name = "reply_date")
+    private LocalDateTime replyDate;
+
     @Builder.Default
     @Column(name = "is_published", nullable = false)
     private Boolean isPublished = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ReviewImage> images = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

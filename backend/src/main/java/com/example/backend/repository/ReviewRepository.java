@@ -12,7 +12,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     @Query("""
-            SELECT AVG(r.rating)
+            SELECT COALESCE(AVG(r.rating), 0) 
             FROM Review r
             WHERE r.hotel.id = :hotelId
             AND r.isPublished = true

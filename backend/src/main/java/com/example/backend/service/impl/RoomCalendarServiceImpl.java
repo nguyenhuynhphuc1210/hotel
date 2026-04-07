@@ -73,6 +73,14 @@ public class RoomCalendarServiceImpl implements RoomCalendarService {
         roomCalendarRepository.stopFutureSales(roomTypeId);
     }
 
+    @Async
+    @Transactional
+    public void reactivateFutureCalendar(Long roomTypeId) {
+        LocalDate today = LocalDate.now();
+
+        roomCalendarRepository.resumeFutureSales(roomTypeId, today);
+    }
+
     @Transactional
     public void updateCalendarByDateRange(Long roomTypeId, UpdateCalendarRequest request) {
 
