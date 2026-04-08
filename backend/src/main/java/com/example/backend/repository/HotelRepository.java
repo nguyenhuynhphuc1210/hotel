@@ -5,10 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface HotelRepository extends JpaRepository<Hotel, Long> {
-    List<Hotel> findByIsActiveTrue();
+    List<Hotel> findByIsActiveTrueAndIsDeletedFalse();
 
-    List<Hotel> findByOwnerEmail(String email);
+    List<Hotel> findByOwnerEmailAndIsDeletedFalse(String email);
     
     boolean existsByEmail(String email);
+
+    List<Hotel> findByIsDeletedTrue();
+
+    List<Hotel> findByIsDeletedFalse();
 
 }

@@ -47,7 +47,7 @@ public class RoomTypeController {
 
     @PutMapping("/{id}")
     public ResponseEntity<RoomTypeResponse> updateRoomType(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @Valid @RequestBody RoomTypeRequest request) {
         return ResponseEntity.ok(roomTypeService.updateRoomType(id, request));
     }
@@ -58,8 +58,24 @@ public class RoomTypeController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/deleted")
+    public ResponseEntity<List<RoomTypeSummaryResponse>> getDeletedRoomTypes() {
+        return ResponseEntity.ok(roomTypeService.getDeletedRoomTypes());
+    }
+
     @PatchMapping("/{id}/restore")
     public ResponseEntity<RoomTypeResponse> restoreRoomType(@PathVariable Long id) {
         return ResponseEntity.ok(roomTypeService.restoreRoomType(id));
+    }
+
+    @PatchMapping("/{id}/suspend")
+    public ResponseEntity<RoomTypeResponse> suspendRoomType(@PathVariable Long id) {
+        return ResponseEntity.ok(roomTypeService.suspendRoomType(id));
+    }
+
+    // API Mở lại
+    @PatchMapping("/{id}/reactivate")
+    public ResponseEntity<RoomTypeResponse> reactivateRoomType(@PathVariable Long id) {
+        return ResponseEntity.ok(roomTypeService.reactivateRoomType(id));
     }
 }

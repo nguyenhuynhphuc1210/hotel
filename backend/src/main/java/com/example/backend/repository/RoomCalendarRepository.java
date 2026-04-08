@@ -59,4 +59,8 @@ public interface RoomCalendarRepository extends JpaRepository<RoomCalendar, Long
                         @Param("hotelId") Long hotelId,
                         @Param("checkIn") LocalDate checkIn,
                         @Param("checkOut") LocalDate checkOut);
+
+        @Modifying
+        @Query("UPDATE RoomCalendar rc SET rc.isAvailable = :isAvailable WHERE rc.roomType.hotel.id = :hotelId")
+        void updateIsAvailableByHotelId(@Param("hotelId") Long hotelId, @Param("isAvailable") boolean isAvailable);
 }

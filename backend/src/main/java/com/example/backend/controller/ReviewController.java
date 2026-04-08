@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.request.ReviewReplyRequest;
+import com.example.backend.dto.request.ReviewReportRequest;
 import com.example.backend.dto.request.ReviewRequest;
 import com.example.backend.dto.response.ReviewResponse;
 import com.example.backend.service.ReviewService;
@@ -27,7 +28,7 @@ public class ReviewController {
     public ResponseEntity<ReviewResponse> createReview(
             @Valid @RequestPart("data") ReviewRequest request,
             @RequestPart(value = "files", required = false) List<MultipartFile> files) {
-        
+
         ReviewResponse response = reviewService.createReview(request, files);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -57,8 +58,29 @@ public class ReviewController {
     public ResponseEntity<ReviewResponse> replyToReview(
             @PathVariable Long id,
             @Valid @RequestBody ReviewReplyRequest request) {
-            
+
         ReviewResponse response = reviewService.replyToReview(id, request);
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}/report")
+    public ResponseEntity<ReviewResponse> reportReview(
+            @PathVariable Long id,
+            @Valid @RequestBody ReviewReportRequest request) {
+        return ResponseEntity.ok(reviewService.reportReview(id, request));
+    }
+
+    @GetMapping("/admin/reported")
+    public ResponseEntity<Page<ReviewResponse>> getReportedReviews(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(reviewService.getReportedReviews(page, size));
+    }
+
+    @PatchMapping("/{id}/resolve-report")
+    public ResponseEntity<ReviewResponse> resolveReport(
+            @PathVariable Long id,
+            @RequestParam boolean isHideApproved) {
+        return ResponseEntity.ok(reviewService.resolveReport(id, isHideApproved));
     }
 }

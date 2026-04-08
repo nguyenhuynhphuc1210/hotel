@@ -45,6 +45,13 @@ public class Review {
     private LocalDateTime replyDate;
 
     @Builder.Default
+    @Column(name = "is_reported", nullable = false)
+    private Boolean isReported = false;
+
+    @Column(name = "report_reason", columnDefinition = "TEXT")
+    private String reportReason;
+
+    @Builder.Default
     @Column(name = "is_published", nullable = false)
     private Boolean isPublished = true;
 

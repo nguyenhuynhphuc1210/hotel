@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class RoomTypeServiceImpl implements RoomTypeService {
+
     private final RoomTypeRepository roomTypeRepository;
     private final HotelRepository hotelRepository;
     private final RoomTypeMapper roomTypeMapper;
@@ -36,9 +37,9 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         List<RoomType> roomTypes;
 
         if (isAdmin()) {
-            roomTypes = roomTypeRepository.findAll();
+            roomTypes = roomTypeRepository.findByHotelIsDeletedFalseAndIsDeletedFalse();
         } else if (isHotelOwner()) {
-            roomTypes = roomTypeRepository.findByHotelOwnerEmail(getCurrentUserEmail());
+            roomTypes = roomTypeRepository.findByHotelOwnerEmailAndHotelIsDeletedFalseAndIsDeletedFalse(getCurrentUserEmail());
         } else {
             throw new AccessDeniedException("Bạn không có quyền truy cập trang quản trị");
         }
@@ -51,7 +52,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional(readOnly = true)
     public List<RoomTypeSummaryResponse> getActiveRoomTypes() {
-        return roomTypeRepository.findByIsActiveTrue()
+        return roomTypeRepository.findByIsActiveTrueAndIsDeletedFalse()
                 .stream()
                 .map(roomTypeMapper::toRoomTypeSummaryResponse)
                 .collect(Collectors.toList());
@@ -60,7 +61,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional(readOnly = true)
     public List<RoomTypeSummaryResponse> getActiveRoomTypesByHotel(Long hotelId) {
-        return roomTypeRepository.findByHotelIdAndIsActiveTrue(hotelId)
+        return roomTypeRepository.findByHotelIdAndIsActiveTrueAndIsDeletedFalse(hotelId)
                 .stream()
                 .map(roomTypeMapper::toRoomTypeSummaryResponse)
                 .collect(Collectors.toList());
@@ -69,7 +70,6 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional(readOnly = true)
     public RoomTypeResponse getRoomTypeById(Long id) {
-
         return roomTypeRepository.findById(id)
                 .map(roomTypeMapper::toRoomTypeResponse)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
@@ -78,7 +78,6 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional
     public RoomTypeResponse createRoomType(RoomTypeRequest request) {
-
         Hotel hotel = hotelRepository.findById(request.getHotelId())
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
 
@@ -96,11 +95,14 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional
     public RoomTypeResponse updateRoomType(Long id, RoomTypeRequest request) {
-
         RoomType existing = roomTypeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
 
         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
+
+        if (Boolean.TRUE.equals(existing.getIsDeleted())) {
+            throw new IllegalArgumentException("Không thể cập nhật thông tin loại phòng đang nằm trong thùng rác!");
+        }
 
         boolean isPriceChanged = existing.getBasePrice().compareTo(request.getBasePrice()) != 0;
         boolean isRoomsChanged = !existing.getTotalRooms().equals(request.getTotalRooms());
@@ -128,14 +130,63 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
     @Override
     @Transactional
-    public void deleteRoomType(Long id) {
-
+    public RoomTypeResponse suspendRoomType(Long id) {
         RoomType existing = roomTypeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
 
         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
 
+        if (Boolean.TRUE.equals(existing.getIsDeleted())) {
+            throw new IllegalArgumentException("Không thể tạm ngưng loại phòng đã bị xóa!");
+        }
+
+        if (!Boolean.TRUE.equals(existing.getIsActive())) {
+            throw new IllegalArgumentException("Loại phòng này đã được tạm ngưng trước đó.");
+        }
+
         existing.setIsActive(false);
+        RoomType savedRoomType = roomTypeRepository.save(existing);
+
+        roomCalendarService.deactivateFutureCalendar(id);
+
+        return roomTypeMapper.toRoomTypeResponse(savedRoomType);
+    }
+
+    @Override
+    @Transactional
+    public RoomTypeResponse reactivateRoomType(Long id) {
+        RoomType existing = roomTypeRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
+
+        checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
+
+        if (Boolean.TRUE.equals(existing.getIsDeleted())) {
+            throw new IllegalArgumentException("Không thể mở bán loại phòng đang nằm trong thùng rác!");
+        }
+
+        if (Boolean.TRUE.equals(existing.getIsActive())) {
+            throw new IllegalArgumentException("Loại phòng này hiện vẫn đang được mở bán.");
+        }
+
+        existing.setIsActive(true);
+        RoomType savedRoomType = roomTypeRepository.save(existing);
+
+        roomCalendarService.reactivateFutureCalendar(id);
+
+        return roomTypeMapper.toRoomTypeResponse(savedRoomType);
+    }
+
+
+    @Override
+    @Transactional
+    public void deleteRoomType(Long id) {
+        RoomType existing = roomTypeRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
+
+        checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
+
+        existing.setIsDeleted(true);
+        existing.setIsActive(false); 
         roomTypeRepository.save(existing);
 
         roomCalendarService.deactivateFutureCalendar(id);
@@ -149,12 +200,37 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
 
-        existing.setIsActive(true);
+        if (!Boolean.TRUE.equals(existing.getIsDeleted())) {
+            throw new IllegalArgumentException("Loại phòng này không nằm trong thùng rác.");
+        }
+
+        if (Boolean.TRUE.equals(existing.getHotel().getIsDeleted())) {
+            throw new IllegalArgumentException("Khách sạn của loại phòng này đang bị xóa. Vui lòng khôi phục khách sạn trước.");
+        }
+
+        existing.setIsDeleted(false);
+        existing.setIsActive(false);
         
         RoomType savedRoomType = roomTypeRepository.save(existing);
-
-        roomCalendarService.reactivateFutureCalendar(id);
-
+        
         return roomTypeMapper.toRoomTypeResponse(savedRoomType);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoomTypeSummaryResponse> getDeletedRoomTypes() {
+        List<RoomType> deletedTypes;
+        
+        if (isAdmin()) {
+            deletedTypes = roomTypeRepository.findByIsDeletedTrue();
+        } else if (isHotelOwner()) {
+            deletedTypes = roomTypeRepository.findByHotelOwnerEmailAndIsDeletedTrue(getCurrentUserEmail());
+        } else {
+            throw new AccessDeniedException("Bạn không có quyền truy cập trang này");
+        }
+
+        return deletedTypes.stream()
+                .map(roomTypeMapper::toRoomTypeSummaryResponse)
+                .collect(Collectors.toList());
     }
 }

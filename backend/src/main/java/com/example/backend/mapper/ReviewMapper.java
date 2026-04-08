@@ -25,7 +25,7 @@ public class ReviewMapper {
                 .rating(req.getRating())
                 .comment(req.getComment())
                 .isPublished(true)
-
+                .isReported(false)
                 .build();
     }
 
@@ -49,9 +49,10 @@ public class ReviewMapper {
                 .comment(r.getComment())
                 .isPublished(r.getIsPublished())
                 .createdAt(r.getCreatedAt())
-                // --- THÊM 3 TRƯỜNG MỚI VÀO ĐÂY ---
                 .ownerReply(r.getOwnerReply())
                 .replyDate(r.getReplyDate())
+                .isReported(r.getIsReported())
+                .reportReason(r.getReportReason())
                 .images(imageResponses)
                 .build();
     }

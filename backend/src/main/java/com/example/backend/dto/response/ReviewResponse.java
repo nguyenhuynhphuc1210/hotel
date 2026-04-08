@@ -21,10 +21,9 @@ public class ReviewResponse {
     private String comment;
     private Boolean isPublished;
     private LocalDateTime createdAt;
-
     private String ownerReply;
-
     private LocalDateTime replyDate;
-
+    private Boolean isReported;
+    private String reportReason;
     private List<ReviewImageResponse> images;
 }

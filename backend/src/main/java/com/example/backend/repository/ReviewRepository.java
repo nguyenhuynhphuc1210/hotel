@@ -24,4 +24,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Page<Review> findByHotelIdAndIsPublishedTrueOrderByCreatedAtDesc(Long hotelId, Pageable pageable);
 
     Page<Review> findByHotelIdOrderByCreatedAtDesc(Long hotelId, Pageable pageable);
+
+    Page<Review> findByIsReportedTrueOrderByCreatedAtDesc(Pageable pageable);
 }
