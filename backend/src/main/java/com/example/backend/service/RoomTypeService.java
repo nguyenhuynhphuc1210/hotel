@@ -15,4 +15,7 @@ public interface RoomTypeService {
     RoomTypeResponse updateRoomType(Long id, RoomTypeRequest request);
     void deleteRoomType(Long id);
     RoomTypeResponse restoreRoomType(Long id);
+    List<RoomTypeSummaryResponse> getDeletedRoomTypes();
+    RoomTypeResponse suspendRoomType(Long id);
+    RoomTypeResponse reactivateRoomType(Long id);
 }

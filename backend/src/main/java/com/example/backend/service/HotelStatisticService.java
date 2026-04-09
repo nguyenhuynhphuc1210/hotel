@@ -13,6 +13,5 @@ public interface HotelStatisticService {
 
     List<HotelStatisticResponse> getStatistics(HotelStatisticRequest request);
 
-    // Đổi tên tham số thành totalAmount
     void recordRealtimeStatistic(Hotel hotel, BigDecimal totalAmount, LocalDate date, BookingStatus status);
 }

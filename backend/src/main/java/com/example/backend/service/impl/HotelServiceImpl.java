@@ -41,9 +41,8 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional(readOnly = true)
     public List<HotelSummaryResponse> getActiveHotels() {
-        return hotelRepository.findByIsActiveTrue()
+        return hotelRepository.findByIsActiveTrueAndIsDeletedFalse()
                 .stream()
-                .filter(hotel -> !hotel.getIsDeleted())
                 .map(hotelMapper::toHotelSummaryResponse)
                 .collect(Collectors.toList());
     }
@@ -54,14 +53,28 @@ public class HotelServiceImpl implements HotelService {
         List<Hotel> hotels;
 
         if (isAdmin()) {
-            hotels = hotelRepository.findAll();
+            hotels = hotelRepository.findByIsDeletedFalse();
         } else if (isHotelOwner()) {
-            hotels = hotelRepository.findByOwnerEmail(getCurrentUserEmail());
+            hotels = hotelRepository.findByOwnerEmailAndIsDeletedFalse(getCurrentUserEmail());
         } else {
             throw new AccessDeniedException("Bạn không có quyền truy cập trang quản trị");
         }
 
         return hotels.stream()
+                .map(hotelMapper::toHotelAdminResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<HotelAdminResponse> getDeletedHotels() {
+        if (!isAdmin()) {
+            throw new AccessDeniedException("Chỉ ADMIN mới được xem danh sách khách sạn đã xóa!");
+        }
+
+        List<Hotel> deletedHotels = hotelRepository.findByIsDeletedTrue();
+
+        return deletedHotels.stream()
                 .map(hotelMapper::toHotelAdminResponse)
                 .collect(Collectors.toList());
     }
@@ -154,8 +167,11 @@ public class HotelServiceImpl implements HotelService {
 
         existing.setIsDeleted(true);
         existing.setIsActive(false);
-
         hotelRepository.save(existing);
+
+        roomTypeRepository.updateIsDeletedByHotelId(id, true);
+        roomTypeRepository.updateIsActiveByHotelId(id, false);
+        roomCalendarRepository.updateIsAvailableByHotelId(id, false);
     }
 
     @Override
@@ -174,13 +190,14 @@ public class HotelServiceImpl implements HotelService {
 
         hotel.setIsDeleted(false);
 
+        roomTypeRepository.updateIsDeletedByHotelId(id, false);
+
         return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
     }
 
     @Override
     @Transactional
     public HotelResponse approveHotel(Long id) {
-
         Hotel hotel = hotelRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
 
@@ -193,14 +210,17 @@ public class HotelServiceImpl implements HotelService {
         }
 
         hotel.setIsActive(true);
+        hotelRepository.save(hotel);
 
-        return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
+        roomTypeRepository.updateIsActiveByHotelId(id, true);
+        roomCalendarRepository.updateIsAvailableByHotelId(id, true);
+
+        return hotelMapper.toHotelResponse(hotel);
     }
 
     @Override
     @Transactional
     public HotelResponse disableHotel(Long id) {
-
         Hotel hotel = hotelRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
 
@@ -213,8 +233,12 @@ public class HotelServiceImpl implements HotelService {
         }
 
         hotel.setIsActive(false);
+        hotelRepository.save(hotel);
 
-        return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
+        roomTypeRepository.updateIsActiveByHotelId(id, false);
+        roomCalendarRepository.updateIsAvailableByHotelId(id, false);
+
+        return hotelMapper.toHotelResponse(hotel);
     }
 
     @Override
@@ -222,7 +246,7 @@ public class HotelServiceImpl implements HotelService {
     public List<HotelSummaryResponse> searchHotels(String district, String keyword,
             LocalDate checkIn, LocalDate checkOut, Integer guests) {
 
-        List<Hotel> hotels = hotelRepository.findByIsActiveTrue();
+        List<Hotel> hotels = hotelRepository.findByIsActiveTrueAndIsDeletedFalse();
 
         return hotels.stream()
                 .filter(h -> district == null || district.isBlank() ||
@@ -246,7 +270,7 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getMinPriceForHotel(Long hotelId, LocalDate checkIn, LocalDate checkOut) {
-        List<RoomType> roomTypes = roomTypeRepository.findByHotelIdAndIsActiveTrue(hotelId);
+        List<RoomType> roomTypes = roomTypeRepository.findByHotelIdAndIsActiveTrueAndIsDeletedFalse(hotelId);
 
         return roomTypes.stream()
                 .flatMap(rt -> roomCalendarRepository

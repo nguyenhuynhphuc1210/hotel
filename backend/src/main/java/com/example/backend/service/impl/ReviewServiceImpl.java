@@ -3,6 +3,7 @@ package com.example.backend.service.impl;
 import static com.example.backend.security.SecurityUtils.*;
 
 import com.example.backend.dto.request.ReviewReplyRequest;
+import com.example.backend.dto.request.ReviewReportRequest;
 import com.example.backend.dto.request.ReviewRequest;
 import com.example.backend.dto.response.ReviewResponse;
 import com.example.backend.entity.Booking;
@@ -181,7 +182,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         String currentUserEmail = getCurrentUserEmail();
         String hotelOwnerEmail = review.getHotel().getOwner().getEmail();
-        
+
         if (!hotelOwnerEmail.equalsIgnoreCase(currentUserEmail)) {
             throw new AccessDeniedException("Bạn không có quyền phản hồi đánh giá của khách sạn này!");
         }
@@ -190,7 +191,68 @@ public class ReviewServiceImpl implements ReviewService {
         review.setReplyDate(LocalDateTime.now());
 
         Review savedReview = reviewRepository.save(review);
-        
+
+        return reviewMapper.toReviewResponse(savedReview);
+    }
+
+    @Override
+    @Transactional
+    public ReviewResponse reportReview(Long reviewId, ReviewReportRequest request) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đánh giá"));
+
+        String currentUserEmail = SecurityUtils.getCurrentUserEmail();
+        if (!review.getHotel().getOwner().getEmail().equalsIgnoreCase(currentUserEmail)) {
+            throw new AccessDeniedException("Chỉ chủ khách sạn mới được báo cáo đánh giá này!");
+        }
+
+        review.setIsReported(true);
+        review.setReportReason(request.getReason());
+
+        return reviewMapper.toReviewResponse(reviewRepository.save(review));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ReviewResponse> getReportedReviews(int page, int size) {
+        if (!SecurityUtils.isAdmin()) {
+            throw new AccessDeniedException("Chỉ Admin mới được xem danh sách báo cáo");
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        return reviewRepository.findByIsReportedTrueOrderByCreatedAtDesc(pageable)
+                .map(reviewMapper::toReviewResponse);
+    }
+
+    @Override
+    @Transactional
+    public ReviewResponse resolveReport(Long reviewId, boolean isHideApproved) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đánh giá"));
+
+        if (!SecurityUtils.isAdmin()) {
+            throw new AccessDeniedException("Chỉ Admin mới có quyền xử lý báo cáo!");
+        }
+
+        if (!Boolean.TRUE.equals(review.getIsReported())) {
+            throw new IllegalArgumentException("Đánh giá này không nằm trong danh sách bị báo cáo");
+        }
+
+        if (isHideApproved) {
+            review.setIsPublished(false);
+        } else {
+            review.setIsPublished(true);
+        }
+
+        review.setIsReported(false);
+
+        Review savedReview = reviewRepository.save(review);
+
+        if (isHideApproved) {
+            updateHotelStarRating(review.getHotel().getId());
+        }
+
         return reviewMapper.toReviewResponse(savedReview);
     }
 }

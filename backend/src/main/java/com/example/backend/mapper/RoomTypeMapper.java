@@ -32,6 +32,7 @@ public class RoomTypeMapper {
                 .basePrice(req.getBasePrice())
                 .totalRooms(req.getTotalRooms())
                 .isActive(true)
+                .isDeleted(false)
                 .build();
     }
 
@@ -55,6 +56,7 @@ public class RoomTypeMapper {
                 .basePrice(rt.getBasePrice())
                 .totalRooms(rt.getTotalRooms())
                 .isActive(rt.getIsActive())
+                .isDeleted(rt.getIsDeleted())
                 .createdAt(rt.getCreatedAt())
                 .updatedAt(rt.getUpdatedAt())
                 .images(images)

@@ -12,6 +12,7 @@ import java.util.List;
 public interface HotelService {
     List<HotelSummaryResponse> getActiveHotels();
     List<HotelAdminResponse> getAllHotels();
+    List<HotelAdminResponse> getDeletedHotels();
     HotelResponse getHotelById(Long id);
     HotelResponse createHotel(HotelRequest request);
     HotelResponse updateHotel(Long id, HotelRequest request);

@@ -34,6 +34,11 @@ public class HotelController {
         return ResponseEntity.ok(hotelService.getAllHotels());
     }
 
+    @GetMapping("/deleted")
+    public ResponseEntity<List<HotelAdminResponse>> getDeletedHotels() {
+        return ResponseEntity.ok(hotelService.getDeletedHotels());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<HotelResponse> getHotelById(@PathVariable Long id) {
         return ResponseEntity.ok(hotelService.getHotelById(id));

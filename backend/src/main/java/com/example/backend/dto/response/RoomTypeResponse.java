@@ -22,6 +22,7 @@ public class RoomTypeResponse {
     private BigDecimal basePrice;
     private Integer totalRooms;
     private Boolean isActive;
+    private Boolean isDeleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<RoomImageResponse> images;
