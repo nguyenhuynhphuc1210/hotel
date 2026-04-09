@@ -8,7 +8,7 @@ import { useState } from 'react'
 import dynamic from 'next/dynamic'
 
 function Header() {
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated, isLoading } = useAuthStore()
   const { logout } = useLogout()
   const [menuOpen, setMenuOpen] = useState(false)
 

@@ -6,9 +6,10 @@ export interface UserResponse {
   email: string
   fullName: string
   phone: string | null
-  dateOfBirth: string | null
+  dateOfBirth: string | null 
   gender: Gender | null
   avatarUrl: string | null
+  avatarPublicId?: string | null
   roleId: number
   roleName: RoleName
   isActive: boolean
@@ -23,6 +24,24 @@ export interface UserRequest {
   phone?: string
   dateOfBirth?: string
   gender?: Gender
-  avatarUrl?: string
   roleId: number
 }
+
+export interface UpdateUserRequest {
+  fullName: string
+  phone?: string
+  dateOfBirth?: string 
+  gender?: Gender
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+export interface AvatarUploadResponse {
+  message: string
+  avatarUrl: string
+}
+

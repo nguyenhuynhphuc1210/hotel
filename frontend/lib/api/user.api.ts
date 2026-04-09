@@ -1,6 +1,6 @@
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
-import { UserResponse, UserRequest } from '@/types/user.types'
+import { UserResponse, UserRequest, UpdateUserRequest, ChangePasswordRequest } from '@/types/user.types'
 
 const userApi = {
   // GET /api/users
@@ -30,6 +30,27 @@ const userApi = {
   // PATCH /api/users/:id/enable
   enable: (id: number | string) =>
     axiosInstance.patch<UserResponse>(`${API_CONFIG.ENDPOINTS.USER_BY_ID(id)}/enable`),
+
+  // Lấy profile của tôi
+  getMyProfile: () => 
+    axiosInstance.get<UserResponse>(`${API_CONFIG.ENDPOINTS.USERS}/me`),
+
+  // Cập nhật profile của tôi
+  updateMyProfile: (data: UpdateUserRequest) =>
+    axiosInstance.put<UserResponse>(`${API_CONFIG.ENDPOINTS.USERS}/me`, data),
+
+  // Đổi mật khẩu
+  changePassword: (data: ChangePasswordRequest) =>
+    axiosInstance.put(`${API_CONFIG.ENDPOINTS.USERS}/change-password`, data),
+
+  // Upload avatar
+  uploadAvatar: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return axiosInstance.post<{avatarUrl: string}>(`${API_CONFIG.ENDPOINTS.USERS}/avatar`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
 }
 
 export default userApi

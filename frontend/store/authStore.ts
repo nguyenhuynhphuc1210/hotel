@@ -36,11 +36,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   setAuth: (token, user) => {
     localStorage.setItem('access_token', token)
-    localStorage.setItem('user', JSON.stringify(user))
+    localStorage.setItem('user', JSON.stringify(user))    
     
-    // Lưu vào Cookie để middleware hoặc server side có thể đọc
-    document.cookie = `access_token=${token}; path=/; SameSite=Strict`
-    document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; SameSite=Strict`
+    const maxAge = 30 * 24 * 60 * 60; 
+    document.cookie = `access_token=${token}; path=/; max-age=${maxAge}; SameSite=Strict`
+    document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=${maxAge}; SameSite=Strict`
     
     set({ token, user, isAuthenticated: true })
   },
@@ -61,19 +61,16 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ user })
   },
 
-  clearAuth: () => {
+   clearAuth: () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('user')
-    document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
-    document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+    document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    document.cookie = "user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
     set({ token: null, user: null, isAuthenticated: false })
   },
   
-  logout: () => {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('user')
-    document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
-    document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
-    set({ token: null, user: null, isAuthenticated: false })
+  logout: () => {    
+    const { clearAuth } = useAuthStore.getState();
+    clearAuth();
   }
 }))

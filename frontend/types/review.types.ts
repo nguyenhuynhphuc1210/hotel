@@ -1,6 +1,12 @@
+export interface ReviewImageResponse {
+  id: number
+  imageUrl: string
+  publicId: string
+}
+
 export interface ReviewRequest {
   bookingId: number
-  rating: number 
+  rating: number
   comment: string
 }
 
@@ -14,5 +20,8 @@ export interface ReviewResponse {
   rating: number
   comment: string | null
   isPublished: boolean
-  createdAt: string 
+  createdAt: string
+  ownerReply?: string | null
+  replyDate?: string | null
+  images?: ReviewImageResponse[]
 }
