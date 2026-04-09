@@ -38,4 +38,5 @@ public class BookingResponse {
     private List<BookingRoomResponse> bookingRooms;
     private PaymentMethod paymentMethod;
     private PaymentStatus paymentStatus;
+    private String paymentUrl;
 }

@@ -73,8 +73,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/room-types/*/restore")
                         .hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/room-types/hotel/*").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/room-types/active").permitAll() 
-                        .requestMatchers(HttpMethod.GET, "/api/room-types/*").permitAll() 
+                        .requestMatchers(HttpMethod.GET, "/api/room-types/active").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/room-types/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/room-types").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.POST, "/api/room-types").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/room-types/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
@@ -146,6 +146,12 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "HOTEL_OWNER")
 
                         .requestMatchers("/api/favorites/**").authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/payments/vnpay-return").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/payments/momo-return").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/payments").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/payments/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/payments/booking/*").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()

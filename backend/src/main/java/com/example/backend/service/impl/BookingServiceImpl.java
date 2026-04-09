@@ -13,8 +13,11 @@ import com.example.backend.repository.*;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.BookingService;
 import com.example.backend.service.HotelStatisticService;
+import com.example.backend.service.MomoService;
+import com.example.backend.service.VNPayService;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +47,9 @@ public class BookingServiceImpl implements BookingService {
     private final BookingMapper bookingMapper;
     private final PaymentRepository paymentRepository;
     private final HotelStatisticService hotelStatisticService;
+    private final VNPayService vnPayService;
+    private final MomoService momoService;
+    private final HttpServletRequest requestServlet;
 
     @Override
     @Transactional
@@ -55,7 +61,6 @@ public class BookingServiceImpl implements BookingService {
 
         User user = null;
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
         if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
             String currentUserEmail = auth.getName();
             user = userRepository.findByEmail(currentUserEmail)
@@ -76,7 +81,6 @@ public class BookingServiceImpl implements BookingService {
 
         Booking booking = bookingMapper.toBooking(request, user, hotel, null, new ArrayList<>());
         BigDecimal grandTotal = BigDecimal.ZERO;
-
         long expectedNights = request.getCheckOutDate().toEpochDay() - request.getCheckInDate().toEpochDay();
 
         for (BookingRoomRequest roomReq : request.getBookingRooms()) {
@@ -128,7 +132,6 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setSubtotal(grandTotal);
-
         BigDecimal discount = BigDecimal.ZERO;
         if (request.getPromotionId() != null) {
             Promotion promo = promotionRepository.findById(request.getPromotionId())
@@ -145,13 +148,10 @@ public class BookingServiceImpl implements BookingService {
 
             BigDecimal calculatedDiscount = grandTotal
                     .multiply(promo.getDiscountPercent().divide(BigDecimal.valueOf(100)));
-
-            if (promo.getMaxDiscountAmount() != null
-                    && calculatedDiscount.compareTo(promo.getMaxDiscountAmount()) > 0) {
-                discount = promo.getMaxDiscountAmount();
-            } else {
-                discount = calculatedDiscount;
-            }
+            discount = (promo.getMaxDiscountAmount() != null
+                    && calculatedDiscount.compareTo(promo.getMaxDiscountAmount()) > 0)
+                            ? promo.getMaxDiscountAmount()
+                            : calculatedDiscount;
 
             booking.setPromotion(promo);
         }
@@ -159,7 +159,12 @@ public class BookingServiceImpl implements BookingService {
         booking.setDiscountAmount(discount);
         booking.setTotalAmount(grandTotal.subtract(discount));
 
-        booking.setStatus(BookingStatus.PENDING);
+        if (request.getPaymentMethod() == PaymentMethod.CASH) {
+            booking.setStatus(BookingStatus.CONFIRMED);
+        } else {
+            booking.setStatus(BookingStatus.PENDING);
+        }
+
         Booking savedBooking = bookingRepository.save(booking);
 
         PaymentStatus initialPaymentStatus = (request.getPaymentMethod() == PaymentMethod.CASH)
@@ -176,7 +181,17 @@ public class BookingServiceImpl implements BookingService {
         savedBooking.setPayment(payment);
         paymentRepository.save(payment);
 
-        return bookingMapper.toBookingResponse(savedBooking);
+        BookingResponse response = bookingMapper.toBookingResponse(savedBooking);
+
+        if (request.getPaymentMethod() == PaymentMethod.VNPAY) {
+            String paymentUrl = vnPayService.createPaymentUrl(savedBooking, requestServlet);
+            response.setPaymentUrl(paymentUrl);
+        } else if (request.getPaymentMethod() == PaymentMethod.MOMO) {
+            String paymentUrl = momoService.createPaymentUrl(savedBooking);
+            response.setPaymentUrl(paymentUrl);
+        }
+
+        return response;
     }
 
     @Override

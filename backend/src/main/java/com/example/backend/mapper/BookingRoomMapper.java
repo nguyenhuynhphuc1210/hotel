@@ -49,7 +49,7 @@ public class BookingRoomMapper {
                 .roomTypeName(br.getRoomType() != null ? br.getRoomType().getTypeName() : null)
                 .quantity(br.getQuantity())
                 .pricePerNight(br.getPricePerNight())
-                .rates(rateResponses) // Gắn danh sách giá chi tiết từng đêm vào đây
+                .rates(rateResponses)
                 .build();
     }
 }

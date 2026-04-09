@@ -1,12 +1,15 @@
 package com.example.backend.repository;
 
 import com.example.backend.entity.Booking;
+import com.example.backend.enums.BookingStatus;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +23,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByGuestEmailOrderByCreatedAtDesc(String guestEmail);
 
     Optional<Booking> findByBookingCodeAndGuestEmail(String bookingCode, String guestEmail);
+
+    List<Booking> findByStatusAndCreatedAtBefore(BookingStatus status, LocalDateTime dateTime);
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.hotel.id = :hotelId AND b.status = 'COMPLETED' AND DATE(b.updatedAt) = :date")
     Integer countCompletedBookingsByDateAndHotel(@Param("hotelId") Long hotelId, @Param("date") LocalDate date);
