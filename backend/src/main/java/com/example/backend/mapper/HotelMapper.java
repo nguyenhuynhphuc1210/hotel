@@ -133,4 +133,5 @@ public class HotelMapper {
                 .totalRoomTypes(roomTypeCount)
                 .build();
     }
+    
 }

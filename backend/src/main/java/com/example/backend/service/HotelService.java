@@ -7,19 +7,30 @@ import com.example.backend.dto.response.HotelSummaryResponse;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public interface HotelService {
-    List<HotelSummaryResponse> getActiveHotels();
-    List<HotelAdminResponse> getAllHotels();
-    List<HotelAdminResponse> getDeletedHotels();
+    Page<HotelSummaryResponse> getActiveHotels(int page, int size);
+
+    Page<HotelAdminResponse> getAllHotels(int page, int size);
+
+    Page<HotelAdminResponse> getDeletedHotels(int page, int size);
+
     HotelResponse getHotelById(Long id);
+
     HotelResponse createHotel(HotelRequest request);
+
     HotelResponse updateHotel(Long id, HotelRequest request);
+
     void deleteHotel(Long id);
+
     HotelResponse restoreHotel(Long id);
+
     HotelResponse approveHotel(Long id);
+
     HotelResponse disableHotel(Long id);
+
     BigDecimal getMinPriceForHotel(Long hotelId, LocalDate checkIn, LocalDate checkOut);
-    List<HotelSummaryResponse> searchHotels(String district, String keyword, LocalDate checkIn, LocalDate checkOut, Integer guests);
+
+    Page<HotelSummaryResponse> searchHotels(String district, String keyword, LocalDate checkIn, LocalDate checkOut, Integer guests, int page, int size);
 }

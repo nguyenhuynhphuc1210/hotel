@@ -36,6 +36,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -147,9 +148,9 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public Page<ReviewResponse> getPublicReviews(Long hotelId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        return reviewRepository.findByHotelIdAndIsPublishedTrueOrderByCreatedAtDesc(hotelId, pageable)
+        return reviewRepository.findByHotelIdAndIsPublishedTrue(hotelId, pageable)
                 .map(reviewMapper::toReviewResponse);
     }
 
@@ -159,17 +160,11 @@ public class ReviewServiceImpl implements ReviewService {
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn"));
 
-        if (SecurityUtils.isHotelOwner()) {
-            String ownerEmail = SecurityUtils.getCurrentUserEmail();
-            if (!hotel.getOwner().getEmail().equals(ownerEmail)) {
-                throw new AccessDeniedException("Bạn không có quyền xem dữ liệu quản trị của khách sạn khác!");
-            }
-        } else if (!SecurityUtils.isAdmin()) {
-            throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu này");
-        }
+        SecurityUtils.checkOwnerOrAdmin(hotel.getOwner().getEmail());
 
-        Pageable pageable = PageRequest.of(page, size);
-        return reviewRepository.findByHotelIdOrderByCreatedAtDesc(hotelId, pageable)
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        
+        return reviewRepository.findByHotelId(hotelId, pageable)
                 .map(reviewMapper::toReviewResponse);
     }
 
@@ -219,9 +214,9 @@ public class ReviewServiceImpl implements ReviewService {
             throw new AccessDeniedException("Chỉ Admin mới được xem danh sách báo cáo");
         }
 
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        return reviewRepository.findByIsReportedTrueOrderByCreatedAtDesc(pageable)
+        return reviewRepository.findByIsReportedTrue(pageable)
                 .map(reviewMapper::toReviewResponse);
     }
 

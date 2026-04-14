@@ -12,6 +12,7 @@ import com.example.backend.enums.PaymentStatus;
 import com.example.backend.repository.BookingRepository;
 import com.example.backend.repository.PaymentRepository;
 import com.example.backend.repository.RoomCalendarRepository;
+import com.example.backend.service.EmailService;
 import com.example.backend.service.PaymentService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -30,6 +32,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -40,13 +43,17 @@ public class PaymentController {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
     private final RoomCalendarRepository roomCalendarRepository;
+    private final EmailService emailService;
 
     @Value("${vnpay.secret-key}")
     private String secretKey;
 
     @GetMapping
-    public ResponseEntity<List<PaymentResponse>> getAllPayments() {
-        return ResponseEntity.ok(paymentService.getAllPayments());
+    public ResponseEntity<Page<PaymentResponse>> getAllPayments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(paymentService.getAllPayments(page, size));
     }
 
     @GetMapping("/{id}")
@@ -83,7 +90,7 @@ public class PaymentController {
             Long bookingId = Long.parseLong(txnRef.split("_")[0]);
 
             Booking booking = bookingRepository.findById(bookingId).orElse(null);
-            Payment payment = paymentRepository.findByBookingId(bookingId).orElse(null);
+            Payment payment = paymentRepository.findByBooking_Id(bookingId).orElse(null);
 
             if (booking == null || payment == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy đơn hàng");
@@ -99,10 +106,11 @@ public class PaymentController {
 
                 paymentRepository.save(payment);
                 bookingRepository.save(booking);
+                emailService.sendBookingConfirmationEmail(booking);
 
                 return ResponseEntity.status(HttpStatus.FOUND)
                         .location(URI.create(
-                                "http://localhost:3000/payment-success?bookingCode=" + booking.getBookingCode()))
+                                "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode()))
                         .build();
             } else {
 
@@ -126,7 +134,7 @@ public class PaymentController {
 
                 return ResponseEntity.status(HttpStatus.FOUND)
                         .location(URI
-                                .create("http://localhost:3000/payment-failed?bookingCode=" + booking.getBookingCode()))
+                                .create("http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode()))
                         .build();
             }
         } else {
@@ -177,7 +185,7 @@ public class PaymentController {
         if (signValue.equals(signature)) {
             Long bookingId = Long.parseLong(orderId.split("_")[0]);
             Booking booking = bookingRepository.findById(bookingId).orElse(null);
-            Payment payment = paymentRepository.findByBookingId(bookingId).orElse(null);
+            Payment payment = paymentRepository.findByBooking_Id(bookingId).orElse(null);
 
             if (booking == null || payment == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy đơn hàng");
@@ -191,10 +199,11 @@ public class PaymentController {
                 booking.setPayment(payment);
                 paymentRepository.save(payment);
                 bookingRepository.save(booking);
+                emailService.sendBookingConfirmationEmail(booking);
 
                 return ResponseEntity.status(HttpStatus.FOUND)
                         .location(URI.create(
-                                "http://localhost:3000/payment-success?bookingCode=" + booking.getBookingCode()))
+                                "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode()))
                         .build();
             } else {
                 payment.setStatus(PaymentStatus.CANCELLED);
@@ -217,7 +226,7 @@ public class PaymentController {
 
                 return ResponseEntity.status(HttpStatus.FOUND)
                         .location(URI
-                                .create("http://localhost:3000/payment-failed?bookingCode=" + booking.getBookingCode()))
+                                .create("http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode()))
                         .build();
             }
         } else {

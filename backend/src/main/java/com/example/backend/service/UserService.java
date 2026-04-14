@@ -5,12 +5,11 @@ import com.example.backend.dto.request.UpdateUserRequest;
 import com.example.backend.dto.request.UserRequest;
 import com.example.backend.dto.response.UserResponse;
 
-import java.util.List;
-
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
 
 public interface UserService {
-    List<UserResponse> getAllUsers();
+    Page<UserResponse> getAllUsers(int page, int size);
 
     UserResponse getUserById(Long id);
 

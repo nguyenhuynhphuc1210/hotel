@@ -9,12 +9,15 @@ import com.example.backend.service.PaymentService;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -25,21 +28,24 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentResponse> getAllPayments() {
-        List<Payment> payments;
+    public Page<PaymentResponse> getAllPayments(int page, int size) {
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<Payment> payments;
 
         if (SecurityUtils.isAdmin()) {
-            payments = paymentRepository.findAll();
+            payments = paymentRepository.findAll(pageable);
+            
         } else if (SecurityUtils.isHotelOwner()) {
             String ownerEmail = SecurityUtils.getCurrentUserEmail();
-            payments = paymentRepository.findByBooking_Hotel_Owner_EmailOrderByPaymentDateDesc(ownerEmail);
+            payments = paymentRepository.findByBooking_Hotel_Owner_Email(ownerEmail, pageable);
+            
         } else {
             throw new AccessDeniedException("Bạn không có quyền truy cập danh sách thanh toán");
         }
 
-        return payments.stream()
-                .map(paymentMapper::toPaymentResponse)
-                .collect(Collectors.toList());
+        return payments.map(paymentMapper::toPaymentResponse);
     }
 
     @Override
@@ -56,7 +62,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentByBookingId(Long bookingId) {
-        Payment payment = paymentRepository.findByBookingId(bookingId)
+        Payment payment = paymentRepository.findByBooking_Id(bookingId)
 
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Không tìm thấy giao dịch thanh toán cho đơn đặt phòng ID = " + bookingId));

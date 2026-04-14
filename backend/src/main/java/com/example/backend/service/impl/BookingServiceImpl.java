@@ -12,6 +12,7 @@ import com.example.backend.mapper.BookingMapper;
 import com.example.backend.repository.*;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.BookingService;
+import com.example.backend.service.EmailService;
 import com.example.backend.service.HotelStatisticService;
 import com.example.backend.service.MomoService;
 import com.example.backend.service.VNPayService;
@@ -21,7 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,7 +33,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +53,7 @@ public class BookingServiceImpl implements BookingService {
     private final VNPayService vnPayService;
     private final MomoService momoService;
     private final HttpServletRequest requestServlet;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -183,9 +187,13 @@ public class BookingServiceImpl implements BookingService {
 
         BookingResponse response = bookingMapper.toBookingResponse(savedBooking);
 
-        if (request.getPaymentMethod() == PaymentMethod.VNPAY) {
+        if (request.getPaymentMethod() == PaymentMethod.CASH) {
+            emailService.sendBookingConfirmationEmail(savedBooking);
+
+        } else if (request.getPaymentMethod() == PaymentMethod.VNPAY) {
             String paymentUrl = vnPayService.createPaymentUrl(savedBooking, requestServlet);
             response.setPaymentUrl(paymentUrl);
+
         } else if (request.getPaymentMethod() == PaymentMethod.MOMO) {
             String paymentUrl = momoService.createPaymentUrl(savedBooking);
             response.setPaymentUrl(paymentUrl);
@@ -227,7 +235,7 @@ public class BookingServiceImpl implements BookingService {
                 LocalDate.now(),
                 BookingStatus.CANCELLED);
 
-        paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
+        paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
             if (payment.getStatus() == PaymentStatus.PAID) {
                 payment.setStatus(PaymentStatus.REFUNDED);
             } else if (payment.getStatus() == PaymentStatus.UNPAID || payment.getStatus() == PaymentStatus.PENDING) {
@@ -235,6 +243,8 @@ public class BookingServiceImpl implements BookingService {
             }
             paymentRepository.save(payment);
         });
+
+        emailService.sendBookingCancellationEmail(savedBooking);
 
         return bookingMapper.toBookingResponse(savedBooking);
     }
@@ -261,7 +271,7 @@ public class BookingServiceImpl implements BookingService {
 
         if (newStatus == BookingStatus.CANCELLED && booking.getStatus() != BookingStatus.CANCELLED) {
             restoreRoomInventory(booking);
-            paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
+            paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
                 if (payment.getStatus() == PaymentStatus.PAID) {
                     payment.setStatus(PaymentStatus.REFUNDED);
                 } else {
@@ -272,7 +282,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         if (newStatus == BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.CHECKED_IN) {
-            paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
+            paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
 
                 if (payment.getPaymentMethod() == PaymentMethod.CASH && payment.getStatus() == PaymentStatus.UNPAID) {
                     payment.setStatus(PaymentStatus.PAID);
@@ -284,7 +294,7 @@ public class BookingServiceImpl implements BookingService {
 
         if (newStatus == BookingStatus.NO_SHOW && booking.getStatus() != BookingStatus.NO_SHOW) {
             restoreRoomInventory(booking);
-            paymentRepository.findByBookingId(booking.getId()).ifPresent(payment -> {
+            paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
                 if (payment.getStatus() == PaymentStatus.PENDING
                         || payment.getStatus() == PaymentStatus.UNPAID) {
                     payment.setStatus(PaymentStatus.CANCELLED);
@@ -311,39 +321,36 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<BookingResponse> getBookingsForOwner() {
-
+    public Page<BookingResponse> getBookingsForOwner(int page, int size) {
         if (!SecurityUtils.isHotelOwner() && !SecurityUtils.isAdmin()) {
             throw new AccessDeniedException("Chỉ chủ khách sạn hoặc Admin mới được xem danh sách này");
         }
 
-        List<Booking> bookings;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Booking> bookingPage;
 
         if (SecurityUtils.isAdmin()) {
-
-            bookings = bookingRepository.findAllByOrderByCreatedAtDesc();
+            bookingPage = bookingRepository.findAll(pageable);
         } else {
             String ownerEmail = SecurityUtils.getCurrentUserEmail();
-            bookings = bookingRepository.findByHotelOwnerEmailOrderByCreatedAtDesc(ownerEmail);
+            bookingPage = bookingRepository.findByHotel_Owner_Email(ownerEmail, pageable);
         }
 
-        return bookings.stream()
-                .map(bookingMapper::toBookingResponse)
-                .collect(Collectors.toList());
+        return bookingPage.map(bookingMapper::toBookingResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<BookingResponse> getMyPersonalBookings() {
+    public Page<BookingResponse> getMyPersonalBookings(int page, int size) {
         String userEmail = SecurityUtils.getCurrentUserEmail();
         User currentUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng"));
 
-        List<Booking> bookings = bookingRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getId());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        return bookings.stream()
-                .map(bookingMapper::toBookingResponse)
-                .collect(Collectors.toList());
+        Page<Booking> bookingPage = bookingRepository.findByUser_Id(currentUser.getId(), pageable);
+
+        return bookingPage.map(bookingMapper::toBookingResponse);
     }
 
     @Override

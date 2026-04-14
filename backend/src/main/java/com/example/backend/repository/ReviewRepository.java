@@ -12,7 +12,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     @Query("""
-            SELECT COALESCE(AVG(r.rating), 0) 
+            SELECT COALESCE(AVG(r.rating), 0)
             FROM Review r
             WHERE r.hotel.id = :hotelId
             AND r.isPublished = true
@@ -21,9 +21,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     boolean existsByBookingId(Long bookingId);
 
-    Page<Review> findByHotelIdAndIsPublishedTrueOrderByCreatedAtDesc(Long hotelId, Pageable pageable);
+    Page<Review> findByHotelIdAndIsPublishedTrue(Long hotelId, Pageable pageable);
 
-    Page<Review> findByHotelIdOrderByCreatedAtDesc(Long hotelId, Pageable pageable);
+    Page<Review> findByHotelId(Long hotelId, Pageable pageable);
 
-    Page<Review> findByIsReportedTrueOrderByCreatedAtDesc(Pageable pageable);
+    Page<Review> findByIsReportedTrue(Pageable pageable);
 }

@@ -10,7 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -26,13 +26,17 @@ public class BookingController {
     }
 
     @GetMapping("/admin")
-    public ResponseEntity<List<BookingResponse>> getBookingsForOwner() {
-        return ResponseEntity.ok(bookingService.getBookingsForOwner());
+    public ResponseEntity<Page<BookingResponse>> getBookingsForOwner(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(bookingService.getBookingsForOwner(page, size));
     }
 
     @GetMapping("/me")
-    public ResponseEntity<List<BookingResponse>> getMyPersonalBookings() {
-        return ResponseEntity.ok(bookingService.getMyPersonalBookings());
+    public ResponseEntity<Page<BookingResponse>> getMyPersonalBookings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(bookingService.getMyPersonalBookings(page, size));
     }
 
     @GetMapping("/lookup")

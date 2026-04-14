@@ -16,6 +16,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Pageable;
 
 import java.util.Optional;
 
@@ -65,7 +67,9 @@ public class FavoriteServiceImpl implements FavoriteService {
         User currentUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thông tin tài khoản"));
 
-        return favoriteRepository.findByUser_IdOrderByCreatedAtDesc(currentUser.getId(), PageRequest.of(page, size))
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        return favoriteRepository.findByUser_Id(currentUser.getId(), pageable)
                 .map(favoriteMapper::toFavoriteResponse);
     }
 }

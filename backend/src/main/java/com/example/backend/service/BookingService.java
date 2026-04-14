@@ -4,7 +4,7 @@ import com.example.backend.dto.request.BookingRequest;
 import com.example.backend.dto.response.BookingResponse;
 import com.example.backend.dto.request.UpdateBookingStatusRequest;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public interface BookingService {
 
@@ -14,9 +14,9 @@ public interface BookingService {
 
     BookingResponse updateBookingStatus(Long bookingId, UpdateBookingStatusRequest request);
 
-    List<BookingResponse> getBookingsForOwner();
+    Page<BookingResponse> getBookingsForOwner(int page, int size);
 
-    List<BookingResponse> getMyPersonalBookings();
+    Page<BookingResponse> getMyPersonalBookings(int page, int size);
 
     BookingResponse getBookingById(Long bookingId);
 

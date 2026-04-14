@@ -63,7 +63,7 @@ public class RoomTypeAmenityServiceImpl implements RoomTypeAmenityService {
         @Override
         @Transactional(readOnly = true)
         public List<RoomTypeAmenityResponse> getByRoomType(Long roomTypeId) {
-                return roomTypeAmenityRepository.findByRoomTypeId(roomTypeId)
+                return roomTypeAmenityRepository.findByRoomType_Id(roomTypeId)
                                 .stream()
                                 .map(mapper::toResponse)
                                 .toList();
@@ -73,7 +73,7 @@ public class RoomTypeAmenityServiceImpl implements RoomTypeAmenityService {
         @Transactional
         public RoomTypeAmenityResponse create(RoomTypeAmenityRequest request) {
 
-                if (roomTypeAmenityRepository.existsByRoomTypeIdAndAmenityId(
+                if (roomTypeAmenityRepository.existsByRoomType_IdAndAmenity_Id(
                                 request.getRoomTypeId(), request.getAmenityId())) {
                         throw new IllegalArgumentException("Tiện ích này đã tồn tại trong loại phòng");
                 }
@@ -146,10 +146,10 @@ public class RoomTypeAmenityServiceImpl implements RoomTypeAmenityService {
                         checkOwnerOrAdmin(roomType.getHotel().getOwner().getEmail());
                 }
 
-                if (!roomTypeAmenityRepository.existsByRoomTypeIdAndAmenityId(roomTypeId, amenityId)) {
+                if (!roomTypeAmenityRepository.existsByRoomType_IdAndAmenity_Id(roomTypeId, amenityId)) {
                         throw new EntityNotFoundException("Không tìm thấy tiện ích trong loại phòng để xóa");
                 }
 
-                roomTypeAmenityRepository.deleteByRoomTypeIdAndAmenityId(roomTypeId, amenityId);
+                roomTypeAmenityRepository.deleteByRoomType_IdAndAmenity_Id(roomTypeId, amenityId);
         }
 }

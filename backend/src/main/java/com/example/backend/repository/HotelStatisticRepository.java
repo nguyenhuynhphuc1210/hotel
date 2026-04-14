@@ -20,7 +20,6 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
 
     Optional<HotelStatistic> findByHotelIdAndStatDate(Long hotelId, LocalDate statDate);
 
-    // Đã đổi :amount thành :totalAmount cho đồng bộ
     @Modifying
     @Query("UPDATE HotelStatistic h SET h.totalBookings = h.totalBookings + 1, h.totalRevenue = h.totalRevenue + :totalAmount WHERE h.hotel.id = :hotelId AND h.statDate = :statDate")
     int incrementSuccessfulBooking(

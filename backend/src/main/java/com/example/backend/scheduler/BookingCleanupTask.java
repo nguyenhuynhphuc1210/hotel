@@ -7,14 +7,17 @@ import com.example.backend.enums.BookingStatus;
 import com.example.backend.enums.PaymentStatus;
 import com.example.backend.repository.BookingRepository;
 import com.example.backend.repository.RoomCalendarRepository;
+import com.example.backend.service.HotelStatisticService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-
 
 @Component
 @RequiredArgsConstructor
@@ -23,15 +26,16 @@ public class BookingCleanupTask {
 
     private final BookingRepository bookingRepository;
     private final RoomCalendarRepository roomCalendarRepository;
+    private final HotelStatisticService hotelStatisticService;
 
     // Chạy mỗi 5 phút một lần
-    @Scheduled(fixedRate = 300000) 
+    @Scheduled(fixedRate = 300000)
     @Transactional
     public void cleanupExpiredBookings() {
         LocalDateTime timeoutLimit = LocalDateTime.now().minusMinutes(15);
 
         List<Booking> expiredBookings = bookingRepository
-            .findByStatusAndCreatedAtBefore(BookingStatus.PENDING, timeoutLimit);
+                .findByStatusAndCreatedAtBefore(BookingStatus.PENDING, timeoutLimit);
 
         for (Booking booking : expiredBookings) {
             log.info("Đang hủy đơn hàng quá hạn: " + booking.getBookingCode());
@@ -45,14 +49,19 @@ public class BookingCleanupTask {
                 List<RoomCalendar> calendars = roomCalendarRepository.findByRoomType_IdAndDateBetween(
                         br.getRoomType().getId(),
                         booking.getCheckInDate(),
-                        booking.getCheckOutDate().minusDays(1)
-                );
+                        booking.getCheckOutDate().minusDays(1));
                 for (RoomCalendar calendar : calendars) {
                     calendar.setBookedRooms(Math.max(0, calendar.getBookedRooms() - br.getQuantity()));
                 }
                 roomCalendarRepository.saveAll(calendars);
             }
-            bookingRepository.save(booking);
+            Booking savedBooking = bookingRepository.save(booking);
+
+            hotelStatisticService.recordRealtimeStatistic(
+                    savedBooking.getHotel(),
+                    savedBooking.getTotalAmount(),
+                    LocalDate.now(),
+                    BookingStatus.CANCELLED);
         }
     }
 }

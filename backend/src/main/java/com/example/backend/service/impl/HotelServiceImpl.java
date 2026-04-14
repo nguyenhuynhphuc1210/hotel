@@ -22,12 +22,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityNotFoundException;
+
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -40,43 +43,39 @@ public class HotelServiceImpl implements HotelService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<HotelSummaryResponse> getActiveHotels() {
-        return hotelRepository.findByIsActiveTrueAndIsDeletedFalse()
-                .stream()
-                .map(hotelMapper::toHotelSummaryResponse)
-                .collect(Collectors.toList());
+    public Page<HotelSummaryResponse> getActiveHotels(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return hotelRepository.findByIsActiveTrueAndIsDeletedFalse(pageable)
+                .map(hotelMapper::toHotelSummaryResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<HotelAdminResponse> getAllHotels() {
-        List<Hotel> hotels;
+    public Page<HotelAdminResponse> getAllHotels(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Hotel> hotelPage;
 
         if (isAdmin()) {
-            hotels = hotelRepository.findByIsDeletedFalse();
+            hotelPage = hotelRepository.findByIsDeletedFalse(pageable);
         } else if (isHotelOwner()) {
-            hotels = hotelRepository.findByOwnerEmailAndIsDeletedFalse(getCurrentUserEmail());
+            hotelPage = hotelRepository.findByOwner_EmailAndIsDeletedFalse(getCurrentUserEmail(), pageable);
         } else {
             throw new AccessDeniedException("Bạn không có quyền truy cập trang quản trị");
         }
 
-        return hotels.stream()
-                .map(hotelMapper::toHotelAdminResponse)
-                .collect(Collectors.toList());
+        return hotelPage.map(hotelMapper::toHotelAdminResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<HotelAdminResponse> getDeletedHotels() {
+    public Page<HotelAdminResponse> getDeletedHotels(int page, int size) {
         if (!isAdmin()) {
             throw new AccessDeniedException("Chỉ ADMIN mới được xem danh sách khách sạn đã xóa!");
         }
 
-        List<Hotel> deletedHotels = hotelRepository.findByIsDeletedTrue();
-
-        return deletedHotels.stream()
-                .map(hotelMapper::toHotelAdminResponse)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(page, size);
+        return hotelRepository.findByIsDeletedTrue(pageable)
+                .map(hotelMapper::toHotelAdminResponse);
     }
 
     @Override
@@ -243,28 +242,29 @@ public class HotelServiceImpl implements HotelService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<HotelSummaryResponse> searchHotels(String district, String keyword,
-            LocalDate checkIn, LocalDate checkOut, Integer guests) {
+    public Page<HotelSummaryResponse> searchHotels(String district, String keyword,
+            LocalDate checkIn, LocalDate checkOut, Integer guests, int page, int size) {
 
-        List<Hotel> hotels = hotelRepository.findByIsActiveTrueAndIsDeletedFalse();
+        String searchDistrict = (district != null && !district.isBlank()) ? district.trim() : null;
+        String searchKeyword = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
 
-        return hotels.stream()
-                .filter(h -> district == null || district.isBlank() ||
-                        h.getDistrict().toLowerCase().contains(district.toLowerCase()))
-                .filter(h -> keyword == null || keyword.isBlank() ||
-                        h.getHotelName().toLowerCase().contains(keyword.toLowerCase()) ||
-                        h.getAddressLine().toLowerCase().contains(keyword.toLowerCase()))
-                .filter(h -> {
-                    if (checkIn == null || checkOut == null)
-                        return true;
-                    long days = checkOut.toEpochDay() - checkIn.toEpochDay();
-                    long availableDays = roomCalendarRepository.countAvailableByHotelAndDateRange(h.getId(), checkIn,
-                            checkOut);
-                    return availableDays >= days;
-                })
-                .filter(hotel -> !hotel.getIsDeleted())
-                .map(hotelMapper::toHotelSummaryResponse)
-                .collect(Collectors.toList());
+        Long nights = 0L;
+        if (checkIn != null && checkOut != null) {
+            nights = checkOut.toEpochDay() - checkIn.toEpochDay();
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Hotel> hotelPage = hotelRepository.searchHotels(
+                searchDistrict,
+                searchKeyword,
+                checkIn,
+                checkOut,
+                nights,
+                pageable
+        );
+
+        return hotelPage.map(hotelMapper::toHotelSummaryResponse);
     }
 
     @Override

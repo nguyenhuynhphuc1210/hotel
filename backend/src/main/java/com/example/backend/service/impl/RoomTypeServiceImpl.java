@@ -37,9 +37,11 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         List<RoomType> roomTypes;
 
         if (isAdmin()) {
-            roomTypes = roomTypeRepository.findByHotelIsDeletedFalseAndIsDeletedFalse();
+            // Đã đổi tên hàm theo Repository mới
+            roomTypes = roomTypeRepository.findAllActiveSystemRoomTypes();
         } else if (isHotelOwner()) {
-            roomTypes = roomTypeRepository.findByHotelOwnerEmailAndHotelIsDeletedFalseAndIsDeletedFalse(getCurrentUserEmail());
+            // Đã đổi tên hàm theo Repository mới
+            roomTypes = roomTypeRepository.findActiveRoomTypesByOwner(getCurrentUserEmail());
         } else {
             throw new AccessDeniedException("Bạn không có quyền truy cập trang quản trị");
         }
@@ -224,7 +226,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         if (isAdmin()) {
             deletedTypes = roomTypeRepository.findByIsDeletedTrue();
         } else if (isHotelOwner()) {
-            deletedTypes = roomTypeRepository.findByHotelOwnerEmailAndIsDeletedTrue(getCurrentUserEmail());
+            deletedTypes = roomTypeRepository.findDeletedRoomTypesByOwner(getCurrentUserEmail());
         } else {
             throw new AccessDeniedException("Bạn không có quyền truy cập trang này");
         }

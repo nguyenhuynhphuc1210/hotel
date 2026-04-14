@@ -8,9 +8,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FavoriteResponse {
-    private Long userId;
-    private String userEmail;
-    private Long hotelId;
-    private String hotelName;
+    private HotelSummaryResponse hotel;
     private LocalDateTime createdAt;
 }

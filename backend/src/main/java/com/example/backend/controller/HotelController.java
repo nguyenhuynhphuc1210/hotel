@@ -15,7 +15,7 @@ import jakarta.validation.Valid;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/hotels")
@@ -25,18 +25,24 @@ public class HotelController {
     private final HotelService hotelService;
 
     @GetMapping("/active")
-    public ResponseEntity<List<HotelSummaryResponse>> getActiveHotels() {
-        return ResponseEntity.ok(hotelService.getActiveHotels());
+    public ResponseEntity<Page<HotelSummaryResponse>> getActiveHotels(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(hotelService.getActiveHotels(page, size));
     }
 
     @GetMapping
-    public ResponseEntity<List<HotelAdminResponse>> getAllHotels() {
-        return ResponseEntity.ok(hotelService.getAllHotels());
+    public ResponseEntity<Page<HotelAdminResponse>> getAllHotels(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(hotelService.getAllHotels(page, size));
     }
 
     @GetMapping("/deleted")
-    public ResponseEntity<List<HotelAdminResponse>> getDeletedHotels() {
-        return ResponseEntity.ok(hotelService.getDeletedHotels());
+    public ResponseEntity<Page<HotelAdminResponse>> getDeletedHotels(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(hotelService.getDeletedHotels(page, size));
     }
 
     @GetMapping("/{id}")
@@ -52,7 +58,7 @@ public class HotelController {
 
     @PutMapping("/{id}")
     public ResponseEntity<HotelResponse> updateHotel(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @Valid @RequestBody HotelRequest request) {
         return ResponseEntity.ok(hotelService.updateHotel(id, request));
     }
@@ -79,14 +85,17 @@ public class HotelController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<HotelSummaryResponse>> searchHotels(
+    public ResponseEntity<Page<HotelSummaryResponse>> searchHotels(
             @RequestParam(required = false) String district,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
-            @RequestParam(required = false) Integer guests) {
-        
-        List<HotelSummaryResponse> results = hotelService.searchHotels(district, keyword, checkIn, checkOut, guests);
+            @RequestParam(required = false) Integer guests,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Page<HotelSummaryResponse> results = hotelService.searchHotels(district, keyword, checkIn, checkOut, guests,
+                page, size);
         return ResponseEntity.ok(results);
     }
 
