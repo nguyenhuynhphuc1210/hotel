@@ -17,6 +17,8 @@ const promotionApi = {
 
   delete: (id: number | string) =>
     axiosInstance.delete(API_CONFIG.ENDPOINTS.PROMOTION_BY_ID(id)),
+
+  
 }
 
 export default promotionApi

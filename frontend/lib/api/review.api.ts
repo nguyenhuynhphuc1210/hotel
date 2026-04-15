@@ -2,49 +2,50 @@
 
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
-import { ReviewRequest, ReviewResponse } from '@/types/review.types'
+import { ReviewReportRequest, ReviewRequest, ReviewResponse } from '@/types/review.types'
+import { PageResponse } from './hotel.api' 
 
 const reviewApi = {
-  /**
-   * Lấy danh sách tất cả review
-   */
-  getAll: () =>
-    axiosInstance.get<ReviewResponse[]>(API_CONFIG.ENDPOINTS.REVIEWS),
+ 
+  getAll: (page = 0, size = 10) =>
+    axiosInstance.get<PageResponse<ReviewResponse>>(API_CONFIG.ENDPOINTS.REVIEWS, {
+      params: { page, size }
+    }),
 
-  /**
-   * Lấy chi tiết một review theo ID
-   */
   getById: (id: number | string) =>
     axiosInstance.get<ReviewResponse>(API_CONFIG.ENDPOINTS.REVIEW_BY_ID(id)),
 
-  /**
-   * Tạo review mới sau khi hoàn tất đặt phòng
-   * Body gồm: bookingId, rating (1-5), comment
-   */
   create: (data: ReviewRequest) =>
     axiosInstance.post<ReviewResponse>(API_CONFIG.ENDPOINTS.REVIEWS, data),
 
-  /**
-   * Cập nhật review (chỉnh sửa đánh giá hoặc bình luận)
-   */
   update: (id: number | string, data: ReviewRequest) =>
     axiosInstance.put<ReviewResponse>(API_CONFIG.ENDPOINTS.REVIEW_BY_ID(id), data),
 
-  /**
-   * Xóa review
-   */
   delete: (id: number | string) =>
     axiosInstance.delete(API_CONFIG.ENDPOINTS.REVIEW_BY_ID(id)),
 
   toggleVisibility: (id: number | string) =>
     axiosInstance.patch<ReviewResponse>(`${API_CONFIG.ENDPOINTS.REVIEWS}/${id}/toggle-visibility`),
-
-  // GET /api/reviews/hotel/:hotelId/admin
-  getAdminReviewsByHotel: (hotelId: number | string, page = 0, size = 10) =>
-    axiosInstance.get<{ content: ReviewResponse[], totalElements: number }>(
+  
+   getAdminReviewsByHotel: (hotelId: number | string, page = 0, size = 10) =>
+    axiosInstance.get<PageResponse<ReviewResponse>>( 
       `/api/reviews/hotel/${hotelId}/admin`,
       { params: { page, size } }
     ),
+
+    reportReview: (id: number | string, data: ReviewReportRequest) =>
+    axiosInstance.patch<ReviewResponse>(`/api/reviews/${id}/report`, data),
+ 
+  getReportedReviews: (page = 0, size = 50) =>
+    axiosInstance.get<PageResponse<ReviewResponse>>(
+      `/api/reviews/admin/reported`,
+      { params: { page, size } }
+    ),
+ 
+  resolveReport: (id: number | string, isHideApproved: boolean) =>
+    axiosInstance.patch<ReviewResponse>(`/api/reviews/${id}/resolve-report`, null, {
+      params: { isHideApproved },
+    }),
 }
 
 export default reviewApi

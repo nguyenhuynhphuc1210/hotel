@@ -1,5 +1,5 @@
+// components/providers/AuthProvider.tsx
 'use client'
-
 import { useEffect } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import userApi from '@/lib/api/user.api' 
@@ -9,25 +9,22 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const { token, clearAuth, setUser } = useAuthStore()
 
   useEffect(() => {
-    const validateToken = async () => {
-      if (!token) return
+    // Chỉ validate nếu thực sự có token trong store
+    if (!token) return
 
+    const validateToken = async () => {
       try {
-        // SỬA TẠI ĐÂY: Dùng hàm đã viết sẵn trong userApi
         const response = await userApi.getMyProfile()
-        
-        // Cập nhật lại thông tin user mới nhất
         setUser(response.data)
       } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
-          // Nếu lỗi 401 (hết hạn) hoặc 403 (không quyền) hoặc thậm chí 500 (lỗi nặng)
-          // thì nên xóa auth để user đăng nhập lại
+          // Chỉ xóa auth nếu server thực sự từ chối token (401, 403)
           if (error.response?.status === 401 || error.response?.status === 403) {
-            console.warn("Phiên đăng nhập không hợp lệ, đang đăng xuất...");
+            console.warn("Phiên đăng nhập hết hạn.");
             clearAuth()
+            // Đừng dùng window.location.href = '/login' ở đây 
+            // vì nó sẽ ép người dùng login ngay cả khi họ đang xem trang public
           }
-        } else {
-          console.error("Lỗi xác thực:", error);
         }
       }
     }

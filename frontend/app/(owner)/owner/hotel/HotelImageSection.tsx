@@ -3,26 +3,20 @@
 import { useState, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-    Upload, Star, Trash2, Loader2, Link as LinkIcon,
+    Upload, Star, Trash2, Loader2,
     Plus, X, ZoomIn, ChevronLeft, ChevronRight, Images,
 } from 'lucide-react'
 import hotelImageApi from '@/lib/api/hotel-image.api'
 import { HotelResponse, HotelImageResponse } from '@/lib/api/hotel.api'
 import toast from 'react-hot-toast'
 
-// ─── Lightbox ─────────────────────────────────────────────
-function Lightbox({
-    images,
-    startIdx,
-    onClose,
-}: {
+function Lightbox({ images, startIdx, onClose }: {
     images: HotelImageResponse[]
     startIdx: number
     onClose: () => void
 }) {
     const [idx, setIdx] = useState(startIdx)
-    const nav = (dir: number) =>
-        setIdx(i => (i + dir + images.length) % images.length)
+    const nav = (dir: number) => setIdx(i => (i + dir + images.length) % images.length)
 
     return (
         <div
@@ -37,7 +31,6 @@ function Lightbox({
             >
                 <X size={18} />
             </button>
-
             <img
                 src={images[idx]?.imageUrl}
                 alt=""
@@ -45,7 +38,6 @@ function Lightbox({
                 style={{ maxWidth: '86vw', maxHeight: '74vh' }}
                 onClick={e => e.stopPropagation()}
             />
-
             <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
                 <button
                     onClick={() => nav(-1)}
@@ -69,45 +61,28 @@ function Lightbox({
     )
 }
 
-// ─── Main Component ───────────────────────────────────────
 export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
     const qc = useQueryClient()
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const [urlInput, setUrlInput] = useState('')
     const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
     const [showAllModal, setShowAllModal] = useState(false)
     const [deletingId, setDeletingId] = useState<number | null>(null)
     const [settingPrimaryId, setSettingPrimaryId] = useState<number | null>(null)
 
     const images: HotelImageResponse[] = hotel.images ?? []
-    const primaryImage = images.find(i => i.isPrimary) ?? images[0]
-    const otherImages = images.filter(i => i.id !== primaryImage?.id).slice(0, 4)
 
     const refresh = () => qc.invalidateQueries({ queryKey: ['owner-hotels'] })
 
-    // ── Mutations ────────────────────────────────────────────
     const uploadMutation = useMutation({
         mutationFn: (files: File[]) => hotelImageApi.upload(hotel.id, files),
         onSuccess: () => { toast.success('Upload ảnh thành công!'); refresh() },
         onError: () => toast.error('Upload thất bại!'),
     })
 
-    const addUrlMutation = useMutation({
-        mutationFn: (url: string) => hotelImageApi.uploadByUrl(hotel.id, url),
-        onSuccess: () => { toast.success('Đã thêm ảnh từ URL!'); setUrlInput(''); refresh() },
-        onError: () => toast.error('Không thể thêm ảnh từ URL này!'),
-    })
-
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files ?? [])
         if (files.length) uploadMutation.mutate(files)
         e.target.value = ''
-    }
-
-    const handleAddByUrl = () => {
-        if (!urlInput.trim()) return
-        if (!urlInput.startsWith('http')) { toast.error('URL không hợp lệ'); return }
-        addUrlMutation.mutate(urlInput)
     }
 
     const handleDelete = async (img: HotelImageResponse) => {
@@ -131,13 +106,10 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
         finally { setSettingPrimaryId(null) }
     }
 
-    const isProcessing = uploadMutation.isPending || addUrlMutation.isPending
-
     const renderGallery = () => {
         const count = images.length
         if (count === 0) return null
 
-        // 1. Nếu chỉ có 1 hình: Chiếm trọn 100%
         if (count === 1) {
             return (
                 <div className="relative h-full w-full cursor-pointer group" onClick={() => setLightboxIdx(0)}>
@@ -147,7 +119,6 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
             )
         }
 
-        // 2. Nếu có 2 hình: Chia đôi 50/50 (Grid 2 cột)
         if (count === 2) {
             return (
                 <div className="grid grid-cols-2 h-full gap-2">
@@ -161,7 +132,6 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
             )
         }
 
-        // 3. Nếu có 3 hình: 1 lớn bên trái (2/3), 2 nhỏ xếp chồng bên phải (1/3)
         if (count === 3) {
             return (
                 <div className="grid grid-cols-3 h-full gap-2">
@@ -181,7 +151,6 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
             )
         }
 
-        // 4. Nếu có 4 hình trở lên: Giao diện Agoda chuẩn (1 lớn + 4 nhỏ)
         const primaryImg = images.find(i => i.isPrimary) ?? images[0]
         const others = images.filter(i => i.id !== primaryImg.id).slice(0, 4)
 
@@ -201,7 +170,7 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
         )
     }
 
-    // ── Empty state ──────────────────────────────────────────
+    // ── Empty state ──
     if (images.length === 0) {
         return (
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -210,15 +179,10 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
                         <Images size={16} style={{ color: '#2563EB' }} />
                         <h2 className="text-sm font-bold text-gray-900">Ảnh khách sạn</h2>
                     </div>
-                    <UploadControls
-                        urlInput={urlInput}
-                        setUrlInput={setUrlInput}
-                        onAddUrl={handleAddByUrl}
+                    <UploadButton
                         onFileChange={handleFileUpload}
-                        isProcessing={isProcessing}
+                        isPending={uploadMutation.isPending}
                         fileInputRef={fileInputRef}
-                        addUrlPending={addUrlMutation.isPending}
-                        uploadPending={uploadMutation.isPending}
                     />
                 </div>
                 <div
@@ -230,7 +194,7 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
                         <Images size={24} style={{ color: '#2563EB' }} />
                     </div>
                     <p className="text-sm font-medium text-gray-500">Chưa có ảnh nào</p>
-                    <p className="text-xs text-gray-400">Upload ảnh hoặc dán URL để hiển thị trên trang khách sạn</p>
+                    <p className="text-xs text-gray-400">Upload ảnh để hiển thị trên trang khách sạn</p>
                     <button
                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white mt-1"
                         style={{ background: '#2563EB' }}
@@ -243,7 +207,6 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
         )
     }
 
-    // ── Gallery layout (Booking.com style) ───────────────────
     return (
         <>
             {lightboxIdx !== null && (
@@ -260,13 +223,9 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
                     deletingId={deletingId}
                     settingPrimaryId={settingPrimaryId}
                     onUpload={() => fileInputRef.current?.click()}
-                    onAddUrl={handleAddByUrl}
-                    urlInput={urlInput}
-                    setUrlInput={setUrlInput}
-                    isProcessing={isProcessing}
+                    isProcessing={uploadMutation.isPending}
                     fileInputRef={fileInputRef}
                     onFileChange={handleFileUpload}
-                    addUrlPending={addUrlMutation.isPending}
                     uploadPending={uploadMutation.isPending}
                 />
             )}
@@ -279,27 +238,22 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
             />
 
             <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
-                {/* Header Section */}
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                         <Images size={18} className="text-blue-600" />
                         <h2 className="text-base font-bold text-gray-900">Hình ảnh khách sạn</h2>
                         <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-600">{images.length} ảnh</span>
                     </div>
-                    <UploadControls
-                        urlInput={urlInput} setUrlInput={setUrlInput} onAddUrl={handleAddByUrl}
-                        onFileChange={handleFileUpload} isProcessing={isProcessing}
-                        fileInputRef={fileInputRef} addUrlPending={addUrlMutation.isPending}
-                        uploadPending={uploadMutation.isPending}
+                    <UploadButton
+                        onFileChange={handleFileUpload}
+                        isPending={uploadMutation.isPending}
+                        fileInputRef={fileInputRef}
                     />
                 </div>
 
-                {/* Main Gallery Area */}
                 <div className="p-4">
                     <div className="relative rounded-2xl overflow-hidden bg-gray-100" style={{ height: 450 }}>
                         {renderGallery()}
-
-                        {/* Nút overlay luôn nằm đè lên góc dưới bên phải */}
                         <button
                             onClick={() => setShowAllModal(true)}
                             className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-gray-800 bg-white/90 hover:bg-white shadow-xl backdrop-blur-md transition-all active:scale-95 border border-white/50 z-10"
@@ -307,8 +261,6 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
                             <Images size={16} className="text-blue-600" />
                             Quản lý tất cả ({images.length})
                         </button>
-
-                        {/* Label Ảnh chính luôn ở góc trái */}
                         <div className="absolute top-4 left-4 z-10 pointer-events-none">
                             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-amber-500 text-white shadow-lg">
                                 <Star size={12} fill="white" /> Ảnh đại diện
@@ -321,10 +273,7 @@ export function HotelImageSection({ hotel }: { hotel: HotelResponse }) {
     )
 }
 
-// ─── Image Hover Actions ──────────────────────────────────
-function ImageHoverActions({
-    img, onDelete, onSetPrimary, isDeleting, isSettingPrimary, hidePrimary = false,
-}: {
+function ImageHoverActions({ img, onDelete, onSetPrimary, isDeleting, isSettingPrimary, hidePrimary = false }: {
     img: HotelImageResponse
     onDelete: () => void
     onSetPrimary: () => void
@@ -358,69 +307,30 @@ function ImageHoverActions({
     )
 }
 
-// ─── Upload Controls ──────────────────────────────────────
-function UploadControls({
-    urlInput, setUrlInput, onAddUrl, onFileChange, isProcessing,
-    fileInputRef, addUrlPending, uploadPending,
-}: {
-    urlInput: string
-    setUrlInput: (v: string) => void
-    onAddUrl: () => void
+function UploadButton({ onFileChange, isPending, fileInputRef }: {
     onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-    isProcessing: boolean
-    fileInputRef: React.RefObject<HTMLInputElement | null> // Thêm | null ở đây
-    addUrlPending: boolean
-    uploadPending: boolean
+    isPending: boolean
+    fileInputRef: React.RefObject<HTMLInputElement | null>
 }) {
     return (
-        <div className="flex items-center gap-2">
-            {/* URL input */}
-            <div className="relative flex items-center">
-                <div className="absolute left-3 text-gray-400"><LinkIcon size={13} /></div>
-                <input
-                    type="text"
-                    placeholder="Dán URL ảnh..."
-                    value={urlInput}
-                    onChange={e => setUrlInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && onAddUrl()}
-                    className="pl-8 pr-14 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
-                    style={{ width: 200 }}
-                />
-                <button
-                    onClick={onAddUrl}
-                    disabled={isProcessing || !urlInput.trim()}
-                    className="absolute right-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase disabled:opacity-50 transition-colors"
-                    style={{ background: '#EFF6FF', color: '#2563EB' }}
-                >
-                    {addUrlPending ? '...' : 'Thêm'}
-                </button>
-            </div>
-
-            <div className="h-5 w-px" style={{ background: '#E2E8F0' }} />
-
-            {/* File upload */}
-            <label
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-white cursor-pointer transition-opacity"
-                style={{
-                    background: '#2563EB',
-                    opacity: isProcessing ? 0.6 : 1,
-                    pointerEvents: isProcessing ? 'none' : 'auto',
-                }}
-            >
-                {uploadPending ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                Upload
-                <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={onFileChange} />
-            </label>
-        </div>
+        <label
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-white cursor-pointer transition-opacity"
+            style={{
+                background: '#2563EB',
+                opacity: isPending ? 0.6 : 1,
+                pointerEvents: isPending ? 'none' : 'auto',
+            }}
+        >
+            {isPending ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+            Upload ảnh
+            <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={onFileChange} />
+        </label>
     )
 }
 
-// ─── All Images Modal ─────────────────────────────────────
-function AllImagesModal({
-    images, onClose, onDelete, onSetPrimary, onOpenLightbox,
-    deletingId, settingPrimaryId,
-    onUpload, onAddUrl, urlInput, setUrlInput, isProcessing,
-    fileInputRef, onFileChange, addUrlPending, uploadPending,
+function AllImagesModal({ images, onClose, onDelete, onSetPrimary, onOpenLightbox,
+    deletingId, settingPrimaryId, onUpload, isProcessing,
+    fileInputRef, onFileChange, uploadPending,
 }: {
     images: HotelImageResponse[]
     onClose: () => void
@@ -430,13 +340,9 @@ function AllImagesModal({
     deletingId: number | null
     settingPrimaryId: number | null
     onUpload: () => void
-    onAddUrl: () => void
-    urlInput: string
-    setUrlInput: (v: string) => void
     isProcessing: boolean
     fileInputRef: React.RefObject<HTMLInputElement | null>
     onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-    addUrlPending: boolean
     uploadPending: boolean
 }) {
     return (
@@ -448,10 +354,7 @@ function AllImagesModal({
                 className="bg-white rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden"
                 style={{ maxWidth: 900, maxHeight: '92vh' }}
             >
-                {/* Header */}
-                <div
-                    className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-100"
-                >
+                <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: '#EFF6FF' }}>
                             <Images size={18} style={{ color: '#2563EB' }} />
@@ -462,15 +365,10 @@ function AllImagesModal({
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <UploadControls
-                            urlInput={urlInput}
-                            setUrlInput={setUrlInput}
-                            onAddUrl={onAddUrl}
+                        <UploadButton
                             onFileChange={onFileChange}
-                            isProcessing={isProcessing}
+                            isPending={uploadPending}
                             fileInputRef={fileInputRef}
-                            addUrlPending={addUrlPending}
-                            uploadPending={uploadPending}
                         />
                         <button
                             onClick={onClose}
@@ -481,7 +379,6 @@ function AllImagesModal({
                     </div>
                 </div>
 
-                {/* Grid */}
                 <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid grid-cols-3 gap-4">
                         {images.map((img, idx) => (
@@ -521,9 +418,7 @@ function AllImagesModal({
                                                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold disabled:opacity-60"
                                                 style={{ background: '#F59E0B', color: '#fff' }}
                                             >
-                                                {settingPrimaryId === img.id
-                                                    ? <Loader2 size={11} className="animate-spin" />
-                                                    : <Star size={11} />}
+                                                {settingPrimaryId === img.id ? <Loader2 size={11} className="animate-spin" /> : <Star size={11} />}
                                                 Đặt chính
                                             </button>
                                         )}
@@ -533,14 +428,11 @@ function AllImagesModal({
                                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold disabled:opacity-60"
                                             style={{ background: '#EF4444', color: '#fff' }}
                                         >
-                                            {deletingId === img.id
-                                                ? <Loader2 size={11} className="animate-spin" />
-                                                : <Trash2 size={11} />}
+                                            {deletingId === img.id ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
                                             Xoá
                                         </button>
                                     </div>
                                 </div>
-
                                 {img.isPrimary && (
                                     <div
                                         className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold"
@@ -552,23 +444,12 @@ function AllImagesModal({
                             </div>
                         ))}
 
-                        {/* Add more tile */}
                         <div
                             className="relative rounded-2xl overflow-hidden cursor-pointer flex flex-col items-center justify-center gap-2 transition-colors"
-                            style={{
-                                aspectRatio: '4/3',
-                                border: '2px dashed #CBD5E1',
-                                background: '#F8FAFC',
-                            }}
+                            style={{ aspectRatio: '4/3', border: '2px dashed #CBD5E1', background: '#F8FAFC' }}
                             onClick={onUpload}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.borderColor = '#2563EB'
-                                e.currentTarget.style.background = '#EFF6FF'
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.borderColor = '#CBD5E1'
-                                e.currentTarget.style.background = '#F8FAFC'
-                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563EB'; e.currentTarget.style.background = '#EFF6FF' }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.background = '#F8FAFC' }}
                         >
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#E2E8F0' }}>
                                 <Plus size={18} style={{ color: '#64748B' }} />
@@ -578,7 +459,6 @@ function AllImagesModal({
                     </div>
                 </div>
 
-                {/* Footer */}
                 <div
                     className="shrink-0 flex items-center justify-between px-6 py-3 border-t border-gray-100"
                     style={{ background: '#F8FAFC' }}

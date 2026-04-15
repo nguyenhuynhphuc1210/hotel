@@ -1,7 +1,5 @@
-// Khớp với BookingStatus enum trong BE
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'CHECKED_IN' | 'NO_SHOW'
 
-// Khớp với BookingResponse.java
 export interface BookingResponse {
   id: number
   bookingCode: string
@@ -30,12 +28,22 @@ export interface BookingResponse {
   bookingRooms: BookingRoomResponse[]
 }
 
+export interface BookingRoomRateResponse {
+  id: number
+  bookingRoomId: number
+  roomTypeId: number
+  date: string      
+  price: number
+}
+
 export interface BookingRoomResponse {
   id: number
+  bookingId: number
   roomTypeId: number
   roomTypeName: string
   quantity: number
   pricePerNight: number
+  rates: BookingRoomRateResponse[]   
 }
 
 export interface BookingRequest {
@@ -49,3 +57,4 @@ export interface BookingRequest {
   paymentMethod: string;
   bookingRooms: { roomTypeId: number; quantity: number }[];
 }
+

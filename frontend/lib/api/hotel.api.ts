@@ -1,5 +1,23 @@
+// lib/api/hotel.api.ts
+
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
+
+export interface HotelImageResponse {
+  id: number
+  hotelId: number
+  hotelName: string
+  imageUrl: string
+  isPrimary: boolean
+  publicId: string
+}
+
+export interface RoomTypeResponse {
+  id: number
+  name: string
+  price: number
+  capacity: number
+}
 
 export interface HotelResponse {
   id: number
@@ -18,8 +36,34 @@ export interface HotelResponse {
   createdAt: string
   updatedAt: string
   roomTypes: RoomTypeResponse[]
-  thumbnailUrl?: string;
+  thumbnailUrl?: string
   images?: HotelImageResponse[]
+}
+
+// Kiểu trả về từ /active và /search (backend trả HotelSummaryResponse)
+export interface HotelSummaryResponse {
+  id: number
+  hotelName: string
+  starRating: number
+  addressLine: string
+  ward: string
+  district: string
+  city: string
+  thumbnailUrl?: string
+  images?: HotelImageResponse[]
+  minPrice?: number
+  isActive: boolean
+}
+
+// Kiểu Page chung của Spring Boot
+export interface PageResponse<T> {
+  content: T[]
+  totalPages: number
+  totalElements: number
+  number: number       // current page (0-based)
+  size: number
+  first: boolean
+  last: boolean
 }
 
 export interface HotelRequest {
@@ -34,25 +78,21 @@ export interface HotelRequest {
   ownerId?: number
 }
 
-export interface HotelImageResponse {
-  id: number
-  hotelId: number
-  hotelName: string
-  imageUrl: string
-  isPrimary: boolean
-  publicId: string
-}
-
-export interface RoomTypeResponse {
-  id: number
-  name: string
-  price: number
-  capacity: number
+export interface HotelSearchParams {
+  district?: string
+  keyword?: string
+  checkIn?: string
+  checkOut?: string
+  guests?: number
+  page?: number
+  size?: number
 }
 
 const hotelApi = {
-  getAll: () =>
-    axiosInstance.get<HotelResponse[]>(API_CONFIG.ENDPOINTS.HOTELS),
+  getAll: (page = 0, size = 100) =>
+  axiosInstance.get<PageResponse<HotelResponse>>(API_CONFIG.ENDPOINTS.HOTELS, {
+    params: { page, size }
+  }),
 
   getById: (id: number | string) =>
     axiosInstance.get<HotelResponse>(API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)),
@@ -66,16 +106,30 @@ const hotelApi = {
   delete: (id: number | string) =>
     axiosInstance.delete(API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)),
 
-  // PATCH /api/hotels/:id/approve
   approve: (id: number | string) =>
     axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/approve`),
 
-  // PATCH /api/hotels/:id/disable
   disable: (id: number | string) =>
     axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/disable`),
 
-  getActive: () =>
-    axiosInstance.get<HotelResponse[]>(`${API_CONFIG.ENDPOINTS.HOTELS}/active`),
+  // ✅ Fix: trả về Page thay vì array
+  getActive: (page = 0, size = 9) =>
+    axiosInstance.get<PageResponse<HotelSummaryResponse>>(
+      `${API_CONFIG.ENDPOINTS.HOTELS}/active`,
+      { params: { page, size } }
+    ),
+
+  // ✅ Thêm search có phân trang
+  search: (params: HotelSearchParams) =>
+    axiosInstance.get<PageResponse<HotelSummaryResponse>>(
+      `${API_CONFIG.ENDPOINTS.HOTELS}/search`,
+      { params }
+    ),
+
+  getMinPrice: (id: number | string, checkIn: string, checkOut: string) =>
+    axiosInstance.get<number>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/min-price`, {
+      params: { checkIn, checkOut },
+    }),
 }
 
 export default hotelApi

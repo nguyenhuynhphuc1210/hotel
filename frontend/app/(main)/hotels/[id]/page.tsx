@@ -24,6 +24,7 @@ import { ReviewResponse } from '@/types/review.types'
 import toast from 'react-hot-toast'
 import HotelGallery from '@/components/layout/HotelGallery'
 import RoomGalleryModal from '@/components/layout/RoomGalleryModal'
+import { HotelPolicyResponse } from '@/types/policy.types'
 
 // ── Hook: fetch calendar cho 1 room trong khoảng checkIn/checkOut ──────────
 function useRoomCalendarPricing(
@@ -205,11 +206,10 @@ function RoomCard({
                     <button
                         onClick={() => onBook(room.id)}
                         disabled={hasFullDates && !allAvailable}
-                        className={`px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
-                            hasFullDates
-                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'
-                                : 'bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 shadow-none'
-                        }`}
+                        className={`px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${hasFullDates
+                            ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'
+                            : 'bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 shadow-none'
+                            }`}
                     >
                         {hasFullDates ? 'Đặt ngay' : 'Xem giá'}
                     </button>
@@ -247,7 +247,7 @@ export default function HotelDetailPage() {
     const { data: hotel, isLoading: isHotelLoading } = useQuery({
         queryKey: ['hotel-detail', hotelId],
         queryFn: () => hotelApi.getById(hotelId).then(r => r.data),
-    })
+    })    
 
     const { data: roomTypes = [] } = useQuery({
         queryKey: ['hotel-rooms', hotelId],
@@ -261,9 +261,12 @@ export default function HotelDetailPage() {
         enabled: !!hotelId,
     })
 
-    const { data: policies = [] } = useQuery({
+    const { data: hotelPolicy } = useQuery({
         queryKey: ['hotel-policies', hotelId],
-        queryFn: () => policyApi.getAll().then(r => r.data.filter(p => p.hotelId === hotelId)),
+        queryFn: () =>
+            axiosInstance
+                .get<HotelPolicyResponse>(`/api/hotel-policies/hotel/${hotelId}`)
+                .then(r => r.data),
         enabled: !!hotelId,
     })
 
@@ -377,7 +380,6 @@ export default function HotelDetailPage() {
         ? (reviews.reduce((acc, r) => acc + Number(r.rating), 0) / reviews.length).toFixed(1)
         : '0.0'
 
-    const hotelPolicy = policies[0]
 
     return (
         <div className="bg-gray-50 min-h-screen pb-20">
@@ -413,7 +415,7 @@ export default function HotelDetailPage() {
 
             <div className="max-w-7xl mx-auto px-4 py-6">
                 <div className="mb-8">
-                    <HotelGallery images={hotel.images || []} />
+                    <HotelGallery images={hotel.images || []} hotelId={hotelId} />
                 </div>
 
                 {/* Room Gallery Modal */}
@@ -641,34 +643,40 @@ export default function HotelDetailPage() {
                                 <ShieldCheck size={20} className="text-blue-600" /> Chính sách chỗ nghỉ
                             </h4>
                             {hotelPolicy ? (
-                                <div className="space-y-5">
-                                    <div className="flex gap-3">
-                                        <Clock className="text-gray-400 shrink-0" size={18} />
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase">Giờ nhận/trả phòng</p>
-                                            <p className="text-sm text-gray-700 mt-0.5">Nhận: <span className="font-semibold">{hotelPolicy.checkInTime}</span></p>
-                                            <p className="text-sm text-gray-700">Trả: <span className="font-semibold">{hotelPolicy.checkOutTime}</span></p>
+                                <div className="space-y-4">
+                                    {/* Giờ nhận / trả phòng — nổi bật như Agoda */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-blue-50 rounded-xl p-3 text-center">
+                                            <p className="text-[10px] font-bold text-blue-400 uppercase mb-1">Nhận phòng</p>
+                                            <p className="text-lg font-black text-blue-700">{hotelPolicy.checkInTime}</p>
+                                        </div>
+                                        <div className="bg-gray-50 rounded-xl p-3 text-center">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Trả phòng</p>
+                                            <p className="text-lg font-black text-gray-700">{hotelPolicy.checkOutTime}</p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-3">
-                                        <Info className="text-gray-400 shrink-0" size={18} />
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase">Chính sách hủy phòng</p>
-                                            <p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{hotelPolicy.cancellationPolicy}</p>
+
+                                    <div className="space-y-3 pt-1">
+                                        <div className="flex gap-3">
+                                            <Info className="text-gray-400 shrink-0 mt-0.5" size={15} />
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-0.5">Hủy đặt phòng</p>
+                                                <p className="text-xs text-gray-600 leading-relaxed">{hotelPolicy.cancellationPolicy}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <Baby className="text-gray-400 shrink-0" size={18} />
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase">Trẻ em & Giường phụ</p>
-                                            <p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{hotelPolicy.childrenPolicy}</p>
+                                        <div className="flex gap-3">
+                                            <Baby className="text-gray-400 shrink-0 mt-0.5" size={15} />
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-0.5">Trẻ em & Giường phụ</p>
+                                                <p className="text-xs text-gray-600 leading-relaxed">{hotelPolicy.childrenPolicy}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <Dog className="text-gray-400 shrink-0" size={18} />
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase">Thú cưng</p>
-                                            <p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{hotelPolicy.petPolicy}</p>
+                                        <div className="flex gap-3">
+                                            <Dog className="text-gray-400 shrink-0 mt-0.5" size={15} />
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-0.5">Thú cưng</p>
+                                                <p className="text-xs text-gray-600 leading-relaxed">{hotelPolicy.petPolicy}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

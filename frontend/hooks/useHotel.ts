@@ -5,10 +5,10 @@ import toast from 'react-hot-toast'
 const KEY = 'hotels'
 
 // Lấy tất cả khách sạn
-export const useHotels = () =>
+export const useHotels = (page = 0, size = 10) =>
   useQuery({
-    queryKey: [KEY],
-    queryFn: () => hotelApi.getAll().then(r => r.data),
+    queryKey: [KEY, page, size], 
+    queryFn: () => hotelApi.getAll(page, size).then(r => r.data),
   })
 
 // Lấy 1 khách sạn

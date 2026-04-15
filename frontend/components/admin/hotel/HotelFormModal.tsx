@@ -10,15 +10,15 @@ import { useCreateHotel, useUpdateHotel } from '@/hooks/useHotel'
 import { useUsers } from '@/hooks/useUser'
 
 const schema = z.object({
-  hotelName:   z.string().min(1, 'Tên khách sạn không được để trống').max(255),
+  hotelName: z.string().min(1, 'Tên khách sạn không được để trống').max(255),
   description: z.string().optional(),
   addressLine: z.string().min(1, 'Địa chỉ không được để trống'),
-  ward:        z.string().min(1, 'Phường/Xã không được để trống'),
-  district:    z.string().min(1, 'Quận/Huyện không được để trống'),
-  city:        z.string().min(1, 'Tỉnh/Thành phố không được để trống'),
-  phone:       z.string().regex(/^\d{10,11}$/, 'Số điện thoại phải từ 10-11 chữ số'),
-  email:       z.string().min(1, 'Email không được để trống').email('Email không đúng định dạng'),
-  ownerId:     z.number({ message: 'Vui lòng chọn chủ sở hữu' }).min(1, 'Vui lòng chọn chủ sở hữu'),
+  ward: z.string().min(1, 'Phường/Xã không được để trống'),
+  district: z.string().min(1, 'Quận/Huyện không được để trống'),
+  city: z.string().min(1, 'Tỉnh/Thành phố không được để trống'),
+  phone: z.string().regex(/^\d{10,11}$/, 'Số điện thoại phải từ 10-11 chữ số'),
+  email: z.string().min(1, 'Email không được để trống').email('Email không đúng định dạng'),
+  ownerId: z.number({ message: 'Vui lòng chọn chủ sở hữu' }).min(1, 'Vui lòng chọn chủ sở hữu'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -37,8 +37,9 @@ export default function HotelFormModal({ open, onClose, hotel }: Props) {
   const createMutation = useCreateHotel()
   const updateMutation = useUpdateHotel(hotel?.id ?? '')
 
-  const { data: users = [] } = useUsers()
-  const owners = users.filter(u => u.roleName === 'ROLE_HOTEL_OWNER')
+  const { data: pageData } = useUsers(0, 100)
+  const users = pageData?.content || []
+  const owners = users.filter((u) => u.roleName === 'ROLE_HOTEL_OWNER')
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
@@ -48,27 +49,27 @@ export default function HotelFormModal({ open, onClose, hotel }: Props) {
   useEffect(() => {
     if (hotel) {
       reset({
-        hotelName:   hotel.hotelName,
+        hotelName: hotel.hotelName,
         description: hotel.description ?? '',
         addressLine: hotel.addressLine,
-        ward:        hotel.ward,
-        district:    hotel.district,
-        city:        hotel.city,
-        phone:       hotel.phone,
-        email:       hotel.email,
-        ownerId:     hotel.ownerId,
+        ward: hotel.ward,
+        district: hotel.district,
+        city: hotel.city,
+        phone: hotel.phone,
+        email: hotel.email,
+        ownerId: hotel.ownerId,
       })
     } else {
       reset({
-        city:        'TP Hồ Chí Minh',
-        hotelName:   '',
+        city: 'TP Hồ Chí Minh',
+        hotelName: '',
         description: '',
         addressLine: '',
-        ward:        '',
-        district:    '',
-        phone:       '',
-        email:       '',
-        ownerId:     undefined,
+        ward: '',
+        district: '',
+        phone: '',
+        email: '',
+        ownerId: undefined,
       })
     }
   }, [hotel, open, reset])

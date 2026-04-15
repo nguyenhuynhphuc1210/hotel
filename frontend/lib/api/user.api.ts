@@ -1,11 +1,14 @@
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
 import { UserResponse, UserRequest, UpdateUserRequest, ChangePasswordRequest } from '@/types/user.types'
+import { PageResponse } from './hotel.api' 
 
 const userApi = {
   // GET /api/users
-  getAll: () =>
-    axiosInstance.get<UserResponse[]>(API_CONFIG.ENDPOINTS.USERS),
+  getAll: (page = 0, size = 10) =>
+    axiosInstance.get<PageResponse<UserResponse>>(API_CONFIG.ENDPOINTS.USERS, {
+      params: { page, size }
+    }),
 
   // GET /api/users/:id
   getById: (id: number | string) =>

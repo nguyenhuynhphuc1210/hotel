@@ -7,6 +7,7 @@ export default function BookingSuccessPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const bookingCode = searchParams.get('bookingCode')
+     const bookingId = searchParams.get('id') 
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -19,7 +20,7 @@ export default function BookingSuccessPage() {
                     Mã đặt phòng của bạn: <span className="font-bold text-blue-600">#{bookingCode}</span>
                 </p>
                 <div className="flex gap-3">
-                    <button onClick={() => router.push('/profile')}
+                    <button onClick={() => router.push(`/booking/detail/${bookingId}`)}
                         className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700">
                         Xem đơn của tôi
                     </button>

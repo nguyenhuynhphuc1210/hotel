@@ -10,6 +10,18 @@ export interface ReviewRequest {
   comment: string
 }
 
+export interface ReviewReplyRequest {
+  reply: string
+}
+
+export interface ReviewReportRequest {
+  reason: string
+}
+
+export interface ReviewResolveRequest {
+  isHideApproved: boolean
+}
+
 export interface ReviewResponse {
   id: number
   bookingId: number
@@ -23,5 +35,7 @@ export interface ReviewResponse {
   createdAt: string
   ownerReply?: string | null
   replyDate?: string | null
+  isReported?: boolean
+  reportReason?: string | null
   images?: ReviewImageResponse[]
 }

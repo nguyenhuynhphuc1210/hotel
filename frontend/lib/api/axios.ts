@@ -26,19 +26,27 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      // Xoá session
+      // 1. Luôn luôn xoá session/cookie khi token hỏng
       localStorage.removeItem('access_token')
       localStorage.removeItem('user')
       document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
       document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
 
-      // Redirect về đúng trang login
       const path = window.location.pathname
-      if (path.startsWith('/admin') || path.startsWith('/owner')) {
-        window.location.href = '/admin/login'
-      } else {
-        window.location.href = '/login'
-      }
+      
+      // 2. CHỈ REDIRECT nếu người dùng đang ở trang yêu cầu quyền (Private Routes)
+      const protectedPaths = ['/admin', '/owner', '/profile', '/booking', '/user']
+      const isProtectedPath = protectedPaths.some(p => path.startsWith(p))
+
+      if (isProtectedPath) {
+        if (path.startsWith('/admin') || path.startsWith('/owner')) {
+          window.location.href = '/admin/login'
+        } else {
+          window.location.href = '/login'
+        }
+      } 
+      // Nếu là trang public (như /hotels), chúng ta chỉ xoá token 
+      // để UI hiển thị trạng thái "Chưa đăng nhập", KHÔNG redirect.
     }
     return Promise.reject(error)
   }

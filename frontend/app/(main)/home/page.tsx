@@ -7,9 +7,11 @@ import {
     MapPin, Star, Tag, ChevronRight, ChevronLeft,
     ArrowRight,
 } from 'lucide-react'
-import hotelApi, { HotelResponse } from '@/lib/api/hotel.api'
+import hotelApi, { HotelSummaryResponse } from '@/lib/api/hotel.api'
 import promotionApi from '@/lib/api/promotion.api'
 import SearchBar from '@/components/common/SearchBar'
+import { PromotionResponse } from '@/types/promotion.types'
+
 
 // ─── Districts ────────────────────────────────────────────
 const DISTRICTS = [
@@ -48,21 +50,23 @@ const DISTRICT_IMAGES: Record<string, string> = {
 }
 const FALLBACK = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=300&fit=crop'
 
-// ─── Page ─────────────────────────────────────────────────
 export default function HomePage() {
     const router = useRouter()
+    const [currentPage, setCurrentPage] = useState(0)
+    const pageSize = 8
 
-    const { data: hotels = [] } = useQuery({
-        queryKey: ['hotels-active'],
-        queryFn: () => hotelApi.getActive().then(r => r.data),
+    const { data: hotelsPage, isLoading: hotelsLoading } = useQuery({
+        queryKey: ['hotels-active', currentPage],
+        queryFn: () => hotelApi.getActive(currentPage, pageSize).then(r => r.data),
     })
 
-    const { data: promotions = [] } = useQuery({
+    const { data: promotions = [] } = useQuery<PromotionResponse[]>({
         queryKey: ['promotions-active'],
         queryFn: async () => {
-            const data = await promotionApi.getAll().then(r => r.data)
+            const response = await promotionApi.getAll()
+            const data: PromotionResponse[] = response.data
             const now = new Date()
-            return data.filter(p =>
+            return data.filter((p: PromotionResponse) =>
                 p.isActive &&
                 new Date(p.startDate) <= now &&
                 new Date(p.endDate) >= now
@@ -70,15 +74,14 @@ export default function HomePage() {
         },
     })
 
-    const featuredHotels = hotels
-        .filter(h => h.isActive)
+    const hotels = hotelsPage?.content || []
+    
+    const featuredHotels = [...hotels]
         .sort((a, b) => (b.starRating ?? 0) - (a.starRating ?? 0))
-        .slice(0, 8)
 
     return (
-        <div>
-
-            {/* ── Hero ── */}
+        <div className="pb-20">
+           
             <section className="relative bg-gradient-to-br from-green-700 via-green-600 to-emerald-500 text-white">
                 <div className="absolute inset-0 opacity-10 pointer-events-none">
                     <div className="absolute top-10 left-10 w-40 h-40 rounded-full bg-white" />
@@ -101,8 +104,6 @@ export default function HomePage() {
                 </div>
             </section>
 
-
-            {/* ── Carousel quận ── */}
             <section className="max-w-7xl mx-auto px-4 mt-14">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">
                     Các điểm thu hút nhất TP. Hồ Chí Minh
@@ -113,33 +114,9 @@ export default function HomePage() {
                 />
             </section>
 
-            {/* ── Grid tất cả quận ── */}
-            {/* <section className="max-w-7xl mx-auto px-4 mt-8">
-                <h2 className="text-base font-semibold text-gray-500 mb-3">Tất cả quận / huyện</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                    {DISTRICTS.map(d => {
-                        const count = hotels.filter(h => h.isActive && h.district === d).length
-                        return (
-                            <button
-                                key={d}
-                                onClick={() => router.push(`/hotels?district=${encodeURIComponent(d)}`)}
-                                className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 hover:border-green-400 hover:bg-green-50 transition-colors group text-left"
-                            >
-                                <MapPin size={13} className="text-green-500 shrink-0" />
-                                <div className="min-w-0">
-                                    <div className="text-sm font-medium text-gray-800 truncate group-hover:text-green-700">{d}</div>
-                                    <div className="text-xs text-gray-400">{count} khách sạn</div>
-                                </div>
-                            </button>
-                        )
-                    })}
-                </div>
-            </section> */}
-
-            {/* ── Khách sạn nổi bật ── */}
             <section className="max-w-7xl mx-auto px-4 mt-14">
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">Khách sạn nổi bật</h2>
+                    <h2 className="text-xl font-bold text-gray-900">Khách sạn dành cho bạn</h2>
                     <button
                         onClick={() => router.push('/hotels')}
                         className="flex items-center gap-1 text-sm text-green-600 font-medium hover:underline"
@@ -147,16 +124,60 @@ export default function HomePage() {
                         Xem tất cả <ChevronRight size={16} />
                     </button>
                 </div>
-                {featuredHotels.length === 0 ? (
+
+                {hotelsLoading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="h-64 bg-gray-100 animate-pulse rounded-xl" />
+                        ))}
+                    </div>
+                ) : featuredHotels.length === 0 ? (
                     <div className="text-center py-12 text-gray-400">Chưa có khách sạn nào</div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {featuredHotels.map(h => <HotelCard key={h.id} hotel={h} />)}
-                    </div>
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {featuredHotels.map(h => <HotelCard key={h.id} hotel={h} />)}
+                        </div>
+
+                        {hotelsPage && hotelsPage.totalPages > 1 && (
+                            <div className="mt-10 flex items-center justify-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                                    disabled={currentPage === 0}
+                                    className="p-2 border rounded-lg disabled:opacity-30 hover:bg-gray-50 transition-colors"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                                
+                                <div className="flex items-center gap-1">
+                                    {[...Array(hotelsPage.totalPages)].map((_, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setCurrentPage(i)}
+                                            className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+                                                currentPage === i 
+                                                ? 'bg-green-600 text-white' 
+                                                : 'hover:bg-green-50 text-gray-600'
+                                            }`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(hotelsPage.totalPages - 1, p + 1))}
+                                    disabled={currentPage === hotelsPage.totalPages - 1}
+                                    className="p-2 border rounded-lg disabled:opacity-30 hover:bg-gray-50 transition-colors"
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
+                            </div>
+                        )}
+                    </>
                 )}
             </section>
 
-            {/* ── Ưu đãi ── */}
             {promotions.length > 0 && (
                 <section className="max-w-7xl mx-auto px-4 mt-14">
                     <div className="flex items-center justify-between mb-6">
@@ -166,12 +187,11 @@ export default function HomePage() {
                         </span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {promotions.slice(0, 6).map(p => <PromotionCard key={p.id} promotion={p} />)}
+                        {promotions.slice(0, 6).map((p: PromotionResponse) => <PromotionCard key={p.id} promotion={p} />)}
                     </div>
                 </section>
             )}
 
-            {/* ── CTA ── */}
             <section className="max-w-7xl mx-auto px-4 mt-14 mb-6">
                 <div className="bg-gradient-to-r from-green-600 to-emerald-500 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="text-white">
@@ -186,7 +206,6 @@ export default function HomePage() {
                     </button>
                 </div>
             </section>
-
         </div>
     )
 }
@@ -196,7 +215,7 @@ function DistrictCarousel({
     hotels,
     onSelect,
 }: {
-    hotels: HotelResponse[]
+    hotels: HotelSummaryResponse[]
     onSelect: (d: string) => void
 }) {
     const VISIBLE = 5
@@ -206,7 +225,6 @@ function DistrictCarousel({
 
     return (
         <div className="relative px-1">
-            {/* Prev */}
             <button
                 onClick={() => setStartIdx(i => Math.max(0, i - 1))}
                 disabled={!canPrev}
@@ -216,14 +234,13 @@ function DistrictCarousel({
                 <ChevronLeft size={18} />
             </button>
 
-            {/* Track */}
             <div className="overflow-hidden">
                 <div
                     className="flex gap-3 transition-transform duration-300 ease-in-out"
                     style={{ transform: `translateX(calc(-${startIdx} * (20% + 0.6rem)))` }}
                 >
                     {DISTRICTS.map(d => {
-                        const count = hotels.filter(h => h.isActive && h.district === d).length
+                        const count = hotels.filter(h => h.district === d).length
                         const img = DISTRICT_IMAGES[d] ?? FALLBACK
                         return (
                             <button
@@ -232,28 +249,23 @@ function DistrictCarousel({
                                 className="shrink-0 text-left group"
                                 style={{ width: 'calc(20% - 0.6rem)' }}
                             >
-                                {/* Image */}
                                 <div className="rounded-2xl overflow-hidden aspect-[4/3] mb-2.5 shadow-sm">
-                                    {img ? (
-                                        <img
-                                            src={img}
-                                            alt={d}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
-                                    ) : null}
+                                    <img
+                                        src={img}
+                                        alt={d}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    />
                                 </div>
-                                {/* Label */}
                                 <div className="font-semibold text-sm text-gray-900 group-hover:text-green-700 transition-colors truncate">
                                     {d}
                                 </div>
-                                <div className="text-xs text-gray-500 mt-0.5">{count} khách sạn</div>
+                                <div className="text-xs text-gray-500 mt-0.5">{count > 0 ? `${count} khách sạn` : 'Khám phá ngay'}</div>
                             </button>
                         )
                     })}
                 </div>
             </div>
 
-            {/* Next */}
             <button
                 onClick={() => setStartIdx(i => Math.min(DISTRICTS.length - VISIBLE, i + 1))}
                 disabled={!canNext}
@@ -267,11 +279,9 @@ function DistrictCarousel({
 }
 
 // ─── Hotel Card ───────────────────────────────────────────
-function HotelCard({ hotel }: { hotel: HotelResponse }) {
+function HotelCard({ hotel }: { hotel: HotelSummaryResponse }) {
     const router = useRouter()
-    // const primaryImage = hotel.images?.find(i => i.isPrimary)?.imageUrl
     const handleCardClick = () => {
-        // Chuyển hướng tới trang chi tiết
         router.push(`/hotels/${hotel.id}`)
     }
     const displayImage = hotel.thumbnailUrl || hotel.images?.find(i => i.isPrimary)?.imageUrl;
@@ -307,10 +317,12 @@ function HotelCard({ hotel }: { hotel: HotelResponse }) {
                 <div className="mt-3 flex items-center justify-between">
                     <div>
                         <span className="text-xs text-gray-400">Từ</span>
-                        <div className="text-green-600 font-bold text-sm">Liên hệ</div>
+                        <div className="text-green-600 font-bold text-sm">
+                            {hotel.minPrice ? `${hotel.minPrice.toLocaleString()}₫` : 'Liên hệ'}
+                        </div>
                     </div>
                     <button className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition-colors">
-                        Đặt ngay
+                        Xem chi tiết
                     </button>
                 </div>
             </div>
@@ -319,12 +331,9 @@ function HotelCard({ hotel }: { hotel: HotelResponse }) {
 }
 
 // ─── Promotion Card ───────────────────────────────────────
+// Đã fix kiểu dữ liệu từ any sang PromotionResponse
 function PromotionCard({ promotion }: {
-    promotion: {
-        id: number; promoCode: string; hotelName: string
-        discountPercent: number; maxDiscountAmount: number
-        endDate: string; minOrderValue: number | null
-    }
+    promotion: PromotionResponse
 }) {
     const daysLeft = Math.ceil(
         (new Date(promotion.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
@@ -338,7 +347,7 @@ function PromotionCard({ promotion }: {
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="font-mono font-bold text-green-700 text-sm">{promotion.promoCode}</div>
-                    <div className="text-xs text-gray-500 truncate">{promotion.hotelName}</div>
+                    <div className="text-xs text-gray-500 truncate">{promotion.hotelName || 'Tất cả khách sạn'}</div>
                 </div>
                 <div className="text-right shrink-0">
                     <div className="text-lg font-bold text-red-500">{promotion.discountPercent}%</div>

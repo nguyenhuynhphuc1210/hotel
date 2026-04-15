@@ -8,14 +8,13 @@ import {
     ChevronLeft, MapPin, Calendar, User, 
     Phone, Mail, CreditCard, Receipt, 
     Hotel, Clock, CheckCircle2, AlertCircle, Printer,
-    Star, ImagePlus, X, Send, MessageSquare
+    Star, ImagePlus, X, Send, MessageSquare, ChevronDown, ChevronUp
 } from 'lucide-react'
 import bookingApi from '@/lib/api/booking.api'
 import { Loader2 } from 'lucide-react'
 import axiosInstance from '@/lib/api/axios'
 import toast from 'react-hot-toast'
 
-// --- INTERFACE LỖI ---
 interface ApiError {
     response?: {
         data?: {
@@ -24,13 +23,20 @@ interface ApiError {
     }
 }
 
+interface BookingRoomRateResponse {
+    id: number
+    bookingRoomId: number
+    roomTypeId: number
+    date: string
+    price: number
+}
+
 function BookingDetailPage() {
     const params = useParams()
     const router = useRouter()
     const qc = useQueryClient()
     const bookingId = params.id as string
 
-    // --- State cho Review ---
     const [rating, setRating] = useState<number>(5)
     const [comment, setComment] = useState<string>('')
     const [hoverRating, setHoverRating] = useState<number>(0)
@@ -39,28 +45,30 @@ function BookingDetailPage() {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const MAX_IMAGES = 5
 
-    // --- Fetch Booking Detail ---
+    // Track which room's rate breakdown is expanded
+    const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set())
+
+    const toggleExpanded = (roomIdx: number) => {
+        setExpandedRooms(prev => {
+            const next = new Set(prev)
+            if (next.has(roomIdx)) next.delete(roomIdx)
+            else next.add(roomIdx)
+            return next
+        })
+    }
+
     const { data: booking, isLoading, isError } = useQuery({
         queryKey: ['booking-detail', bookingId],
         queryFn: () => bookingApi.getById(bookingId).then(res => res.data),
         enabled: !!bookingId
     })
 
-    // --- Mutation Gửi Đánh Giá ---
     const reviewMutation = useMutation({
         mutationFn: () => {
             const formData = new FormData()
-            // Backend nhận JSON qua part "data"
-            const reviewData = JSON.stringify({ 
-                bookingId: Number(bookingId), 
-                rating, 
-                comment 
-            });
-            formData.append('data', new Blob([reviewData], { type: 'application/json' }));
-            
-            // Part "files"
-            selectedFiles.forEach(file => formData.append('files', file));
-            
+            const reviewData = JSON.stringify({ bookingId: Number(bookingId), rating, comment })
+            formData.append('data', new Blob([reviewData], { type: 'application/json' }))
+            selectedFiles.forEach(file => formData.append('files', file))
             return axiosInstance.post('/api/reviews', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             })
@@ -70,14 +78,11 @@ function BookingDetailPage() {
             qc.invalidateQueries({ queryKey: ['booking-detail', bookingId] })
             setComment('')
             setSelectedFiles([])
-            setPreviewUrls(prev => {
-                prev.forEach(url => URL.revokeObjectURL(url));
-                return [];
-            });
+            setPreviewUrls(prev => { prev.forEach(url => URL.revokeObjectURL(url)); return [] })
         },
         onError: (err: ApiError) => {
-            const msg = typeof err.response?.data === 'string' 
-                ? err.response.data 
+            const msg = typeof err.response?.data === 'string'
+                ? err.response.data
                 : err.response?.data?.message || 'Gửi đánh giá thất bại'
             toast.error(msg)
         }
@@ -103,15 +108,12 @@ function BookingDetailPage() {
         )
     }
 
-    // --- Handlers Review ---
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || [])
         const remaining = MAX_IMAGES - selectedFiles.length
         const allowed = files.slice(0, remaining)
-        
         const valid = allowed.filter(f => f.size <= 5 * 1024 * 1024)
         if (valid.length < allowed.length) toast.error("Một số ảnh quá lớn (>5MB)")
-
         const newUrls = valid.map(f => URL.createObjectURL(f))
         setSelectedFiles(prev => [...prev, ...valid])
         setPreviewUrls(prev => [...prev, ...newUrls])
@@ -127,36 +129,41 @@ function BookingDetailPage() {
     const getStatusInfo = (status: string) => {
         switch (status) {
             case 'CONFIRMED': return { label: 'Đã xác nhận', color: 'bg-emerald-500', icon: <CheckCircle2 size={18} /> }
-            case 'PENDING': return { label: 'Chờ xử lý', color: 'bg-amber-500', icon: <Clock size={18} /> }
-            case 'CANCELLED': return { label: 'Đã hủy', color: 'bg-red-500', icon: <AlertCircle size={18} /> }
-            case 'COMPLETED': return { label: 'Đã hoàn thành', color: 'bg-blue-500', icon: <CheckCircle2 size={18} /> }
-            default: return { label: status, color: 'bg-gray-500', icon: <Clock size={18} /> }
+            case 'PENDING':   return { label: 'Chờ xử lý',   color: 'bg-amber-500',   icon: <Clock size={18} /> }
+            case 'CANCELLED': return { label: 'Đã hủy',      color: 'bg-red-500',     icon: <AlertCircle size={18} /> }
+            case 'COMPLETED': return { label: 'Đã hoàn thành', color: 'bg-blue-500',  icon: <CheckCircle2 size={18} /> }
+            default:          return { label: status,         color: 'bg-gray-500',    icon: <Clock size={18} /> }
         }
     }
 
     const status = getStatusInfo(booking.status)
 
-    const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString('vi-VN', {
-            weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
-        })
-    }
+    const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('vi-VN', {
+        weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
+    })
 
-    const nights = Math.ceil((new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24))
+    const formatDateShort = (dateStr: string) => new Date(dateStr).toLocaleDateString('vi-VN', {
+        weekday: 'short', day: '2-digit', month: '2-digit'
+    })
+
+    const nights = Math.ceil(
+        (new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime())
+        / (1000 * 60 * 60 * 24)
+    )
 
     return (
         <div className="min-h-screen bg-gray-50 py-12">
             <div className="max-w-4xl mx-auto px-4">
-                
+
                 {/* Header Actions */}
                 <div className="flex items-center justify-between mb-8">
-                    <button 
-                        onClick={() => router.back()}
+                    <button
+                        onClick={() => router.push('/profile')}
                         className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
                     >
                         <ChevronLeft size={20} /> Quay lại
                     </button>
-                    <button 
+                    <button
                         onClick={() => window.print()}
                         className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-gray-50 transition-all"
                     >
@@ -166,7 +173,7 @@ function BookingDetailPage() {
 
                 {/* Main Card */}
                 <div className="bg-white rounded-[32px] shadow-xl shadow-gray-200/50 overflow-hidden border border-gray-100">
-                    
+
                     {/* Status Banner */}
                     <div className={`${status.color} p-6 text-white flex items-center justify-between`}>
                         <div className="flex items-center gap-3">
@@ -183,7 +190,7 @@ function BookingDetailPage() {
                     </div>
 
                     <div className="p-8 md:p-12 space-y-12">
-                        
+
                         {/* Section 1: Hotel & Stay */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-4">
@@ -232,21 +239,21 @@ function BookingDetailPage() {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500"><User size={18}/></div>
+                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500"><User size={18} /></div>
                                     <div>
                                         <p className="text-[10px] font-bold text-gray-400 uppercase">Tên khách</p>
                                         <p className="font-bold text-gray-800">{booking.guestName}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500"><Mail size={18}/></div>
-                                    <div>
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 shrink-0"><Mail size={18} /></div>
+                                    <div className="min-w-0">
                                         <p className="text-[10px] font-bold text-gray-400 uppercase">Email</p>
-                                        <p className="font-bold text-gray-800">{booking.guestEmail}</p>
+                                        <p className="font-bold text-gray-800 truncate" title={booking.guestEmail}>{booking.guestEmail}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500"><Phone size={18}/></div>
+                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500"><Phone size={18} /></div>
                                     <div>
                                         <p className="text-[10px] font-bold text-gray-400 uppercase">Số điện thoại</p>
                                         <p className="font-bold text-gray-800">{booking.guestPhone}</p>
@@ -255,29 +262,97 @@ function BookingDetailPage() {
                             </div>
                         </div>
 
-                        {/* Section 3: Room Details */}
+                        {/* Section 3: Room Details với per-night breakdown */}
                         <div className="border-t border-gray-100 pt-10">
                             <div className="flex items-center gap-2 text-blue-600 mb-6">
                                 <Receipt size={20} />
                                 <h3 className="font-bold uppercase text-xs tracking-widest">Chi tiết phòng</h3>
                             </div>
-                            <div className="space-y-4">
-                                {booking.bookingRooms.map((room, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm font-bold text-blue-600">
-                                                x{room.quantity}
+                            <div className="space-y-3">
+                                {booking.bookingRooms.map((room, idx) => {
+                                    const rates: BookingRoomRateResponse[] = room.rates ?? []
+                                    const hasRates = rates.length > 0
+                                    const isExpanded = expandedRooms.has(idx)
+
+                                    // Tổng tiền = sum của rates * quantity (nếu có rates), fallback về pricePerNight * nights * quantity
+                                    const roomTotal = hasRates
+                                        ? rates.reduce((sum, r) => sum + Number(r.price), 0) * room.quantity
+                                        : Number(room.pricePerNight) * nights * room.quantity
+
+                                    return (
+                                        <div key={idx} className="border border-gray-100 rounded-2xl overflow-hidden">
+                                            {/* Room header row */}
+                                            <div className="flex items-center justify-between p-4 bg-gray-50">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm font-bold text-blue-600 text-sm shrink-0">
+                                                        x{room.quantity}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-gray-900">{room.roomTypeName}</p>
+                                                        <p className="text-xs text-gray-500">{nights} đêm</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <p className="font-bold text-gray-900">
+                                                        {roomTotal.toLocaleString('vi-VN')}₫
+                                                    </p>
+                                                    {hasRates && (
+                                                        <button
+                                                            onClick={() => toggleExpanded(idx)}
+                                                            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg transition-all"
+                                                        >
+                                                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                            {isExpanded ? 'Ẩn' : 'Chi tiết'}
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-bold text-gray-900">{room.roomTypeName}</p>
-                                                <p className="text-xs text-gray-500">{room.pricePerNight.toLocaleString('vi-VN')}₫ / đêm</p>
-                                            </div>
+
+                                            {/* Per-night breakdown */}
+                                            {hasRates && isExpanded && (
+                                                <div className="border-t border-gray-100 divide-y divide-gray-50">
+                                                    {rates.map((rate, rIdx) => {
+                                                        const nightTotal = Number(rate.price) * room.quantity
+                                                        return (
+                                                            <div
+                                                                key={rIdx}
+                                                                className="flex items-center justify-between px-5 py-3 bg-white hover:bg-blue-50/30 transition-colors"
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    {/* Night number badge */}
+                                                                    <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-[11px] font-bold text-blue-600 shrink-0">
+                                                                        {rIdx + 1}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-sm font-semibold text-gray-700">
+                                                                            {formatDateShort(rate.date)}
+                                                                        </p>
+                                                                        <p className="text-[11px] text-gray-400">
+                                                                            {Number(rate.price).toLocaleString('vi-VN')}₫ × {room.quantity} phòng
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                                <p className="text-sm font-bold text-gray-800">
+                                                                    {nightTotal.toLocaleString('vi-VN')}₫
+                                                                </p>
+                                                            </div>
+                                                        )
+                                                    })}
+
+                                                    {/* Subtotal row */}
+                                                    <div className="flex items-center justify-between px-5 py-3 bg-blue-50/50">
+                                                        <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">
+                                                            Tổng · {room.roomTypeName}
+                                                        </p>
+                                                        <p className="text-sm font-black text-blue-700">
+                                                            {roomTotal.toLocaleString('vi-VN')}₫
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        <p className="font-bold text-gray-900">
-                                            {(room.quantity * room.pricePerNight * nights).toLocaleString('vi-VN')}₫
-                                        </p>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         </div>
 
@@ -306,7 +381,7 @@ function BookingDetailPage() {
                             </div>
                         </div>
 
-                        {/* --- PHẦN ĐÁNH GIÁ (REVIEWS) --- */}
+                        {/* Section 5: Review */}
                         {booking.status === 'COMPLETED' && (
                             <div className="border-t border-gray-100 pt-10">
                                 <div className="flex items-center gap-2 text-blue-600 mb-6">
@@ -319,18 +394,15 @@ function BookingDetailPage() {
                                         <p className="text-sm font-bold text-blue-900">Trải nghiệm của bạn như thế nào?</p>
                                         <div className="flex gap-2">
                                             {[1, 2, 3, 4, 5].map(s => (
-                                                <button 
-                                                    key={s} 
-                                                    type="button"
+                                                <button key={s} type="button"
                                                     onMouseEnter={() => setHoverRating(s)}
                                                     onMouseLeave={() => setHoverRating(0)}
                                                     onClick={() => setRating(s)}
                                                     className="transition-transform hover:scale-125 focus:outline-none"
                                                 >
-                                                    <Star 
-                                                        size={36} 
-                                                        fill={(hoverRating || rating) >= s ? '#f59e0b' : 'none'} 
-                                                        className={(hoverRating || rating) >= s ? 'text-amber-400' : 'text-blue-200'} 
+                                                    <Star size={36}
+                                                        fill={(hoverRating || rating) >= s ? '#f59e0b' : 'none'}
+                                                        className={(hoverRating || rating) >= s ? 'text-amber-400' : 'text-blue-200'}
                                                     />
                                                 </button>
                                             ))}
@@ -341,7 +413,7 @@ function BookingDetailPage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <textarea 
+                                        <textarea
                                             value={comment}
                                             onChange={e => setComment(e.target.value)}
                                             placeholder="Chia sẻ cảm nhận của bạn về phòng ốc, dịch vụ..."
@@ -353,19 +425,15 @@ function BookingDetailPage() {
                                                 {previewUrls.map((url, i) => (
                                                     <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-white shadow-sm group">
                                                         <img src={url} alt="preview" className="w-full h-full object-cover" />
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => removeFile(i)} 
+                                                        <button type="button" onClick={() => removeFile(i)}
                                                             className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                                                         >
-                                                            <X size={12}/>
+                                                            <X size={12} />
                                                         </button>
                                                     </div>
                                                 ))}
                                                 {selectedFiles.length < MAX_IMAGES && (
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => fileInputRef.current?.click()}
+                                                    <button type="button" onClick={() => fileInputRef.current?.click()}
                                                         className="w-20 h-20 border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center justify-center text-blue-400 hover:bg-white transition-colors"
                                                     >
                                                         <ImagePlus size={20} />
@@ -373,18 +441,10 @@ function BookingDetailPage() {
                                                     </button>
                                                 )}
                                             </div>
-                                            <input 
-                                                type="file" 
-                                                ref={fileInputRef} 
-                                                hidden 
-                                                multiple 
-                                                accept="image/*" 
-                                                onChange={handleFileChange} 
-                                            />
+                                            <input type="file" ref={fileInputRef} hidden multiple accept="image/*" onChange={handleFileChange} />
                                         </div>
 
-                                        <button 
-                                            type="button"
+                                        <button type="button"
                                             onClick={() => reviewMutation.mutate()}
                                             disabled={reviewMutation.isPending || !comment.trim()}
                                             className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all disabled:opacity-50"
@@ -400,7 +460,6 @@ function BookingDetailPage() {
                     </div>
                 </div>
 
-                {/* Footer Note */}
                 <p className="text-center text-gray-400 text-xs mt-8">
                     Cảm ơn bạn đã tin dùng Vago Hotel. Nếu có thắc mắc, vui lòng liên hệ hotline 1900 xxxx.
                 </p>

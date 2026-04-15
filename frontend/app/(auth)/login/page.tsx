@@ -36,7 +36,10 @@ export default function LoginPage() {
             const { token, user } = res.data
             setAuth(token, user)
             toast.success(`Chào mừng, ${user.fullName}!`)
-            router.push('/home')
+
+            const params = new URLSearchParams(window.location.search)
+            const redirect = params.get('redirect')
+            router.push(redirect || '/home')
         } catch (err) {
             const error = err as { response?: { data?: { message?: string } } }
             toast.error(error?.response?.data?.message || 'Email hoặc mật khẩu không đúng')
@@ -85,7 +88,7 @@ export default function LoginPage() {
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
                             <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
-                            
+
                         </div>
                         <div className="relative">
                             <input

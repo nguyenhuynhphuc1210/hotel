@@ -36,6 +36,7 @@ const API_CONFIG = {
     PROMOTIONS: '/api/promotions',
     PROMOTION_BY_ID: (id: number | string) => `/api/promotions/${id}`,
 
+
     // Hotel Policies
     HOTEL_POLICIES: '/api/hotel-policies',
     HOTEL_POLICY_BY_ID: (id: number | string) => `/api/hotel-policies/${id}`,
@@ -70,6 +71,9 @@ const API_CONFIG = {
     ROOM_TYPE_AMENITIES: '/api/room-type-amenities',
     ROOM_TYPE_AMENITIES_BY_ROOM_TYPE: (roomTypeId: number | string) => `/api/room-type-amenities/room-type/${roomTypeId}`,
     ROOM_TYPE_AMENITY_BY_ID: (roomTypeId: number | string, amenityId: number | string) => `/api/room-type-amenities/${roomTypeId}/${amenityId}`,
+
+    FAVORITES_TOGGLE: (hotelId: number | string) => `/api/favorites/${hotelId}/toggle`,
+    FAVORITES_MY: '/api/favorites/my-favorites',
 
   },
 }
