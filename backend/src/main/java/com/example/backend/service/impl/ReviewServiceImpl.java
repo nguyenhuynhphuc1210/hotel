@@ -79,7 +79,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new IllegalArgumentException("Chỉ có thể gửi đánh giá khi đơn đặt phòng đã hoàn tất (COMPLETED)");
         }
 
-        if (reviewRepository.existsByBookingId(booking.getId())) {
+        if (reviewRepository.existsByBooking_Id(booking.getId())) {
             throw new IllegalArgumentException("Bạn đã gửi đánh giá cho đơn đặt phòng này rồi");
         }
 
@@ -150,7 +150,7 @@ public class ReviewServiceImpl implements ReviewService {
     public Page<ReviewResponse> getPublicReviews(Long hotelId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        return reviewRepository.findByHotelIdAndIsPublishedTrue(hotelId, pageable)
+        return reviewRepository.findByHotel_IdAndIsPublishedTrue(hotelId, pageable)
                 .map(reviewMapper::toReviewResponse);
     }
 
@@ -164,7 +164,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         
-        return reviewRepository.findByHotelId(hotelId, pageable)
+        return reviewRepository.findByHotel_Id(hotelId, pageable)
                 .map(reviewMapper::toReviewResponse);
     }
 

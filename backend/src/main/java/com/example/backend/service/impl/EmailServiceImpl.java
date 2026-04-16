@@ -3,14 +3,17 @@ package com.example.backend.service.impl;
 import com.example.backend.entity.Booking;
 import com.example.backend.entity.BookingRoom;
 import com.example.backend.enums.PaymentMethod;
+import com.example.backend.repository.BookingRepository;
 import com.example.backend.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.UnsupportedEncodingException;
 import java.time.format.DateTimeFormatter;
@@ -21,11 +24,11 @@ import java.time.temporal.ChronoUnit;
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
+    private final BookingRepository bookingRepository;
 
     @Override
     @Async
     public void sendOtpEmail(String to, String otp) {
-        // ... (Giữ nguyên code hàm sendOtpEmail cũ của bạn)
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -44,18 +47,20 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     @Async
-    public void sendBookingConfirmationEmail(Booking booking) {
+    @Transactional(readOnly = true)
+    public void sendBookingConfirmationEmail(Long bookingId) {
+        Booking booking = bookingRepository.findByIdWithDetails(bookingId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Booking ID: " + bookingId));
+
         String to = booking.getUser() != null ? booking.getUser().getEmail() : booking.getGuestEmail();
         String customerName = booking.getUser() != null ? booking.getUser().getFullName() : booking.getGuestName();
         String subject = "Vago - Đơn đặt của quý khách hiện đã được xác nhận! (" + booking.getBookingCode() + ")";
 
-        // Format lại ngày tháng
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         String checkIn = booking.getCheckInDate().format(formatter);
         String checkOut = booking.getCheckOutDate().format(formatter);
         long nights = ChronoUnit.DAYS.between(booking.getCheckInDate(), booking.getCheckOutDate());
 
-        // Lấy thông tin phòng và TẠO BẢNG CHI TIẾT GIÁ TỪNG ĐÊM
         StringBuilder roomDetails = new StringBuilder();
         StringBuilder priceBreakdown = new StringBuilder();
         int totalRooms = 0;
@@ -64,13 +69,11 @@ public class EmailServiceImpl implements EmailService {
             totalRooms += br.getQuantity();
             roomDetails.append(br.getQuantity()).append(" x ").append(br.getRoomType().getTypeName()).append("<br>");
 
-            // Render tiêu đề loại phòng trong bảng thanh toán
             priceBreakdown.append(
                     "<tr><td colspan='2' style='color: #334155; font-weight: bold; padding-top: 10px; padding-bottom: 5px;'>")
                     .append(br.getQuantity()).append(" x ").append(br.getRoomType().getTypeName())
                     .append("</td></tr>");
 
-            // Render chi tiết từng đêm (Lấy từ BookingRoomRate)
             if (br.getRates() != null && !br.getRates().isEmpty()) {
                 for (com.example.backend.entity.BookingRoomRate rate : br.getRates()) {
                     java.math.BigDecimal nightTotal = rate.getPrice()
@@ -80,7 +83,6 @@ public class EmailServiceImpl implements EmailService {
                             "<tr><td style='color: #64748b; font-size: 13px; padding-left: 10px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px;'>")
                             .append("- Đêm ").append(rate.getDate().format(formatter));
 
-                    // Nếu đặt > 1 phòng, hiển thị phép nhân cho rõ ràng
                     if (br.getQuantity() > 1) {
                         priceBreakdown.append(" <span style='font-size: 11px;'>(₫ ")
                                 .append(String.format("%,.0f", rate.getPrice()))
@@ -94,7 +96,6 @@ public class EmailServiceImpl implements EmailService {
             }
         }
 
-        // Thông tin địa chỉ khách sạn
         String address = booking.getHotel().getAddressLine() + ", " + booking.getHotel().getWard() + ", "
                 + booking.getHotel().getDistrict() + ", " + booking.getHotel().getCity();
 
@@ -102,16 +103,13 @@ public class EmailServiceImpl implements EmailService {
                 ? "Thanh toán tại khách sạn khi nhận phòng"
                 : "Đã thanh toán trực tuyến (" + booking.getPayment().getPaymentMethod().name() + ")";
 
-        // 🔥 PHÂN LUỒNG LINK QUẢN LÝ (Có tài khoản vs Khách vãng lai)
         String manageLink = booking.getUser() != null
                 ? "http://localhost:3000/booking/detail/" + booking.getId()
                 : "http://localhost:3000/booking/lookup?code=" + booking.getBookingCode();
 
-        // Xây dựng HTML
         String htmlMsg = "<div style='background-color: #f2f5f8; padding: 30px 10px; font-family: Arial, Helvetica, sans-serif; color: #333; line-height: 1.5;'>"
                 + "<div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; overflow: hidden;'>"
 
-                // Khối 1: Header
                 + "<div style='border-top: 4px solid #10b981; padding: 30px 20px; text-align: center;'>"
                 + "<h2 style='color: #10b981; margin-top: 0; font-size: 22px;'>Đơn đặt của quý khách hiện đã được xác nhận!</h2>"
                 + "<p style='font-size: 15px;'>Thân gửi <strong>" + customerName + "</strong>,</p>"
@@ -122,7 +120,6 @@ public class EmailServiceImpl implements EmailService {
                 + "' style='display: inline-block; margin-top: 15px; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 20px; font-weight: bold; font-size: 14px;'>Quản lý đặt chỗ của tôi</a>"
                 + "</div>"
 
-                // Khối 2: Thông tin Khách sạn
                 + "<div style='background-color: #f8fafc; padding: 20px; border-top: 1px solid #e0e0e0;'>"
                 + "<h3 style='margin: 0 0 10px 0; font-size: 18px; color: #1e293b;'>"
                 + booking.getHotel().getHotelName() + "</h3>"
@@ -136,7 +133,6 @@ public class EmailServiceImpl implements EmailService {
                 + "<p style='margin: 5px 0; font-size: 16px; font-weight: bold;'>" + checkOut + "</p>"
                 + "<p style='margin: 0; font-size: 12px; color: #64748b;'>(trước 12:00)</p></td></tr></table></div>"
 
-                // Khối 3: Thông tin Đơn đặt phòng
                 + "<div style='padding: 20px; border-top: 1px solid #e0e0e0;'>"
                 + "<h4 style='margin: 0 0 15px 0; font-size: 16px; color: #1e293b;'>Thông tin về Đơn đặt phòng</h4>"
                 + "<table width='100%' cellpadding='8' cellspacing='0' style='font-size: 14px; color: #334155;'>"
@@ -147,17 +143,15 @@ public class EmailServiceImpl implements EmailService {
                 + "<tr><td style='border-bottom: 1px dashed #e2e8f0;'><strong>Khách chính:</strong></td><td style='border-bottom: 1px dashed #e2e8f0;'>"
                 + customerName + "</td></tr></table></div>"
 
-                // Khối 4: Chi tiết thanh toán (TÍCH HỢP BIẾN priceBreakdown VÀO ĐÂY)
                 + "<div style='padding: 20px; border-top: 1px solid #e0e0e0; background-color: #f8fafc;'>"
                 + "<h4 style='margin: 0 0 15px 0; font-size: 16px; color: #1e293b;'>Thông tin chi tiết thanh toán</h4>"
                 + "<table width='100%' cellpadding='5' cellspacing='0' style='font-size: 14px;'>"
 
-                + priceBreakdown.toString() // <--- Render chi tiết các đêm ra đây
+                + priceBreakdown.toString()
 
                 + "<tr><td style='color: #334155; padding-top: 15px;'>Tạm tính</td><td align='right' style='color: #334155; padding-top: 15px;'>"
                 + String.format("%,.0f", booking.getSubtotal()) + " ₫</td></tr>";
 
-        // Hiện dòng giảm giá nếu có promotion
         if (booking.getDiscountAmount() != null && booking.getDiscountAmount().doubleValue() > 0) {
             htmlMsg += "<tr><td style='color: #10b981;'>Giảm giá</td><td align='right' style='color: #10b981;'>- "
                     + String.format("%,.0f", booking.getDiscountAmount()) + " ₫</td></tr>";
@@ -175,7 +169,12 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     @Async
-    public void sendBookingCancellationEmail(Booking booking) {
+    @Transactional(readOnly = true)
+    public void sendBookingCancellationEmail(Long bookingId) {
+
+        Booking booking = bookingRepository.findByIdWithDetails(bookingId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Booking ID: " + bookingId));
+
         String to = booking.getUser() != null ? booking.getUser().getEmail() : booking.getGuestEmail();
         String customerName = booking.getUser() != null ? booking.getUser().getFullName() : booking.getGuestName();
         String subject = "Vago - Việc đặt phòng của quý khách đã được hủy thành công (" + booking.getBookingCode()

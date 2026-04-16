@@ -10,7 +10,6 @@ import com.example.backend.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,7 +27,7 @@ public class HotelMapper {
         return Hotel.builder()
                 .hotelName(req.getHotelName())
                 .description(req.getDescription())
-                .starRating(BigDecimal.ZERO)
+
                 .addressLine(req.getAddressLine())
                 .ward(req.getWard())
                 .district(req.getDistrict())
@@ -36,8 +35,7 @@ public class HotelMapper {
                 .phone(req.getPhone())
                 .email(req.getEmail())
                 .owner(owner)
-                .isActive(false)
-                .isDeleted(false)
+
                 .build();
     }
 
@@ -62,8 +60,11 @@ public class HotelMapper {
                 .email(hotel.getEmail())
                 .ownerId(hotel.getOwner() != null ? hotel.getOwner().getId() : null)
                 .ownerName(hotel.getOwner() != null ? hotel.getOwner().getFullName() : null)
-                .isActive(hotel.getIsActive())
-                .isDeleted(hotel.getIsDeleted())
+
+                .status(hotel.getStatus())
+                .statusReason(hotel.getStatusReason())
+                .deletedAt(hotel.getDeletedAt())
+                
                 .createdAt(hotel.getCreatedAt())
                 .updatedAt(hotel.getUpdatedAt())
                 .images(imageResponses)
@@ -89,7 +90,9 @@ public class HotelMapper {
                 .starRating(hotel.getStarRating())
                 .district(hotel.getDistrict())
                 .city(hotel.getCity())
-                .isActive(hotel.getIsActive())
+
+                .status(hotel.getStatus())
+                
                 .thumbnailUrl(thumbnail)
                 .build();
     }
@@ -125,13 +128,13 @@ public class HotelMapper {
                 .ownerName(hotel.getOwner() != null ? hotel.getOwner().getFullName() : null)
                 .ownerEmail(hotel.getOwner() != null ? hotel.getOwner().getEmail() : null)
 
-                .isActive(hotel.getIsActive())
-                .isDeleted(hotel.getIsDeleted())
+                .status(hotel.getStatus())
+                .statusReason(hotel.getStatusReason())
+                .deletedAt(hotel.getDeletedAt())
+                
                 .createdAt(hotel.getCreatedAt())
-
                 .thumbnailUrl(thumbnail)
                 .totalRoomTypes(roomTypeCount)
                 .build();
     }
-    
 }

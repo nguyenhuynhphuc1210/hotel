@@ -10,15 +10,12 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, Long> {
 
-    List<HotelStatistic> findByHotelIdAndStatDateBetweenOrderByStatDateAsc(
+    List<HotelStatistic> findByHotel_IdAndStatDateBetweenOrderByStatDateAsc(
             Long hotelId, LocalDate fromDate, LocalDate toDate);
-
-    Optional<HotelStatistic> findByHotelIdAndStatDate(Long hotelId, LocalDate statDate);
 
     @Modifying
     @Query("UPDATE HotelStatistic h SET h.totalBookings = h.totalBookings + 1, h.totalRevenue = h.totalRevenue + :totalAmount WHERE h.hotel.id = :hotelId AND h.statDate = :statDate")

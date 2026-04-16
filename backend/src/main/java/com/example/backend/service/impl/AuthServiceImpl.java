@@ -2,6 +2,7 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.request.ForgotPasswordRequest;
 import com.example.backend.dto.request.LoginRequest;
+import com.example.backend.dto.request.PartnerRegisterRequest;
 import com.example.backend.dto.request.RegisterRequest;
 import com.example.backend.dto.request.ResetPasswordRequest;
 import com.example.backend.dto.request.VerifyOtpRequest;
@@ -83,6 +84,33 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public AuthResponse registerPartner(PartnerRegisterRequest request) {
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email này đã được sử dụng!");
+        }
+
+        Role ownerRole = roleRepository.findByRoleName("ROLE_HOTEL_OWNER")
+                .orElseThrow(() -> new RuntimeException("Lỗi cấu hình: Không tìm thấy quyền Đối tác"));
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .fullName(request.getFullName())
+                .phone(request.getPhone())
+                .role(ownerRole)
+                .isActive(true)
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        String newToken = jwtTokenProvider.generateTokenFromEmail(savedUser.getEmail());
+
+        return new AuthResponse(newToken, userMapper.toUserResponse(savedUser));
+    }
+
+    @Override
+    @Transactional
     public void verifyOtp(VerifyOtpRequest request) {
         getValidOtpToken(request.getEmail(), request.getOtp());
     }
@@ -111,7 +139,7 @@ public class AuthServiceImpl implements AuthService {
 
         SecureRandom random = new SecureRandom();
 
-        String rawOtp = String.format("%06d", random.nextInt(1000000)); 
+        String rawOtp = String.format("%06d", random.nextInt(1000000));
 
         String hashedOtp = passwordEncoder.encode(rawOtp);
 
@@ -122,12 +150,13 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         otpTokenRepository.save(otpToken);
 
-        emailService.sendOtpEmail(user.getEmail(), rawOtp); 
+        emailService.sendOtpEmail(user.getEmail(), rawOtp);
     }
 
     private OtpToken getValidOtpToken(String email, String rawOtp) {
         OtpToken otpToken = otpTokenRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Không có yêu cầu cấp lại mật khẩu nào đang hoạt động"));
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Không có yêu cầu cấp lại mật khẩu nào đang hoạt động"));
 
         if (!passwordEncoder.matches(rawOtp, otpToken.getOtp())) {
             throw new IllegalArgumentException("Mã OTP không chính xác");

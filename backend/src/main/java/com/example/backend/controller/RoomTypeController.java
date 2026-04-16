@@ -73,7 +73,6 @@ public class RoomTypeController {
         return ResponseEntity.ok(roomTypeService.suspendRoomType(id));
     }
 
-    // API Mở lại
     @PatchMapping("/{id}/reactivate")
     public ResponseEntity<RoomTypeResponse> reactivateRoomType(@PathVariable Long id) {
         return ResponseEntity.ok(roomTypeService.reactivateRoomType(id));

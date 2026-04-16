@@ -1,5 +1,6 @@
 package com.example.backend.dto.response;
 
+import com.example.backend.enums.HotelStatus;
 import lombok.*;
 import java.math.BigDecimal;
 
@@ -13,7 +14,8 @@ public class HotelSummaryResponse {
     private BigDecimal starRating;
     private String district;
     private String city;
-    private Boolean isActive;
+
+    private HotelStatus status;
 
     private String thumbnailUrl; 
 }

@@ -2,7 +2,9 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.request.ChangePasswordRequest;
 import com.example.backend.dto.request.UpdateUserRequest;
+import com.example.backend.dto.request.UpgradeToPartnerRequest;
 import com.example.backend.dto.request.UserRequest;
+import com.example.backend.dto.response.AuthResponse;
 import com.example.backend.dto.response.UserResponse;
 import com.example.backend.service.UserService;
 
@@ -10,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -90,5 +93,12 @@ public class UserController {
         return ResponseEntity.ok(Map.of(
                 "message", "Upload avatar thành công",
                 "avatarUrl", avatarUrl));
+    }
+
+    @PostMapping("/upgrade-to-partner")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<AuthResponse> upgradeToPartner(@Valid @RequestBody UpgradeToPartnerRequest request) {
+        AuthResponse response = userService.upgradeToPartner(request);
+        return ResponseEntity.ok(response);
     }
 }

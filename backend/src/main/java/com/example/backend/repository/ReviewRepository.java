@@ -19,11 +19,11 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             """)
     BigDecimal getAverageRating(@Param("hotelId") Long hotelId);
 
-    boolean existsByBookingId(Long bookingId);
+    boolean existsByBooking_Id(Long bookingId);
 
-    Page<Review> findByHotelIdAndIsPublishedTrue(Long hotelId, Pageable pageable);
+    Page<Review> findByHotel_IdAndIsPublishedTrue(Long hotelId, Pageable pageable);
 
-    Page<Review> findByHotelId(Long hotelId, Pageable pageable);
+    Page<Review> findByHotel_Id(Long hotelId, Pageable pageable);
 
     Page<Review> findByIsReportedTrue(Pageable pageable);
 }

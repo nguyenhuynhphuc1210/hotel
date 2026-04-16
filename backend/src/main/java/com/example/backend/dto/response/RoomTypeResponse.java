@@ -21,8 +21,9 @@ public class RoomTypeResponse {
     private Double roomSize;
     private BigDecimal basePrice;
     private Integer totalRooms;
+    private Boolean isNonSmoking;
     private Boolean isActive;
-    private Boolean isDeleted;
+    private LocalDateTime deletedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<RoomImageResponse> images;

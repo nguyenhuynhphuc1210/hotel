@@ -3,7 +3,9 @@ package com.example.backend.service.impl;
 import static com.example.backend.security.SecurityUtils.*;
 import com.example.backend.dto.request.ChangePasswordRequest;
 import com.example.backend.dto.request.UpdateUserRequest;
+import com.example.backend.dto.request.UpgradeToPartnerRequest;
 import com.example.backend.dto.request.UserRequest;
+import com.example.backend.dto.response.AuthResponse;
 import com.example.backend.dto.response.UserResponse;
 import com.example.backend.entity.Role;
 import com.example.backend.entity.User;
@@ -11,6 +13,8 @@ import com.example.backend.entity.User;
 import com.example.backend.mapper.UserMapper;
 import com.example.backend.repository.RoleRepository;
 import com.example.backend.repository.UserRepository;
+import com.example.backend.security.JwtTokenProvider;
+import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.CloudinaryService;
 import com.example.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +39,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final CloudinaryService cloudinaryService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Override
     @Transactional(readOnly = true)
@@ -241,5 +246,29 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             throw new RuntimeException("Quá trình tải ảnh lên thất bại: " + e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse upgradeToPartner(UpgradeToPartnerRequest request) {
+        String currentUserEmail = SecurityUtils.getCurrentUserEmail();
+        User user = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng"));
+
+        if ("ROLE_HOTEL_OWNER".equals(user.getRole().getRoleName())) {
+            throw new IllegalArgumentException("Tài khoản này đã là tài khoản Đối tác!");
+        }
+
+        Role ownerRole = roleRepository.findByRoleName("ROLE_HOTEL_OWNER")
+                .orElseThrow(() -> new RuntimeException("Lỗi cấu hình: Không tìm thấy quyền Đối tác"));
+
+        user.setRole(ownerRole);
+        user.setPhone(request.getPhone());
+        
+        User savedUser = userRepository.save(user);
+
+        String newToken = jwtTokenProvider.generateTokenFromEmail(savedUser.getEmail());
+
+        return new AuthResponse(newToken, userMapper.toUserResponse(savedUser));
     }
 }

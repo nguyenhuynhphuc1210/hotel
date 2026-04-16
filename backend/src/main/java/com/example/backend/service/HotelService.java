@@ -28,7 +28,13 @@ public interface HotelService {
 
     HotelResponse approveHotel(Long id);
 
-    HotelResponse disableHotel(Long id);
+    HotelResponse reactivateHotel(Long id);
+
+    HotelResponse disableHotel(Long id, String reason);
+
+    HotelResponse rejectHotel(Long id, String reason);
+
+    HotelResponse suspendHotel(Long id, String reason);
 
     BigDecimal getMinPriceForHotel(Long hotelId, LocalDate checkIn, LocalDate checkOut);
 

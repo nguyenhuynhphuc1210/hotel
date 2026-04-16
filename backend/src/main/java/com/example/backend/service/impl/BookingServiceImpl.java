@@ -2,6 +2,7 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.request.BookingRequest;
 import com.example.backend.dto.request.BookingRoomRequest;
+import com.example.backend.dto.request.CancelBookingRequest; // IMPORT DTO MỚI
 import com.example.backend.dto.request.UpdateBookingStatusRequest;
 import com.example.backend.dto.response.BookingResponse;
 import com.example.backend.entity.*;
@@ -58,7 +59,6 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
-
         if (!request.getCheckInDate().isBefore(request.getCheckOutDate())) {
             throw new IllegalArgumentException("Ngày check-out phải sau ngày check-in ít nhất 1 đêm");
         }
@@ -188,12 +188,10 @@ public class BookingServiceImpl implements BookingService {
         BookingResponse response = bookingMapper.toBookingResponse(savedBooking);
 
         if (request.getPaymentMethod() == PaymentMethod.CASH) {
-            emailService.sendBookingConfirmationEmail(savedBooking);
-
+            emailService.sendBookingConfirmationEmail(savedBooking.getId());
         } else if (request.getPaymentMethod() == PaymentMethod.VNPAY) {
             String paymentUrl = vnPayService.createPaymentUrl(savedBooking, requestServlet);
             response.setPaymentUrl(paymentUrl);
-
         } else if (request.getPaymentMethod() == PaymentMethod.MOMO) {
             String paymentUrl = momoService.createPaymentUrl(savedBooking);
             response.setPaymentUrl(paymentUrl);
@@ -204,19 +202,24 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse cancelBooking(Long bookingId) {
+    public BookingResponse cancelBooking(Long bookingId, CancelBookingRequest request) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn đặt phòng"));
 
-        if (!SecurityUtils.isAdmin()) {
-            String currentUserEmail = SecurityUtils.getCurrentUserEmail();
+        String cancelledBy = "GUEST";
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAuthenticated = auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser");
 
-            boolean isOwnerOfThisHotel = booking.getHotel().getOwner().getEmail().equals(currentUserEmail);
-            boolean isGuestOfThisBooking = booking.getUser() != null
-                    && booking.getUser().getEmail().equals(currentUserEmail);
+        if (isAuthenticated) {
+            cancelledBy = auth.getName();
+            if (!SecurityUtils.isAdmin()) {
+                boolean isOwnerOfThisHotel = booking.getHotel().getOwner().getEmail().equals(cancelledBy);
+                boolean isGuestOfThisBooking = booking.getUser() != null
+                        && booking.getUser().getEmail().equals(cancelledBy);
 
-            if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
-                throw new AccessDeniedException("Bạn không có quyền hủy đơn đặt phòng này.");
+                if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
+                    throw new AccessDeniedException("Bạn không có quyền hủy đơn đặt phòng này.");
+                }
             }
         }
 
@@ -226,7 +229,13 @@ public class BookingServiceImpl implements BookingService {
 
         restoreRoomInventory(booking);
 
+        // --- CẬP NHẬT CÁC THÔNG TIN HỦY ---
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancelReason(request.getCancelReason());
+        booking.setCancelledAt(LocalDateTime.now());
+        booking.setCancelledBy(cancelledBy);
+        // ----------------------------------
+
         Booking savedBooking = bookingRepository.save(booking);
 
         hotelStatisticService.recordRealtimeStatistic(
@@ -244,7 +253,7 @@ public class BookingServiceImpl implements BookingService {
             paymentRepository.save(payment);
         });
 
-        emailService.sendBookingCancellationEmail(savedBooking);
+        emailService.sendBookingCancellationEmail(savedBooking.getId());
 
         return bookingMapper.toBookingResponse(savedBooking);
     }
@@ -271,6 +280,11 @@ public class BookingServiceImpl implements BookingService {
 
         if (newStatus == BookingStatus.CANCELLED && booking.getStatus() != BookingStatus.CANCELLED) {
             restoreRoomInventory(booking);
+
+            booking.setCancelledAt(LocalDateTime.now());
+            booking.setCancelReason("Hủy bởi Quản trị viên / Chủ khách sạn (Chuyển trạng thái hệ thống)");
+            booking.setCancelledBy(SecurityUtils.getCurrentUserEmail());
+            
             paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
                 if (payment.getStatus() == PaymentStatus.PAID) {
                     payment.setStatus(PaymentStatus.REFUNDED);
@@ -283,7 +297,6 @@ public class BookingServiceImpl implements BookingService {
 
         if (newStatus == BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.CHECKED_IN) {
             paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
-
                 if (payment.getPaymentMethod() == PaymentMethod.CASH && payment.getStatus() == PaymentStatus.UNPAID) {
                     payment.setStatus(PaymentStatus.PAID);
                     payment.setPaymentDate(LocalDateTime.now());

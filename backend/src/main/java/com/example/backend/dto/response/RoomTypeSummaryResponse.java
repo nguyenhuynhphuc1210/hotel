@@ -17,6 +17,6 @@ public class RoomTypeSummaryResponse {
     private BigDecimal basePrice;
     private Integer totalRooms;
     private Boolean isActive;
-
+    private Boolean isNonSmoking;
     private String thumbnailUrl; 
 }

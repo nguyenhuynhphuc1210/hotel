@@ -24,6 +24,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByStatusAndCreatedAtBefore(BookingStatus status, LocalDateTime dateTime);
 
+    @Query("SELECT b FROM Booking b LEFT JOIN FETCH b.hotel LEFT JOIN FETCH b.bookingRooms WHERE b.id = :id")
+    Optional<Booking> findByIdWithDetails(@Param("id") Long id);
+
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.hotel.id = :hotelId AND b.status = 'COMPLETED' AND DATE(b.updatedAt) = :date")
     Integer countCompletedBookingsByDateAndHotel(@Param("hotelId") Long hotelId, @Param("date") LocalDate date);
 
