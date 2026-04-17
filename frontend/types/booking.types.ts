@@ -26,6 +26,7 @@ export interface BookingResponse {
   createdAt: string
   updatedAt: string
   bookingRooms: BookingRoomResponse[]
+  reviewed?: boolean
 }
 
 export interface BookingRoomRateResponse {

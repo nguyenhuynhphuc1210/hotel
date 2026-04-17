@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useHotels, useDeleteHotel, useApproveHotel, useDisableHotel } from '@/hooks/useHotel'
+import { useHotels, useDeletedHotels, useApproveHotel, useDisableHotel, useDeleteHotel } from '@/hooks/useHotel'
 import { HotelResponse } from '@/lib/api/hotel.api'
 import {
   Search, Plus, Pencil, Trash2, CheckCircle,

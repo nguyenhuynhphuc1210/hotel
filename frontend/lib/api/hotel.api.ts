@@ -33,6 +33,7 @@ export interface HotelResponse {
   ownerId: number
   ownerName: string
   isActive: boolean
+  isDeleted: boolean
   createdAt: string
   updatedAt: string
   roomTypes: RoomTypeResponse[]
@@ -40,7 +41,6 @@ export interface HotelResponse {
   images?: HotelImageResponse[]
 }
 
-// Kiểu trả về từ /active và /search (backend trả HotelSummaryResponse)
 export interface HotelSummaryResponse {
   id: number
   hotelName: string
@@ -55,12 +55,11 @@ export interface HotelSummaryResponse {
   isActive: boolean
 }
 
-// Kiểu Page chung của Spring Boot
 export interface PageResponse<T> {
   content: T[]
   totalPages: number
   totalElements: number
-  number: number       // current page (0-based)
+  number: number
   size: number
   first: boolean
   last: boolean
@@ -90,9 +89,9 @@ export interface HotelSearchParams {
 
 const hotelApi = {
   getAll: (page = 0, size = 100) =>
-  axiosInstance.get<PageResponse<HotelResponse>>(API_CONFIG.ENDPOINTS.HOTELS, {
-    params: { page, size }
-  }),
+    axiosInstance.get<PageResponse<HotelResponse>>(API_CONFIG.ENDPOINTS.HOTELS, {
+      params: { page, size }
+    }),
 
   getById: (id: number | string) =>
     axiosInstance.get<HotelResponse>(API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)),
@@ -112,14 +111,13 @@ const hotelApi = {
   disable: (id: number | string) =>
     axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/disable`),
 
-  // ✅ Fix: trả về Page thay vì array
+
   getActive: (page = 0, size = 9) =>
     axiosInstance.get<PageResponse<HotelSummaryResponse>>(
       `${API_CONFIG.ENDPOINTS.HOTELS}/active`,
       { params: { page, size } }
     ),
 
-  // ✅ Thêm search có phân trang
   search: (params: HotelSearchParams) =>
     axiosInstance.get<PageResponse<HotelSummaryResponse>>(
       `${API_CONFIG.ENDPOINTS.HOTELS}/search`,
@@ -130,6 +128,16 @@ const hotelApi = {
     axiosInstance.get<number>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/min-price`, {
       params: { checkIn, checkOut },
     }),
+
+  getDeleted: (page = 0, size = 10) =>
+    axiosInstance.get<PageResponse<HotelResponse>>(
+      `${API_CONFIG.ENDPOINTS.HOTELS}/deleted`,
+      { params: { page, size } }
+    ),
+
+
+  restore: (id: number | string) =>
+    axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/restore`),
 }
 
 export default hotelApi

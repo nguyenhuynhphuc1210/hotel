@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, ChangeEvent, FormEvent, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
     User, Package, ChevronRight, LogOut, Loader2, Mail,
     Save, Camera, Lock, Eye, EyeOff, MapPin, Heart, Star,
-    Hotel, CalendarDays, X
+    Hotel, CalendarDays, X, Ban
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
@@ -17,6 +17,7 @@ import { UpdateUserRequest, ChangePasswordRequest, Gender } from '@/types/user.t
 import { BookingStatus } from '@/types/booking.types'
 import dynamic from 'next/dynamic'
 import { FavoriteResponse, FavoritePage } from '@/types/favorite.types'
+import Pagination from '@/components/ui/Pagination'
 
 interface ApiError {
     response?: { data?: { message?: string } | string }
@@ -41,10 +42,19 @@ function ProfilePage() {
     const router = useRouter()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { user, logout, setUser, isLoading: authLoading } = useAuthStore()
+    const queryClient = useQueryClient()
 
     const [activeTab, setActiveTab] = useState<TabType>('info')
     const [isEditing, setIsEditing] = useState(false)
     const [showPassword, setShowPassword] = useState({ old: false, new: false, confirm: false })
+
+    // Pagination state for bookings
+    const [bookingPage, setBookingPage] = useState(0)
+    const [bookingSize] = useState(5)
+
+    // Cancel confirmation state
+    const [cancellingId, setCancellingId] = useState<number | null>(null)
+    const [confirmCancelId, setConfirmCancelId] = useState<number | null>(null)
 
     const [formData, setFormData] = useState<UpdateUserRequest>({
         fullName: user?.fullName || '',
@@ -57,11 +67,15 @@ function ProfilePage() {
         oldPassword: '', newPassword: '', confirmPassword: '',
     })
 
-    const { data: bookings, isLoading: bookingsLoading } = useQuery({
-        queryKey: ['my-bookings'],
-        queryFn: () => bookingApi.getMyBookings().then(r => r.data),
+    const { data: bookingsPageData, isLoading: bookingsLoading } = useQuery({
+        queryKey: ['my-bookings', bookingPage, bookingSize],
+        queryFn: () => bookingApi.getMyBookings(bookingPage, bookingSize).then(r => r.data),
         enabled: !!user && activeTab === 'bookings',
     })
+
+    const bookings = bookingsPageData?.content ?? []
+    const totalPages = bookingsPageData?.totalPages ?? 0
+    const totalElements = bookingsPageData?.totalElements ?? 0
 
     const { data: favoritesPage, isLoading: favLoading, refetch: refetchFavs } = useQuery({
         queryKey: ['my-favorites'],
@@ -107,6 +121,27 @@ function ProfilePage() {
         },
     })
 
+    const cancelBookingMutation = useMutation({
+        mutationFn: (id: number) => bookingApi.cancelBooking(id),
+        onSuccess: () => {
+            toast.success('Đã hủy đơn đặt phòng thành công!')
+            setCancellingId(null)
+            setConfirmCancelId(null)
+            queryClient.invalidateQueries({ queryKey: ['my-bookings'] })
+        },
+        onError: (err: ApiError) => {
+            const msg = typeof err.response?.data === 'string' ? err.response.data : err.response?.data?.message || 'Hủy đơn thất bại'
+            toast.error(msg)
+            setCancellingId(null)
+        },
+    })
+
+    const handleCancelBooking = (id: number) => {
+        setCancellingId(id)
+        cancelBookingMutation.mutate(id)
+        setConfirmCancelId(null)
+    }
+
     const [removingId, setRemovingId] = useState<number | null>(null)
     const handleRemoveFavorite = async (hotelId: number) => {
         setRemovingId(hotelId)
@@ -146,9 +181,15 @@ function ProfilePage() {
             case 'PENDING': return { label: 'Chờ xử lý', style: 'bg-amber-100 text-amber-700' }
             case 'CANCELLED': return { label: 'Đã hủy', style: 'bg-red-100 text-red-700' }
             case 'COMPLETED': return { label: 'Đã hoàn thành', style: 'bg-blue-100 text-blue-700' }
+            case 'CHECKED_IN': return { label: 'Đã nhận phòng', style: 'bg-purple-100 text-purple-700' }
+            case 'NO_SHOW': return { label: 'Không đến', style: 'bg-gray-100 text-gray-700' }
             default: return { label: status, style: 'bg-gray-100 text-gray-700' }
         }
     }
+
+    // Only PENDING and CONFIRMED can be cancelled by user
+    const isCancellable = (status: BookingStatus) =>
+        status === 'PENDING' || status === 'CONFIRMED'
 
     if (authLoading || !user) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-blue-600" size={40} /></div>
@@ -184,7 +225,13 @@ function ProfilePage() {
 
                             <nav className="space-y-2">
                                 <TabBtn active={activeTab === 'info'} icon={<User size={20} />} label="Thông tin cá nhân" onClick={() => setActiveTab('info')} />
-                                <TabBtn active={activeTab === 'bookings'} icon={<Package size={20} />} label="Đơn đặt phòng" onClick={() => setActiveTab('bookings')} badge={bookings?.length} />
+                                <TabBtn
+                                    active={activeTab === 'bookings'}
+                                    icon={<Package size={20} />}
+                                    label="Đơn đặt phòng"
+                                    onClick={() => { setActiveTab('bookings'); setBookingPage(0) }}
+                                    badge={totalElements || undefined}
+                                />
                                 <TabBtn active={activeTab === 'favorites'} icon={<Heart size={20} />} label="Khách sạn yêu thích" onClick={() => setActiveTab('favorites')} badge={favorites?.length || undefined} />
                                 <TabBtn active={activeTab === 'security'} icon={<Lock size={20} />} label="Bảo mật & Mật khẩu" onClick={() => setActiveTab('security')} />
 
@@ -245,7 +292,13 @@ function ProfilePage() {
                         {/* ── Tab Đơn đặt phòng ── */}
                         {activeTab === 'bookings' && (
                             <div className="space-y-4">
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">Đơn đặt phòng của tôi</h3>
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-xl font-bold text-gray-900">Đơn đặt phòng của tôi</h3>
+                                    {totalElements > 0 && (
+                                        <span className="text-sm text-gray-400">{totalElements} đơn</span>
+                                    )}
+                                </div>
+
                                 {bookingsLoading ? (
                                     <div className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-600" /></div>
                                 ) : !bookings || bookings.length === 0 ? (
@@ -254,39 +307,91 @@ function ProfilePage() {
                                         <p className="text-gray-500 font-medium">Bạn chưa có đơn đặt phòng nào.</p>
                                         <button onClick={() => router.push('/')} className="mt-4 text-blue-600 font-bold text-sm">Khám phá ngay</button>
                                     </div>
-                                ) : bookings.map((booking) => (
-                                    <div key={booking.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="p-5 flex flex-col md:flex-row gap-5">
-                                            <div className="flex-1">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase">#{booking.bookingCode}</span>
-                                                    <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${getStatusInfo(booking.status).style}`}>{getStatusInfo(booking.status).label}</span>
-                                                </div>
-                                                <h4 className="font-bold text-gray-900 text-lg mb-1">{booking.hotelName}</h4>
-                                                <div className="flex items-center gap-1.5 text-gray-400 text-xs mb-4">
-                                                    <MapPin size={12} /> {booking.hotelAddress}
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-2xl p-4">
-                                                    <div>
-                                                        <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Nhận phòng</p>
-                                                        <p className="text-sm font-bold text-gray-700">{formatDate(booking.checkInDate)}</p>
+                                ) : (
+                                    <>
+                                        {bookings.map((booking) => (
+                                            <div key={booking.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                                <div className="p-5 flex flex-col md:flex-row gap-5">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase">#{booking.bookingCode}</span>
+                                                            <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${getStatusInfo(booking.status).style}`}>{getStatusInfo(booking.status).label}</span>
+                                                        </div>
+                                                        <h4 className="font-bold text-gray-900 text-lg mb-1">{booking.hotelName}</h4>
+                                                        <div className="flex items-center gap-1.5 text-gray-400 text-xs mb-4">
+                                                            <MapPin size={12} /> {booking.hotelAddress}
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-2xl p-4">
+                                                            <div>
+                                                                <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Nhận phòng</p>
+                                                                <p className="text-sm font-bold text-gray-700">{formatDate(booking.checkInDate)}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Trả phòng</p>
+                                                                <p className="text-sm font-bold text-gray-700">{formatDate(booking.checkOutDate)}</p>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Trả phòng</p>
-                                                        <p className="text-sm font-bold text-gray-700">{formatDate(booking.checkOutDate)}</p>
+                                                    <div className="md:w-48 flex flex-col justify-between items-end border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-5">
+                                                        <div className="text-right">
+                                                            <p className="text-xs text-gray-400 font-medium">Tổng thanh toán</p>
+                                                            <p className="text-xl font-black text-blue-600">{booking.totalAmount.toLocaleString('vi-VN')}₫</p>
+                                                        </div>
+                                                        <div className="flex flex-col gap-2 w-full mt-4">
+                                                            <button
+                                                                onClick={() => router.push(`/booking/detail/${booking.id}`)}
+                                                                className="w-full py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-900 rounded-xl text-xs font-bold transition-colors"
+                                                            >
+                                                                Xem chi tiết
+                                                            </button>
+
+                                                            {/* Cancel button — only for PENDING / CONFIRMED */}
+                                                            {isCancellable(booking.status) && (
+                                                                confirmCancelId === booking.id ? (
+                                                                    <div className="flex gap-1.5">
+                                                                        <button
+                                                                            onClick={() => setConfirmCancelId(null)}
+                                                                            className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-colors"
+                                                                        >
+                                                                            Không
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleCancelBooking(booking.id)}
+                                                                            disabled={cancellingId === booking.id}
+                                                                            className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-60 transition-colors"
+                                                                        >
+                                                                            {cancellingId === booking.id
+                                                                                ? <Loader2 size={12} className="animate-spin" />
+                                                                                : 'Xác nhận'}
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => setConfirmCancelId(booking.id)}
+                                                                        className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                                                                    >
+                                                                        <Ban size={13} /> Hủy đơn
+                                                                    </button>
+                                                                )
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="md:w-48 flex flex-col justify-between items-end border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-5">
-                                                <div className="text-right">
-                                                    <p className="text-xs text-gray-400 font-medium">Tổng thanh toán</p>
-                                                    <p className="text-xl font-black text-blue-600">{booking.totalAmount.toLocaleString('vi-VN')}₫</p>
-                                                </div>
-                                                <button onClick={() => router.push(`/booking/detail/${booking.id}`)} className="w-full mt-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-900 rounded-xl text-xs font-bold transition-colors">Xem chi tiết</button>
-                                            </div>
+                                        ))}
+
+                                        {/* Pagination */}
+                                        <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4 shadow-sm">
+                                            <Pagination
+                                                currentPage={bookingPage}
+                                                totalPages={totalPages}
+                                                totalElements={totalElements}
+                                                pageSize={bookingSize}
+                                                onPageChange={(p) => setBookingPage(p)}
+                                            />
                                         </div>
-                                    </div>
-                                ))}
+                                    </>
+                                )}
                             </div>
                         )}
 
@@ -313,12 +418,11 @@ function ProfilePage() {
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 gap-4">
-                                        {favorites.map((fav: FavoriteResponse) => (
+                                        {favorites.map((fav: FavoriteResponse, index: number) => (
                                             <div
-                                                key={fav.hotelId}
+                                                key={fav.hotelId || index}
                                                 className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden flex"
                                             >
-                                                {/* Ảnh bên trái */}
                                                 <div
                                                     className="w-36 shrink-0 bg-gray-100 cursor-pointer overflow-hidden"
                                                     onClick={() => router.push(`/hotels/${fav.hotelId}`)}
@@ -332,7 +436,6 @@ function ProfilePage() {
                                                     )}
                                                 </div>
 
-                                                {/* Nội dung */}
                                                 <div className="flex-1 p-5 flex flex-col justify-between">
                                                     <div>
                                                         <h4
@@ -348,8 +451,13 @@ function ProfilePage() {
                                                         )}
                                                         {fav.hotelStarRating && (
                                                             <div className="flex items-center gap-0.5">
-                                                                {Array.from({ length: Math.round(fav.hotelStarRating) }).map((_, i) => (
-                                                                    <Star key={i} size={11} fill="#f59e0b" className="text-amber-400" />
+                                                                {[...Array(Math.round(fav.hotelStarRating))].map((_, i) => (
+                                                                    <Star
+                                                                        key={`${fav.hotelId}-star-${i}`}
+                                                                        size={11}
+                                                                        fill="#f59e0b"
+                                                                        className="text-amber-400"
+                                                                    />
                                                                 ))}
                                                             </div>
                                                         )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -53,7 +53,7 @@ const FALLBACK = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=40
 export default function HomePage() {
     const router = useRouter()
     const [currentPage, setCurrentPage] = useState(0)
-    const pageSize = 8
+    const pageSize = 4
 
     const { data: hotelsPage, isLoading: hotelsLoading } = useQuery({
         queryKey: ['hotels-active', currentPage],
@@ -75,35 +75,39 @@ export default function HomePage() {
     })
 
     const hotels = hotelsPage?.content || []
-    
+
     const featuredHotels = [...hotels]
         .sort((a, b) => (b.starRating ?? 0) - (a.starRating ?? 0))
 
+    const [isSticky, setIsSticky] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsSticky(window.scrollY > 400);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     return (
         <div className="pb-20">
-           
-            <section className="relative bg-gradient-to-br from-green-700 via-green-600 to-emerald-500 text-white">
-                <div className="absolute inset-0 opacity-10 pointer-events-none">
-                    <div className="absolute top-10 left-10 w-40 h-40 rounded-full bg-white" />
-                    <div className="absolute bottom-0 right-20 w-64 h-64 rounded-full bg-white" />
-                    <div className="absolute top-1/2 left-1/3 w-24 h-24 rounded-full bg-white" />
-                </div>
-                <div className="relative max-w-7xl mx-auto px-4 pt-16 pb-32">
-                    <div className="text-center mb-10">
-                        <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-                            Khám phá khách sạn<br />
-                            <span className="text-yellow-300">tốt nhất tại TP.HCM</span>
-                        </h1>
-                        <p className="text-green-100 text-lg">
-                            Hàng trăm khách sạn chất lượng, đặt phòng dễ dàng, giá tốt nhất
-                        </p>
-                    </div>
-                    <div className="max-w-5xl mx-auto relative z-50">
-                        <SearchBar variant="hero" />
-                    </div>
-                </div>
-            </section>
+            <div className={`fixed top-16 left-0 w-full z-40 bg-white border-b border-gray-100 py-3 px-4 shadow-xl transition-all duration-500 transform ${isSticky ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+                }`}>
+                <SearchBar variant="compact" />
+            </div>
 
+           <section className="relative bg-gradient-to-br from-green-700 via-green-600 to-emerald-500 text-white">
+            <div className="max-w-7xl mx-auto px-4 pt-16 pb-32">
+                <div className="text-center mb-10">
+                    <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                        Khám phá khách sạn tốt nhất
+                    </h1>
+                </div>                
+                <div className="max-w-5xl mx-auto">
+                    <SearchBar variant="hero" />
+                </div>
+            </div>
+        </section>
             <section className="max-w-7xl mx-auto px-4 mt-14">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">
                     Các điểm thu hút nhất TP. Hồ Chí Minh
@@ -148,17 +152,16 @@ export default function HomePage() {
                                 >
                                     <ChevronLeft size={20} />
                                 </button>
-                                
+
                                 <div className="flex items-center gap-1">
                                     {[...Array(hotelsPage.totalPages)].map((_, i) => (
                                         <button
                                             key={i}
                                             onClick={() => setCurrentPage(i)}
-                                            className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
-                                                currentPage === i 
-                                                ? 'bg-green-600 text-white' 
+                                            className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${currentPage === i
+                                                ? 'bg-green-600 text-white'
                                                 : 'hover:bg-green-50 text-gray-600'
-                                            }`}
+                                                }`}
                                         >
                                             {i + 1}
                                         </button>

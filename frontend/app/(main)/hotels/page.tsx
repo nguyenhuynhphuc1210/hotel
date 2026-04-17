@@ -11,6 +11,7 @@ import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
 import { HotelResponse } from '@/lib/api/hotel.api'
 import SearchBar from '@/components/common/SearchBar'
+import Pagination from '@/components/ui/Pagination'
 
 // ── Types ─────────────────────────────────────────────────
 type MinPriceMap = Record<number, number | null>
@@ -42,22 +43,39 @@ export default function HotelsPage() {
     const [showFilter, setShowFilter] = useState(true)
     const [priceMin, setPriceMin] = useState('')
     const [priceMax, setPriceMax] = useState('')
+    const [currentPage, setCurrentPage] = useState(0)
+    const [pageSize, setPageSize] = useState(1)
 
     // ── Fetch hotels ──
-    const { data: hotels = [], isLoading } = useQuery<HotelResponse[]>({
-        queryKey: ['hotels-search', keyword, district, checkIn, checkOut, adults],
+    const { data: pageData, isLoading } = useQuery({
+        queryKey: ['hotels-search', keyword, district, checkIn, checkOut, adults, currentPage, pageSize],
         queryFn: () => axiosInstance.get(API_CONFIG.ENDPOINTS.HOTELS_SEARCH, {
-            params: { keyword, district, checkIn, checkOut, guests: adults }
+            params: {
+                keyword,
+                district,
+                checkIn,
+                checkOut,
+                guests: adults,
+                page: currentPage,
+                size: pageSize
+            }
         }).then(r => r.data),
     })
 
-    const hotelIds = hotels.map(h => h.id).join(',')
+    const hotels = pageData?.content || []
+
+    const hotelIds = hotels.map((h: HotelResponse) => h.id).join(',')
+
     const { data: minPrices = {} } = useQuery<MinPriceMap>({
         queryKey: ['min-prices', hotelIds, checkIn, checkOut],
         queryFn: async () => {
             if (!hasFullDates || hotels.length === 0) return {}
             const results = await Promise.allSettled(
-                hotels.map(h => axiosInstance.get(API_CONFIG.ENDPOINTS.HOTEL_MIN_PRICE(h.id), { params: { checkIn, checkOut } }).then(r => ({ id: h.id, price: r.data })))
+                hotels.map((h: HotelResponse) =>
+                    axiosInstance.get(API_CONFIG.ENDPOINTS.HOTEL_MIN_PRICE(h.id), {
+                        params: { checkIn, checkOut }
+                    }).then(r => ({ id: h.id, price: r.data }))
+                )
             )
             const map: MinPriceMap = {}
             results.forEach(r => { if (r.status === 'fulfilled') map[r.value.id] = r.value.price })
@@ -125,9 +143,10 @@ export default function HotelsPage() {
 
     const nights = hasFullDates ? Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000) : 0
 
+    const totalElements = pageData?.totalElements || 0
     const title = keyword || district
-        ? `${keyword || district}: tìm thấy ${filtered.length} khách sạn`
-        : `Tất cả khách sạn tại TP.HCM: ${filtered.length} kết quả`
+        ? `${keyword || district}: tìm thấy ${totalElements} khách sạn`
+        : `Tất cả khách sạn tại TP.HCM: ${totalElements} kết quả`
 
     const activeFilterCount =
         starFilter.length + (priceMin ? 1 : 0) + (priceMax ? 1 : 0)
@@ -346,7 +365,23 @@ export default function HotelsPage() {
                                 ))}
                             </div>
                         )}
+                        {pageData && pageData.totalPages > 1 && (
+                            <div className="mt-8 bg-white p-4 rounded-2xl border border-gray-200">
+                                <Pagination
+                                    currentPage={currentPage}
+                                    pageSize={pageSize}
+                                    totalPages={pageData.totalPages}
+                                    totalElements={pageData.totalElements}
+                                    onPageChange={(page) => {
+                                        setCurrentPage(page);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    onPageSizeChange={setPageSize}
+                                />
+                            </div>
+                        )}
                     </div>
+
                 </div>
             </div>
         </div>
@@ -425,7 +460,7 @@ function HotelCard({
                     </div>
 
                     <button
-                        onClick={(e) => { 
+                        onClick={(e) => {
                             e.stopPropagation(); // QUAN TRỌNG: Ngăn không cho sự kiện onCardClick chạy
                             if (hasFullDates) {
                                 onCardClick(); // Nếu có ngày rồi thì vào xem phòng

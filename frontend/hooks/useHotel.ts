@@ -97,4 +97,25 @@ export const useDisableHotel = () => {
       toast.error(e?.response?.data?.message || 'Thất bại!')
     },
   })
+  
+}
+
+export const useDeletedHotels = (page = 0, size = 10) =>
+  useQuery({
+    queryKey: [KEY, 'deleted', page, size],
+    queryFn: () => hotelApi.getDeleted(page, size).then(r => r.data),
+  })
+
+export const useRestoreHotel = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number | string) => hotelApi.restore(id),
+    onSuccess: () => {
+      toast.success('Khôi phục khách sạn thành công!')
+      qc.invalidateQueries({ queryKey: [KEY] })     },
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } } }
+      toast.error(error?.response?.data?.message || 'Khôi phục thất bại!')
+    },
+  })
 }

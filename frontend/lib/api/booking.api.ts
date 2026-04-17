@@ -5,7 +5,7 @@ import { PageResponse } from './hotel.api'
 
 const bookingApi = {
   
-  getAll: (page = 0, size = 10) =>
+  getAll: (page = 0, size = 10000) =>
     axiosInstance.get<PageResponse<BookingResponse>>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/admin`, {
       params: { page, size }
     }),
@@ -26,6 +26,9 @@ const bookingApi = {
     axiosInstance.get<PageResponse<BookingResponse>>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/me`, {
       params: { page, size }
     }),
+
+  cancelBooking: (id: number | string) =>
+    axiosInstance.post<BookingResponse>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/${id}/cancel`),
 }
 
 export default bookingApi
