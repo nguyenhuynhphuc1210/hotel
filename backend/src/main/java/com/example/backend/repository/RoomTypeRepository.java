@@ -11,24 +11,34 @@ import java.util.List;
 
 public interface RoomTypeRepository extends JpaRepository<RoomType, Long> {
 
-    // 1. Thay IsDeletedFalse thành DeletedAtIsNull
     List<RoomType> findByIsActiveTrueAndDeletedAtIsNull();
-    
-    // 2. Lấy các loại phòng đang hoạt động của 1 khách sạn cụ thể
-    List<RoomType> findByHotelIdAndIsActiveTrueAndDeletedAtIsNull(Long hotelId);
-    
-    // 3. Lấy tất cả loại phòng chưa xóa (và khách sạn chứa nó cũng chưa xóa)
-    @Query("SELECT rt FROM RoomType rt WHERE rt.hotel.deletedAt IS NULL AND rt.deletedAt IS NULL")
-    List<RoomType> findAllActiveSystemRoomTypes();
 
-    // 4. Lấy danh sách các loại phòng đã bị thùng rác (DeletedAt IsNotNull)
+    @Query("""
+                SELECT rt FROM RoomType rt
+                WHERE rt.hotel.id = :hotelId
+                AND rt.hotel.deletedAt IS NULL
+                AND rt.isActive = true
+                AND rt.deletedAt IS NULL
+            """)
+    List<RoomType> findActiveRoomTypesByHotel(@Param("hotelId") Long hotelId);
+
+    List<RoomType> findByHotelIdAndDeletedAtIsNull(Long hotelId);
+
+    @Query("SELECT rt FROM RoomType rt WHERE rt.hotel.deletedAt IS NULL AND rt.deletedAt IS NULL")
+    List<RoomType> findAllNotDeletedSystemRoomTypes();
+
     List<RoomType> findByDeletedAtIsNotNull();
 
-    // 5. Lấy danh sách loại phòng chưa xóa của chính Owner đó
-    @Query("SELECT rt FROM RoomType rt WHERE rt.hotel.owner.email = :email AND rt.hotel.deletedAt IS NULL AND rt.deletedAt IS NULL")
-    List<RoomType> findActiveRoomTypesByOwner(@Param("email") String email);
+    @Query("""
+                SELECT rt FROM RoomType rt
+                JOIN FETCH rt.hotel h
+                JOIN FETCH h.owner
+                WHERE h.owner.email = :email
+                AND h.deletedAt IS NULL
+                AND rt.deletedAt IS NULL
+            """)
+    List<RoomType> findAllNotDeletedRoomTypesByOwner(@Param("email") String email);
 
-    // 6. Lấy danh sách loại phòng đã xóa của chính Owner đó
     @Query("SELECT rt FROM RoomType rt WHERE rt.hotel.owner.email = :email AND rt.deletedAt IS NOT NULL")
     List<RoomType> findDeletedRoomTypesByOwner(@Param("email") String email);
 
@@ -36,8 +46,12 @@ public interface RoomTypeRepository extends JpaRepository<RoomType, Long> {
     @Query("UPDATE RoomType rt SET rt.isActive = :isActive WHERE rt.hotel.id = :hotelId")
     void updateIsActiveByHotelId(@Param("hotelId") Long hotelId, @Param("isActive") boolean isActive);
 
-    // 7. Sửa lại hàm cập nhật xóa mềm bằng LocalDateTime
     @Modifying
-    @Query("UPDATE RoomType rt SET rt.deletedAt = :deletedAt WHERE rt.hotel.id = :hotelId")
+    @Query("""
+                UPDATE RoomType rt
+                SET rt.deletedAt = :deletedAt
+                WHERE rt.hotel.id = :hotelId
+                AND rt.deletedAt IS NULL
+            """)
     void updateDeletedAtByHotelId(@Param("hotelId") Long hotelId, @Param("deletedAt") LocalDateTime deletedAt);
 }

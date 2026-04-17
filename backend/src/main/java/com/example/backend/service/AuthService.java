@@ -21,4 +21,6 @@ public interface AuthService {
     void verifyOtp(VerifyOtpRequest request);
 
     void resetPassword(ResetPasswordRequest request);
+
+    AuthResponse loginWithGoogle(String idTokenString);
 }

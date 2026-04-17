@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.request.ForgotPasswordRequest;
+import com.example.backend.dto.request.GoogleLoginRequest;
 import com.example.backend.dto.request.LoginRequest;
 import com.example.backend.dto.request.PartnerRegisterRequest;
 import com.example.backend.dto.request.RegisterRequest;
@@ -54,5 +55,12 @@ public class AuthController {
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ResponseEntity.ok("Mật khẩu đã được đặt lại thành công.");
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> loginWithGoogle(
+            @Valid @RequestBody GoogleLoginRequest request) {
+
+        return ResponseEntity.ok(authService.loginWithGoogle(request.getIdToken()));
     }
 }

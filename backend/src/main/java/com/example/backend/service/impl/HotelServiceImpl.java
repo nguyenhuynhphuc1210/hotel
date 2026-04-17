@@ -347,7 +347,7 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getMinPriceForHotel(Long hotelId, LocalDate checkIn, LocalDate checkOut) {
-        List<RoomType> roomTypes = roomTypeRepository.findByHotelIdAndIsActiveTrueAndDeletedAtIsNull(hotelId);
+        List<RoomType> roomTypes = roomTypeRepository.findActiveRoomTypesByHotel(hotelId);
 
         return roomTypes.stream()
                 .flatMap(rt -> roomCalendarRepository

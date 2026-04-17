@@ -38,9 +38,9 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         List<RoomType> roomTypes;
 
         if (isAdmin()) {
-            roomTypes = roomTypeRepository.findAllActiveSystemRoomTypes();
+            roomTypes = roomTypeRepository.findAllNotDeletedSystemRoomTypes();
         } else if (isHotelOwner()) {
-            roomTypes = roomTypeRepository.findActiveRoomTypesByOwner(getCurrentUserEmail());
+            roomTypes = roomTypeRepository.findAllNotDeletedRoomTypesByOwner(getCurrentUserEmail());
         } else {
             throw new AccessDeniedException("Bạn không có quyền truy cập trang quản trị");
         }
@@ -62,7 +62,21 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional(readOnly = true)
     public List<RoomTypeSummaryResponse> getActiveRoomTypesByHotel(Long hotelId) {
-        return roomTypeRepository.findByHotelIdAndIsActiveTrueAndDeletedAtIsNull(hotelId)
+        return roomTypeRepository.findActiveRoomTypesByHotel(hotelId)
+                .stream()
+                .map(roomTypeMapper::toRoomTypeSummaryResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoomTypeSummaryResponse> getAllRoomTypesByHotelForManagement(Long hotelId) {
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + hotelId));
+
+        checkOwnerOrAdmin(hotel.getOwner().getEmail());
+
+        return roomTypeRepository.findByHotelIdAndDeletedAtIsNull(hotelId)
                 .stream()
                 .map(roomTypeMapper::toRoomTypeSummaryResponse)
                 .collect(Collectors.toList());
@@ -80,7 +94,8 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Transactional
     public RoomTypeResponse createRoomType(RoomTypeRequest request) {
         Hotel hotel = hotelRepository.findById(request.getHotelId())
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
+                .orElseThrow(
+                        () -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
 
         checkOwnerOrAdmin(hotel.getOwner().getEmail());
 
@@ -187,7 +202,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
 
         existing.setDeletedAt(LocalDateTime.now());
-        existing.setIsActive(false); 
+        existing.setIsActive(false);
         roomTypeRepository.save(existing);
 
         roomCalendarService.deactivateFutureCalendar(id);
@@ -206,14 +221,15 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         }
 
         if (existing.getHotel().getDeletedAt() != null) {
-            throw new IllegalArgumentException("Khách sạn của loại phòng này đang bị xóa. Vui lòng khôi phục khách sạn trước.");
+            throw new IllegalArgumentException(
+                    "Khách sạn của loại phòng này đang bị xóa. Vui lòng khôi phục khách sạn trước.");
         }
 
         existing.setDeletedAt(null);
         existing.setIsActive(false);
-        
+
         RoomType savedRoomType = roomTypeRepository.save(existing);
-        
+
         return roomTypeMapper.toRoomTypeResponse(savedRoomType);
     }
 
@@ -221,7 +237,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Transactional(readOnly = true)
     public List<RoomTypeSummaryResponse> getDeletedRoomTypes() {
         List<RoomType> deletedTypes;
-        
+
         if (isAdmin()) {
             deletedTypes = roomTypeRepository.findByDeletedAtIsNotNull();
         } else if (isHotelOwner()) {

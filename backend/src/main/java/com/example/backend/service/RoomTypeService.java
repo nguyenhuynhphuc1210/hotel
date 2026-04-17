@@ -10,6 +10,7 @@ public interface RoomTypeService {
     List<RoomTypeSummaryResponse> getAllRoomTypes();
     List<RoomTypeSummaryResponse> getActiveRoomTypes();
     List<RoomTypeSummaryResponse> getActiveRoomTypesByHotel(Long hotelId);
+    List<RoomTypeSummaryResponse> getAllRoomTypesByHotelForManagement(Long hotelId);
     RoomTypeResponse getRoomTypeById(Long id);
     RoomTypeResponse createRoomType(RoomTypeRequest request);
     RoomTypeResponse updateRoomType(Long id, RoomTypeRequest request);

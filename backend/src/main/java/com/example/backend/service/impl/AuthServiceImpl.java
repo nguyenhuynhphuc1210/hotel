@@ -18,6 +18,8 @@ import com.example.backend.repository.UserRepository;
 import com.example.backend.security.JwtTokenProvider;
 import com.example.backend.service.AuthService;
 import com.example.backend.service.EmailService;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,6 +33,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.json.JsonFactory;
+import java.util.Collections;
+import java.util.UUID;
+
+
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +54,9 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper userMapper;
     private final OtpTokenRepository otpTokenRepository;
     private final EmailService emailService;
+
+    @Value("${google.client.id}")
+    private String googleClientId;
 
     @Override
     public AuthResponse login(LoginRequest request) {
@@ -168,5 +181,59 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return otpToken;
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse loginWithGoogle(String idTokenString) {
+        GoogleIdToken verifier = verifyGoogleToken(idTokenString);
+        GoogleIdToken.Payload payload = verifier.getPayload();
+
+        String email = payload.getEmail();
+        String fullName = (String) payload.get("name");
+        String avatarUrl = (String) payload.get("picture");
+
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+
+            Role userRole = roleRepository.findByRoleName("ROLE_USER")
+                    .orElseThrow(() -> new RuntimeException("Lỗi hệ thống: Không tìm thấy quyền USER!"));
+
+            User newUser = User.builder()
+                    .email(email)
+                    .fullName(fullName)
+                    .avatarUrl(avatarUrl)
+                    .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .isActive(true)
+                    .role(userRole)
+                    .build();
+            return userRepository.save(newUser);
+        });
+
+        String token = jwtTokenProvider.generateTokenFromEmail(user.getEmail());
+
+        return AuthResponse.builder()
+                .token(token)
+                .user(userMapper.toUserResponse(user))
+                .build();
+    }
+
+    private GoogleIdToken verifyGoogleToken(String idTokenString) {
+        try {
+            NetHttpTransport transport = new NetHttpTransport();
+            JsonFactory jsonFactory = GsonFactory.getDefaultInstance();
+
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(transport, jsonFactory)
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(idTokenString);
+            if (idToken == null)
+                throw new IllegalArgumentException("Định dạng ID Token không hợp lệ");
+            
+            return idToken;
+        } catch (Exception e) {
+            e.printStackTrace(); // debug
+    throw new IllegalArgumentException("Xác thực Google thất bại: " + e.getMessage());
+        }
     }
 }
