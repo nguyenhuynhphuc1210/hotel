@@ -184,7 +184,8 @@ public class HotelServiceImpl implements HotelService {
         }
 
         hotel.setDeletedAt(null);
-
+        hotel.setStatus(HotelStatus.PENDING);
+        hotel.setStatusReason("Khách sạn được khôi phục, chờ duyệt lại");
         roomTypeRepository.updateDeletedAtByHotelId(id, null);
 
         return hotelMapper.toHotelResponse(hotelRepository.save(hotel));

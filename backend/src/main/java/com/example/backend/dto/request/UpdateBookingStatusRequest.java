@@ -8,4 +8,6 @@ import lombok.Data;
 public class UpdateBookingStatusRequest {
     @NotNull(message = "Trạng thái không được để trống")
     private BookingStatus status;
+
+    private String reason;
 }

@@ -7,12 +7,12 @@ import com.example.backend.entity.Payment;
 import com.example.backend.entity.RoomCalendar;
 import com.example.backend.enums.BookingStatus;
 import com.example.backend.enums.PaymentStatus;
+import com.example.backend.event.BookingEmailEvent;
 import com.example.backend.mapper.PaymentMapper;
 import com.example.backend.repository.BookingRepository;
 import com.example.backend.repository.PaymentRepository;
 import com.example.backend.repository.RoomCalendarRepository;
 import com.example.backend.security.SecurityUtils;
-import com.example.backend.service.EmailService;
 import com.example.backend.service.MomoService;
 import com.example.backend.service.PaymentService;
 import com.example.backend.service.VNPayService;
@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -45,9 +46,9 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentMapper paymentMapper;
     private final BookingRepository bookingRepository;
     private final RoomCalendarRepository roomCalendarRepository;
-    private final EmailService emailService;
     private final VNPayService vnPayService;
     private final MomoService momoService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -258,7 +259,8 @@ public class PaymentServiceImpl implements PaymentService {
         paymentRepository.save(payment);
         bookingRepository.save(booking);
         try {
-            emailService.sendBookingConfirmationEmail(booking.getId());
+            eventPublisher.publishEvent(
+                    new BookingEmailEvent(booking.getId(), "CONFIRM", null));
         } catch (Exception e) {
             System.err.println("Lỗi gửi email: " + e.getMessage());
         }

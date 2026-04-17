@@ -2,18 +2,18 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.request.BookingRequest;
 import com.example.backend.dto.request.BookingRoomRequest;
-import com.example.backend.dto.request.CancelBookingRequest; // IMPORT DTO MỚI
+import com.example.backend.dto.request.CancelBookingRequest;
 import com.example.backend.dto.request.UpdateBookingStatusRequest;
 import com.example.backend.dto.response.BookingResponse;
 import com.example.backend.entity.*;
 import com.example.backend.enums.BookingStatus;
 import com.example.backend.enums.PaymentMethod;
 import com.example.backend.enums.PaymentStatus;
+import com.example.backend.event.BookingEmailEvent;
 import com.example.backend.mapper.BookingMapper;
 import com.example.backend.repository.*;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.BookingService;
-import com.example.backend.service.EmailService;
 import com.example.backend.service.HotelStatisticService;
 import com.example.backend.service.MomoService;
 import com.example.backend.service.VNPayService;
@@ -34,10 +34,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
@@ -54,7 +58,7 @@ public class BookingServiceImpl implements BookingService {
     private final VNPayService vnPayService;
     private final MomoService momoService;
     private final HttpServletRequest requestServlet;
-    private final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -188,7 +192,7 @@ public class BookingServiceImpl implements BookingService {
         BookingResponse response = bookingMapper.toBookingResponse(savedBooking);
 
         if (request.getPaymentMethod() == PaymentMethod.CASH) {
-            emailService.sendBookingConfirmationEmail(savedBooking.getId());
+            eventPublisher.publishEvent(new BookingEmailEvent(savedBooking.getId(), "CONFIRM", null));
         } else if (request.getPaymentMethod() == PaymentMethod.VNPAY) {
             String paymentUrl = vnPayService.createPaymentUrl(savedBooking, requestServlet);
             response.setPaymentUrl(paymentUrl);
@@ -210,6 +214,8 @@ public class BookingServiceImpl implements BookingService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isAuthenticated = auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser");
 
+        boolean isAdminOrOwner = false;
+
         if (isAuthenticated) {
             cancelledBy = auth.getName();
             if (!SecurityUtils.isAdmin()) {
@@ -217,9 +223,15 @@ public class BookingServiceImpl implements BookingService {
                 boolean isGuestOfThisBooking = booking.getUser() != null
                         && booking.getUser().getEmail().equals(cancelledBy);
 
+                if (isOwnerOfThisHotel) {
+                    isAdminOrOwner = true;
+                }
+
                 if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
                     throw new AccessDeniedException("Bạn không có quyền hủy đơn đặt phòng này.");
                 }
+            } else {
+                isAdminOrOwner = true;
             }
         }
 
@@ -229,12 +241,21 @@ public class BookingServiceImpl implements BookingService {
 
         restoreRoomInventory(booking);
 
-        // --- CẬP NHẬT CÁC THÔNG TIN HỦY ---
+        String finalReason;
+        if (request.getCancelReason() != null && !request.getCancelReason().isBlank()) {
+            finalReason = request.getCancelReason().trim();
+        } else {
+            if (isAdminOrOwner) {
+                finalReason = "Hủy bởi Quản trị viên / Chủ khách sạn";
+            } else {
+                finalReason = "Khách hàng thay đổi kế hoạch (Không cung cấp lý do cụ thể)";
+            }
+        }
+
         booking.setStatus(BookingStatus.CANCELLED);
-        booking.setCancelReason(request.getCancelReason());
+        booking.setCancelReason(finalReason);
         booking.setCancelledAt(LocalDateTime.now());
         booking.setCancelledBy(cancelledBy);
-        // ----------------------------------
 
         Booking savedBooking = bookingRepository.save(booking);
 
@@ -253,7 +274,12 @@ public class BookingServiceImpl implements BookingService {
             paymentRepository.save(payment);
         });
 
-        emailService.sendBookingCancellationEmail(savedBooking.getId());
+        try {
+            eventPublisher.publishEvent(
+                    new BookingEmailEvent(savedBooking.getId(), "CANCEL", finalReason));
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi email hủy phòng cho booking ID {}: {}", booking.getId(), e.getMessage());
+        }
 
         return bookingMapper.toBookingResponse(savedBooking);
     }
@@ -281,10 +307,14 @@ public class BookingServiceImpl implements BookingService {
         if (newStatus == BookingStatus.CANCELLED && booking.getStatus() != BookingStatus.CANCELLED) {
             restoreRoomInventory(booking);
 
+            String cancelReason = (request.getReason() != null && !request.getReason().isBlank())
+                    ? request.getReason().trim()
+                    : "Hủy bởi Quản trị viên / Chủ khách sạn (Chuyển trạng thái hệ thống)";
+
             booking.setCancelledAt(LocalDateTime.now());
-            booking.setCancelReason("Hủy bởi Quản trị viên / Chủ khách sạn (Chuyển trạng thái hệ thống)");
+            booking.setCancelReason(cancelReason);
             booking.setCancelledBy(SecurityUtils.getCurrentUserEmail());
-            
+
             paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
                 if (payment.getStatus() == PaymentStatus.PAID) {
                     payment.setStatus(PaymentStatus.REFUNDED);
@@ -293,6 +323,13 @@ public class BookingServiceImpl implements BookingService {
                 }
                 paymentRepository.save(payment);
             });
+
+            try {
+                eventPublisher.publishEvent(new BookingEmailEvent(booking.getId(), "CANCEL", cancelReason));
+            } catch (Exception e) {
+
+                log.error("Lỗi khi gửi email hủy phòng cho booking ID {}: {}", booking.getId(), e.getMessage());
+            }
         }
 
         if (newStatus == BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.CHECKED_IN) {
@@ -329,6 +366,7 @@ public class BookingServiceImpl implements BookingService {
                     LocalDate.now(),
                     newStatus);
         }
+
         return bookingMapper.toBookingResponse(savedBooking);
     }
 

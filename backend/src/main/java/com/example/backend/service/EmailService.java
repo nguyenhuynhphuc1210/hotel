@@ -6,5 +6,5 @@ public interface EmailService {
 
     void sendBookingConfirmationEmail(Long bookingId);
 
-    void sendBookingCancellationEmail(Long bookingId);
+    void sendBookingCancellationEmail(Long bookingId, String reason);
 }

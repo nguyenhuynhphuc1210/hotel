@@ -170,20 +170,21 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     @Transactional(readOnly = true)
-    public void sendBookingCancellationEmail(Long bookingId) {
+    public void sendBookingCancellationEmail(Long bookingId, String reason) {
 
         Booking booking = bookingRepository.findByIdWithDetails(bookingId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Booking ID: " + bookingId));
 
         String to = booking.getUser() != null ? booking.getUser().getEmail() : booking.getGuestEmail();
         String customerName = booking.getUser() != null ? booking.getUser().getFullName() : booking.getGuestName();
-        String subject = "Vago - Việc đặt phòng của quý khách đã được hủy thành công (" + booking.getBookingCode()
-                + ")";
+        String subject = "Vago - Việc đặt phòng của quý khách đã bị hủy (" + booking.getBookingCode() + ")";
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         String checkIn = booking.getCheckInDate().format(formatter);
         String checkOut = booking.getCheckOutDate().format(formatter);
         long nights = ChronoUnit.DAYS.between(booking.getCheckInDate(), booking.getCheckOutDate());
+
+        String displayReason = (reason != null && !reason.isBlank()) ? reason : "Không có lý do cụ thể được cung cấp từ chỗ nghỉ.";
 
         StringBuilder roomDetails = new StringBuilder();
         int totalRooms = 0;
@@ -200,10 +201,16 @@ public class EmailServiceImpl implements EmailService {
         String htmlMsg = "<div style='background-color: #f0f2f5; padding: 30px 10px; font-family: Arial, Helvetica, sans-serif; color: #333; line-height: 1.5;'>"
                 + "<div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; overflow: hidden;'>"
 
-                + "<div style='border-top: 4px solid #1e293b; padding: 30px 20px; text-align: center;'>"
-                + "<h2 style='color: #1e293b; margin-top: 0; font-size: 22px;'>Việc đặt phòng của quý khách đã được hủy thành công</h2>"
+                + "<div style='border-top: 4px solid #ef4444; padding: 30px 20px; text-align: center;'>"
+                + "<h2 style='color: #ef4444; margin-top: 0; font-size: 22px;'>Việc đặt phòng của quý khách đã được hủy</h2>"
                 + "<p style='font-size: 15px; margin-top: 20px;'>Kính gửi " + customerName
                 + "&nbsp;&nbsp;|&nbsp;&nbsp;<strong>Mã đặt chỗ: " + booking.getBookingCode() + "</strong></p>"
+
+                + "<div style='margin: 20px 0; padding: 15px; background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px; text-align: left;'>"
+                + "<p style='margin: 0; font-size: 14px; font-weight: bold; color: #991b1b;'>Lý do hủy:</p>"
+                + "<p style='margin: 5px 0 0 0; font-size: 14px; color: #b91c1c; font-style: italic;'>" + displayReason + "</p>"
+                + "</div>"
+
                 + "<p style='font-size: 14px; color: #475569; line-height: 1.6; margin-top: 20px;'>"
                 + "Chúng tôi xác nhận đã hủy phòng của quý khách tại <strong>" + booking.getHotel().getHotelName()
                 + "</strong>. "
