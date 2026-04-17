@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.example.backend.enums.HotelStatus;
+
 @Entity
 @Table(name = "hotels")
 @Getter
@@ -45,20 +47,23 @@ public class Hotel {
     @Column(nullable = false)
     private String phone;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String email;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
+    @Enumerated(EnumType.STRING)
     @Builder.Default
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive = false;
+    @Column(nullable = false)
+    private HotelStatus status = HotelStatus.PENDING;
 
-    @Builder.Default
-    @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted = false;
+    @Column(name = "status_reason", columnDefinition = "TEXT")
+    private String statusReason;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

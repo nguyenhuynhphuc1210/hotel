@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.request.BookingRequest;
+import com.example.backend.dto.request.CancelBookingRequest;
 import com.example.backend.dto.request.UpdateBookingStatusRequest;
 import com.example.backend.dto.response.BookingResponse;
 import com.example.backend.service.BookingService;
@@ -46,9 +47,11 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.lookupGuestBooking(bookingCode, email));
     }
 
-    @PostMapping("/{id}/cancel")
-    public ResponseEntity<BookingResponse> cancelBooking(@PathVariable Long id) {
-        return ResponseEntity.ok(bookingService.cancelBooking(id));
+    @PatchMapping("/{bookingId}/cancel")
+    public ResponseEntity<BookingResponse> cancelBooking(
+            @PathVariable Long bookingId,
+            @Valid @RequestBody CancelBookingRequest request) {
+        return ResponseEntity.ok(bookingService.cancelBooking(bookingId, request));
     }
 
     @PatchMapping("/{id}/status")

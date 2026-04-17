@@ -80,13 +80,23 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/room-types/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/room-types/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
 
-                        .requestMatchers(HttpMethod.GET, "/api/hotels").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.GET, "/api/hotels/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/hotels/active").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/hotels/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/hotels/*/min-price").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/hotels/*").permitAll()
+
                         .requestMatchers(HttpMethod.GET, "/api/hotels/deleted").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/hotels/*/approve").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/hotels/*/reject").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/hotels/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/hotels/*/disable").hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/hotels").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.POST, "/api/hotels").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/hotels/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/hotels/*").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/hotels/*/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/hotels/*/suspend").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/hotels/*/reactivate")
+                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.GET, "/api/amenities/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/amenities").hasAnyRole("ADMIN")
@@ -133,7 +143,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/bookings/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/*").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/status").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.POST, "/api/bookings/*/cancel").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/cancel").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/api/reviews/hotel/*/public").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/reviews").authenticated()
@@ -146,9 +156,13 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "HOTEL_OWNER")
 
                         .requestMatchers("/api/favorites/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/statistics")
+                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.GET, "/api/payments/vnpay-return").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/payments/momo-return").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/payments/vnpay-ipn").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/payments/momo-ipn").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/payments").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/payments/*").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/payments/booking/*").authenticated()
@@ -157,6 +171,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/change-password").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/users/avatar").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/users/upgrade-to-partner").authenticated()
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/roles/**").hasRole("ADMIN")
 

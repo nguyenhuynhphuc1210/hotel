@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.request.HotelRequest;
+import com.example.backend.dto.request.StatusRequest;
 import com.example.backend.dto.response.HotelAdminResponse;
 import com.example.backend.dto.response.HotelResponse;
 import com.example.backend.dto.response.HotelSummaryResponse;
@@ -80,8 +81,33 @@ public class HotelController {
     }
 
     @PatchMapping("/{id}/disable")
-    public ResponseEntity<HotelResponse> disableHotel(@PathVariable Long id) {
-        return ResponseEntity.ok(hotelService.disableHotel(id));
+    public ResponseEntity<HotelResponse> disableHotel(
+            @PathVariable Long id,
+            @RequestBody StatusRequest request) {
+
+        return ResponseEntity.ok(hotelService.disableHotel(id, request.getReason()));
+    }
+
+    @PatchMapping("/{id}/reject")
+    public ResponseEntity<HotelResponse> rejectHotel(
+            @PathVariable Long id,
+            @RequestBody StatusRequest request) {
+
+        return ResponseEntity.ok(hotelService.rejectHotel(id, request.getReason()));
+    }
+
+    @PatchMapping("/{id}/suspend")
+    public ResponseEntity<HotelResponse> suspendHotel(
+            @PathVariable Long id,
+            @RequestBody(required = false) StatusRequest request) {
+
+        String reason = (request != null) ? request.getReason() : null;
+        return ResponseEntity.ok(hotelService.suspendHotel(id, reason));
+    }
+
+    @PatchMapping("/{id}/reactivate")
+    public ResponseEntity<HotelResponse> reactivateHotel(@PathVariable Long id) {
+        return ResponseEntity.ok(hotelService.reactivateHotel(id));
     }
 
     @GetMapping("/search")

@@ -2,6 +2,7 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.request.ForgotPasswordRequest;
 import com.example.backend.dto.request.LoginRequest;
+import com.example.backend.dto.request.PartnerRegisterRequest;
 import com.example.backend.dto.request.RegisterRequest;
 import com.example.backend.dto.request.ResetPasswordRequest;
 import com.example.backend.dto.request.VerifyOtpRequest;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -28,6 +30,12 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authService.register(request));
+    }
+
+    @PostMapping("/partner/register")
+    public ResponseEntity<AuthResponse> registerPartner(@Valid @RequestBody PartnerRegisterRequest request) {
+        AuthResponse response = authService.registerPartner(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/forgot-password")

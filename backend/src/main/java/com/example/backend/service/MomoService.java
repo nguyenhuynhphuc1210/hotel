@@ -2,6 +2,8 @@ package com.example.backend.service;
 
 import com.example.backend.config.MomoConfig;
 import com.example.backend.entity.Booking;
+
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -100,5 +102,71 @@ public class MomoService {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public boolean verifySignature(HttpServletRequest request) {
+        String partnerCode = request.getParameter("partnerCode");
+        String orderId = request.getParameter("orderId");
+        String requestId = request.getParameter("requestId");
+        String amount = request.getParameter("amount");
+        String orderInfo = request.getParameter("orderInfo");
+        String orderType = request.getParameter("orderType");
+        String transId = request.getParameter("transId");
+        String resultCode = request.getParameter("resultCode");
+        String message = request.getParameter("message");
+        String payType = request.getParameter("payType");
+        String responseTime = request.getParameter("responseTime");
+        String extraData = request.getParameter("extraData");
+        String signature = request.getParameter("signature");
+
+        String rawHash = "accessKey=" + accessKey +
+                "&amount=" + amount +
+                "&extraData=" + extraData +
+                "&message=" + message +
+                "&orderId=" + orderId +
+                "&orderInfo=" + orderInfo +
+                "&orderType=" + orderType +
+                "&partnerCode=" + partnerCode +
+                "&payType=" + payType +
+                "&requestId=" + requestId +
+                "&responseTime=" + responseTime +
+                "&resultCode=" + resultCode +
+                "&transId=" + transId;
+
+        String signValue = MomoConfig.hmacSHA256(rawHash, secretKey);
+        return signValue.equals(signature);
+    }
+
+    public boolean verifyIpnSignature(Map<String, Object> requestBody) {
+        String partnerCode = (String) requestBody.get("partnerCode");
+        String orderId = (String) requestBody.get("orderId");
+        String requestId = (String) requestBody.get("requestId");
+        String amount = String.valueOf(requestBody.get("amount"));
+        String orderInfo = (String) requestBody.get("orderInfo");
+        String orderType = (String) requestBody.get("orderType");
+        String transId = String.valueOf(requestBody.get("transId"));
+        String resultCode = String.valueOf(requestBody.get("resultCode"));
+        String message = (String) requestBody.get("message");
+        String payType = (String) requestBody.get("payType");
+        String responseTime = String.valueOf(requestBody.get("responseTime"));
+        String extraData = (String) requestBody.get("extraData");
+        String signature = (String) requestBody.get("signature");
+
+        String rawHash = "accessKey=" + accessKey +
+                "&amount=" + amount +
+                "&extraData=" + extraData +
+                "&message=" + message +
+                "&orderId=" + orderId +
+                "&orderInfo=" + orderInfo +
+                "&orderType=" + orderType +
+                "&partnerCode=" + partnerCode +
+                "&payType=" + payType +
+                "&requestId=" + requestId +
+                "&responseTime=" + responseTime +
+                "&resultCode=" + resultCode +
+                "&transId=" + transId;
+
+        String signValue = MomoConfig.hmacSHA256(rawHash, secretKey);
+        return signValue.equals(signature);
     }
 }

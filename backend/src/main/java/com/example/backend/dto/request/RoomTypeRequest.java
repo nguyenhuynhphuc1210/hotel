@@ -37,4 +37,7 @@ public class RoomTypeRequest {
     @NotNull(message = "Tổng số phòng không được để trống")
     @Min(value = 1, message = "Tổng số phòng vật lý phải lớn hơn hoặc bằng 1")
     private Integer totalRooms;
+
+    @NotNull(message = "Vui lòng xác định phòng có cho phép hút thuốc hay không")
+    private Boolean isNonSmoking;
 }

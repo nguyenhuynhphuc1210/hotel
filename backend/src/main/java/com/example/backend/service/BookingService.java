@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.request.BookingRequest;
+import com.example.backend.dto.request.CancelBookingRequest;
 import com.example.backend.dto.response.BookingResponse;
 import com.example.backend.dto.request.UpdateBookingStatusRequest;
 
@@ -10,7 +11,7 @@ public interface BookingService {
 
     BookingResponse createBooking(BookingRequest request);
 
-    BookingResponse cancelBooking(Long bookingId);
+    BookingResponse cancelBooking(Long bookingId, CancelBookingRequest request);
 
     BookingResponse updateBookingStatus(Long bookingId, UpdateBookingStatusRequest request);
 

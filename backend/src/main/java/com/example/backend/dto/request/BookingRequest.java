@@ -20,6 +20,7 @@ public class BookingRequest {
 
     private String guestName;
 
+    @Pattern(regexp = "^\\d{10,11}$", message = "Số điện thoại phải từ 10-11 chữ số")
     private String guestPhone;
 
     @NotNull(message = "Hotel ID không được để trống")

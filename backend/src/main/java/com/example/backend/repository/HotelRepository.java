@@ -1,6 +1,7 @@
 package com.example.backend.repository;
 
 import com.example.backend.entity.Hotel;
+import com.example.backend.enums.HotelStatus; // Nhớ import Enum
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,19 +12,19 @@ import java.time.LocalDate;
 
 public interface HotelRepository extends JpaRepository<Hotel, Long> {
 
-    Page<Hotel> findByIsActiveTrueAndIsDeletedFalse(Pageable pageable);
-    
-    Page<Hotel> findByOwner_EmailAndIsDeletedFalse(String email, Pageable pageable);
+    Page<Hotel> findByStatusAndDeletedAtIsNull(HotelStatus status, Pageable pageable);
+
+    Page<Hotel> findByOwner_EmailAndDeletedAtIsNull(String email, Pageable pageable);
 
     boolean existsByEmail(String email);
-    
-    Page<Hotel> findByIsDeletedTrue(Pageable pageable);
-    
-    Page<Hotel> findByIsDeletedFalse(Pageable pageable);
+
+    Page<Hotel> findByDeletedAtIsNotNull(Pageable pageable);
+
+    Page<Hotel> findByDeletedAtIsNull(Pageable pageable);
 
     @Query("""
             SELECT h FROM Hotel h
-            WHERE h.isActive = true AND h.isDeleted = false
+            WHERE h.status = com.example.backend.enums.HotelStatus.APPROVED AND h.deletedAt IS NULL
             AND (:district IS NULL OR LOWER(h.district) LIKE LOWER(CONCAT('%', :district, '%')))
             AND (:keyword IS NULL OR LOWER(h.hotelName) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(h.addressLine) LIKE LOWER(CONCAT('%', :keyword, '%')))

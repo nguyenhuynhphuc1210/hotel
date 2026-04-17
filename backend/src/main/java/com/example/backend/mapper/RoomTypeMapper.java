@@ -31,8 +31,8 @@ public class RoomTypeMapper {
                 .roomSize(req.getRoomSize())
                 .basePrice(req.getBasePrice())
                 .totalRooms(req.getTotalRooms())
-                .isActive(true)
-                .isDeleted(false)
+                .isNonSmoking(req.getIsNonSmoking()) 
+
                 .build();
     }
 
@@ -55,8 +55,10 @@ public class RoomTypeMapper {
                 .roomSize(rt.getRoomSize())
                 .basePrice(rt.getBasePrice())
                 .totalRooms(rt.getTotalRooms())
+                .isNonSmoking(rt.getIsNonSmoking())
+                .deletedAt(rt.getDeletedAt())
+                
                 .isActive(rt.getIsActive())
-                .isDeleted(rt.getIsDeleted())
                 .createdAt(rt.getCreatedAt())
                 .updatedAt(rt.getUpdatedAt())
                 .images(images)
@@ -84,6 +86,9 @@ public class RoomTypeMapper {
                 .roomSize(rt.getRoomSize())
                 .basePrice(rt.getBasePrice())
                 .totalRooms(rt.getTotalRooms())
+
+                .isNonSmoking(rt.getIsNonSmoking())
+                
                 .isActive(rt.getIsActive())
                 .thumbnailUrl(thumbnail)
                 .build();

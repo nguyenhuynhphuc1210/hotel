@@ -2,7 +2,9 @@ package com.example.backend.service;
 
 import com.example.backend.dto.request.ChangePasswordRequest;
 import com.example.backend.dto.request.UpdateUserRequest;
+import com.example.backend.dto.request.UpgradeToPartnerRequest;
 import com.example.backend.dto.request.UserRequest;
+import com.example.backend.dto.response.AuthResponse;
 import com.example.backend.dto.response.UserResponse;
 
 import org.springframework.web.multipart.MultipartFile;
@@ -16,6 +18,8 @@ public interface UserService {
     UserResponse createUser(UserRequest request);
 
     UserResponse updateUser(Long id, UserRequest request);
+
+    AuthResponse upgradeToPartner(UpgradeToPartnerRequest request);
 
     void deleteUser(Long id);
 

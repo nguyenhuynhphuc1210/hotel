@@ -10,6 +10,7 @@ import com.example.backend.entity.Hotel;
 import com.example.backend.entity.RoomCalendar;
 import com.example.backend.entity.RoomType;
 import com.example.backend.entity.User;
+import com.example.backend.enums.HotelStatus;
 import com.example.backend.mapper.HotelMapper;
 import com.example.backend.repository.HotelRepository;
 import com.example.backend.repository.UserRepository;
@@ -28,6 +29,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +37,7 @@ import org.springframework.data.domain.Pageable;
 @Service
 @RequiredArgsConstructor
 public class HotelServiceImpl implements HotelService {
+
     private final HotelRepository hotelRepository;
     private final UserRepository userRepository;
     private final HotelMapper hotelMapper;
@@ -45,7 +48,7 @@ public class HotelServiceImpl implements HotelService {
     @Transactional(readOnly = true)
     public Page<HotelSummaryResponse> getActiveHotels(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return hotelRepository.findByIsActiveTrueAndIsDeletedFalse(pageable)
+        return hotelRepository.findByStatusAndDeletedAtIsNull(HotelStatus.APPROVED, pageable)
                 .map(hotelMapper::toHotelSummaryResponse);
     }
 
@@ -56,9 +59,9 @@ public class HotelServiceImpl implements HotelService {
         Page<Hotel> hotelPage;
 
         if (isAdmin()) {
-            hotelPage = hotelRepository.findByIsDeletedFalse(pageable);
+            hotelPage = hotelRepository.findByDeletedAtIsNull(pageable);
         } else if (isHotelOwner()) {
-            hotelPage = hotelRepository.findByOwner_EmailAndIsDeletedFalse(getCurrentUserEmail(), pageable);
+            hotelPage = hotelRepository.findByOwner_EmailAndDeletedAtIsNull(getCurrentUserEmail(), pageable);
         } else {
             throw new AccessDeniedException("Bạn không có quyền truy cập trang quản trị");
         }
@@ -74,7 +77,8 @@ public class HotelServiceImpl implements HotelService {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        return hotelRepository.findByIsDeletedTrue(pageable)
+
+        return hotelRepository.findByDeletedAtIsNotNull(pageable)
                 .map(hotelMapper::toHotelAdminResponse);
     }
 
@@ -89,7 +93,6 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional
     public HotelResponse createHotel(HotelRequest request) {
-
         if (hotelRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email khách sạn đã tồn tại!");
         }
@@ -101,17 +104,14 @@ public class HotelServiceImpl implements HotelService {
             owner = userRepository.findById(request.getOwnerId())
                     .orElseThrow(() -> new EntityNotFoundException(
                             "Không tìm thấy chủ sở hữu với ID: " + request.getOwnerId()));
-
         } else {
-
             owner = userRepository.findByEmail(currentEmail)
                     .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng hiện tại"));
         }
 
         Hotel hotel = hotelMapper.toHotel(request, owner);
-        hotel.setStarRating(BigDecimal.ZERO);
 
-        hotel.setIsActive(isAdmin());
+        hotel.setStatus(isAdmin() ? HotelStatus.APPROVED : HotelStatus.PENDING);
 
         return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
     }
@@ -119,7 +119,6 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional
     public HotelResponse updateHotel(Long id, HotelRequest request) {
-
         Hotel existing = hotelRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
 
@@ -141,12 +140,10 @@ public class HotelServiceImpl implements HotelService {
         existing.setEmail(request.getEmail());
 
         if (isAdmin() && request.getOwnerId() != null) {
-
             if (!existing.getOwner().getId().equals(request.getOwnerId())) {
                 User newOwner = userRepository.findById(request.getOwnerId())
                         .orElseThrow(() -> new EntityNotFoundException(
                                 "Không tìm thấy tài khoản chủ sở hữu mới với ID: " + request.getOwnerId()));
-
                 existing.setOwner(newOwner);
             }
         }
@@ -164,11 +161,10 @@ public class HotelServiceImpl implements HotelService {
             throw new AccessDeniedException("Chỉ ADMIN mới được xoá khách sạn!");
         }
 
-        existing.setIsDeleted(true);
-        existing.setIsActive(false);
+        existing.setDeletedAt(LocalDateTime.now());
         hotelRepository.save(existing);
 
-        roomTypeRepository.updateIsDeletedByHotelId(id, true);
+        roomTypeRepository.updateDeletedAtByHotelId(id, LocalDateTime.now());
         roomTypeRepository.updateIsActiveByHotelId(id, false);
         roomCalendarRepository.updateIsAvailableByHotelId(id, false);
     }
@@ -183,13 +179,13 @@ public class HotelServiceImpl implements HotelService {
             throw new AccessDeniedException("Chỉ ADMIN mới được khôi phục khách sạn!");
         }
 
-        if (!Boolean.TRUE.equals(hotel.getIsDeleted())) {
+        if (hotel.getDeletedAt() == null) {
             throw new IllegalArgumentException("Khách sạn này chưa bị xóa!");
         }
 
-        hotel.setIsDeleted(false);
+        hotel.setDeletedAt(null);
 
-        roomTypeRepository.updateIsDeletedByHotelId(id, false);
+        roomTypeRepository.updateDeletedAtByHotelId(id, null);
 
         return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
     }
@@ -204,11 +200,12 @@ public class HotelServiceImpl implements HotelService {
             throw new AccessDeniedException("Chỉ ADMIN mới được duyệt khách sạn!");
         }
 
-        if (Boolean.TRUE.equals(hotel.getIsActive())) {
-            throw new IllegalArgumentException("Khách sạn đã được duyệt trước đó!");
+        if (hotel.getStatus() == HotelStatus.APPROVED) {
+            throw new IllegalArgumentException("Khách sạn này hiện đã ở trạng thái hoạt động rồi!");
         }
 
-        hotel.setIsActive(true);
+        hotel.setStatus(HotelStatus.APPROVED);
+        hotel.setStatusReason(null);
         hotelRepository.save(hotel);
 
         roomTypeRepository.updateIsActiveByHotelId(id, true);
@@ -217,9 +214,11 @@ public class HotelServiceImpl implements HotelService {
         return hotelMapper.toHotelResponse(hotel);
     }
 
+
+
     @Override
     @Transactional
-    public HotelResponse disableHotel(Long id) {
+    public HotelResponse disableHotel(Long id, String reason) {
         Hotel hotel = hotelRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
 
@@ -227,15 +226,93 @@ public class HotelServiceImpl implements HotelService {
             throw new AccessDeniedException("Chỉ ADMIN mới được vô hiệu hóa khách sạn!");
         }
 
-        if (!Boolean.TRUE.equals(hotel.getIsActive())) {
+        if (hotel.getStatus() == HotelStatus.DISABLED) {
             throw new IllegalArgumentException("Khách sạn đã bị vô hiệu hóa trước đó");
         }
 
-        hotel.setIsActive(false);
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Bắt buộc phải nhập lý do vô hiệu hóa để Chủ khách sạn biết và khắc phục!");
+        }
+
+        hotel.setStatus(HotelStatus.DISABLED);
+        hotel.setStatusReason(reason.trim());
         hotelRepository.save(hotel);
 
         roomTypeRepository.updateIsActiveByHotelId(id, false);
         roomCalendarRepository.updateIsAvailableByHotelId(id, false);
+
+        return hotelMapper.toHotelResponse(hotel);
+    }
+
+    @Override
+    @Transactional
+    public HotelResponse rejectHotel(Long id, String reason) {
+        Hotel hotel = hotelRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
+
+        if (!isAdmin()) {
+            throw new AccessDeniedException("Chỉ ADMIN mới được từ chối khách sạn!");
+        }
+
+        if (hotel.getStatus() != HotelStatus.PENDING) {
+            throw new IllegalArgumentException("Chỉ có thể từ chối khách sạn đang ở trạng thái chờ duyệt (PENDING)!");
+        }
+
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Bắt buộc phải nhập lý do từ chối để Chủ khách sạn biết và khắc phục!");
+        }
+
+        hotel.setStatus(HotelStatus.REJECTED);
+        hotel.setStatusReason(reason.trim());
+        hotelRepository.save(hotel);
+
+        roomTypeRepository.updateIsActiveByHotelId(id, false);
+        roomCalendarRepository.updateIsAvailableByHotelId(id, false);
+
+        return hotelMapper.toHotelResponse(hotel);
+    }
+
+    @Override
+    @Transactional
+    public HotelResponse suspendHotel(Long id, String reason) {
+        Hotel hotel = hotelRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
+
+        checkOwnerOrAdmin(hotel.getOwner().getEmail());
+
+        if (hotel.getStatus() != HotelStatus.APPROVED) {
+            throw new IllegalArgumentException("Chỉ có thể tạm ngưng khách sạn đang ở trạng thái hoạt động!");
+        }
+
+        hotel.setStatus(HotelStatus.SUSPENDED);
+        hotel.setStatusReason(reason != null ? reason.trim() : "Chủ khách sạn tạm đóng cửa để sửa chữa/nâng cấp.");
+        hotelRepository.save(hotel);
+
+        roomTypeRepository.updateIsActiveByHotelId(id, false);
+        roomCalendarRepository.updateIsAvailableByHotelId(id, false);
+
+        return hotelMapper.toHotelResponse(hotel);
+    }
+
+    @Override
+    @Transactional
+    public HotelResponse reactivateHotel(Long id) {
+        Hotel hotel = hotelRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + id));
+
+        checkOwnerOrAdmin(hotel.getOwner().getEmail());
+
+        if (hotel.getStatus() != HotelStatus.SUSPENDED) {
+            throw new AccessDeniedException("Trạng thái hiện tại không cho phép tự kích hoạt. Vui lòng liên hệ Admin.");
+        }
+
+        hotel.setStatus(HotelStatus.APPROVED);
+        hotel.setStatusReason(null);
+        hotelRepository.save(hotel);
+
+        roomTypeRepository.updateIsActiveByHotelId(id, true);
+        roomCalendarRepository.updateIsAvailableByHotelId(id, true);
 
         return hotelMapper.toHotelResponse(hotel);
     }
@@ -261,8 +338,7 @@ public class HotelServiceImpl implements HotelService {
                 checkIn,
                 checkOut,
                 nights,
-                pageable
-        );
+                pageable);
 
         return hotelPage.map(hotelMapper::toHotelSummaryResponse);
     }
@@ -270,7 +346,7 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getMinPriceForHotel(Long hotelId, LocalDate checkIn, LocalDate checkOut) {
-        List<RoomType> roomTypes = roomTypeRepository.findByHotelIdAndIsActiveTrueAndIsDeletedFalse(hotelId);
+        List<RoomType> roomTypes = roomTypeRepository.findByHotelIdAndIsActiveTrueAndDeletedAtIsNull(hotelId);
 
         return roomTypes.stream()
                 .flatMap(rt -> roomCalendarRepository

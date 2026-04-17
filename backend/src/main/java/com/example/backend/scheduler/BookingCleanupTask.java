@@ -37,10 +37,18 @@ public class BookingCleanupTask {
         List<Booking> expiredBookings = bookingRepository
                 .findByStatusAndCreatedAtBefore(BookingStatus.PENDING, timeoutLimit);
 
+        if (expiredBookings.isEmpty()) {
+            return;
+        }
+
         for (Booking booking : expiredBookings) {
-            log.info("Đang hủy đơn hàng quá hạn: " + booking.getBookingCode());
+            log.info("Hệ thống đang tự động hủy đơn hàng hết hạn thanh toán: {}", booking.getBookingCode());
 
             booking.setStatus(BookingStatus.CANCELLED);
+            booking.setCancelledAt(LocalDateTime.now());
+            booking.setCancelledBy("SYSTEM");
+            booking.setCancelReason("Hết hạn thời gian thanh toán (15 phút)");
+
             if (booking.getPayment() != null) {
                 booking.getPayment().setStatus(PaymentStatus.CANCELLED);
             }
@@ -50,11 +58,14 @@ public class BookingCleanupTask {
                         br.getRoomType().getId(),
                         booking.getCheckInDate(),
                         booking.getCheckOutDate().minusDays(1));
+                
                 for (RoomCalendar calendar : calendars) {
-                    calendar.setBookedRooms(Math.max(0, calendar.getBookedRooms() - br.getQuantity()));
+                    int newBookedRooms = calendar.getBookedRooms() - br.getQuantity();
+                    calendar.setBookedRooms(Math.max(0, newBookedRooms));
                 }
                 roomCalendarRepository.saveAll(calendars);
             }
+
             Booking savedBooking = bookingRepository.save(booking);
 
             hotelStatisticService.recordRealtimeStatistic(
@@ -63,5 +74,7 @@ public class BookingCleanupTask {
                     LocalDate.now(),
                     BookingStatus.CANCELLED);
         }
+        
+        log.info("Đã hoàn tất dọn dẹp {} đơn hàng quá hạn.", expiredBookings.size());
     }
 }

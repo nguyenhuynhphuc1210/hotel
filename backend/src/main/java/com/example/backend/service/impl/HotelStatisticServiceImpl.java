@@ -45,7 +45,7 @@ public class HotelStatisticServiceImpl implements HotelStatisticService {
 
         SecurityUtils.checkOwnerOrAdmin(hotel.getOwner().getEmail());
 
-        List<HotelStatistic> stats = statisticRepository.findByHotelIdAndStatDateBetweenOrderByStatDateAsc(
+        List<HotelStatistic> stats = statisticRepository.findByHotel_IdAndStatDateBetweenOrderByStatDateAsc(
                 request.getHotelId(),
                 request.getFromDate(),
                 request.getToDate());

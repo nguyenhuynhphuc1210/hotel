@@ -1,5 +1,6 @@
 package com.example.backend.dto.response;
 
+import com.example.backend.enums.HotelStatus;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -23,8 +24,11 @@ public class HotelResponse {
     private String email;
     private Long ownerId;
     private String ownerName;
-    private Boolean isActive;
-    private Boolean isDeleted;
+
+    private HotelStatus status;
+    private String statusReason;
+    private LocalDateTime deletedAt;
+    
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

@@ -2,6 +2,7 @@ package com.example.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -49,12 +50,15 @@ public class RoomType {
     private Integer totalRooms;
 
     @Builder.Default
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive = true;
+    @Column(name = "is_non_smoking", nullable = false)
+    private Boolean isNonSmoking = true;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Builder.Default
-    @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted = false;
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -76,5 +80,4 @@ public class RoomType {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
-
 }
