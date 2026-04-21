@@ -17,7 +17,8 @@ public interface RoomTypeAmenityRepository extends JpaRepository<RoomTypeAmenity
 
     List<RoomTypeAmenity> findByRoomType_Id(Long roomTypeId);
 
-    boolean existsByRoomType_IdAndAmenity_Id(Long roomTypeId, Long amenityId);
+    @Query("SELECT COUNT(rta) > 0 FROM RoomTypeAmenity rta WHERE rta.roomType.id = :roomTypeId AND rta.amenity.id = :amenityId")
+    boolean existsByRoomTypeAndAmenity(@Param("roomTypeId") Long roomTypeId, @Param("amenityId") Long amenityId);
 
     void deleteByRoomType_IdAndAmenity_Id(Long roomTypeId, Long amenityId);
 }

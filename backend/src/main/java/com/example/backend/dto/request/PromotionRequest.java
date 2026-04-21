@@ -29,14 +29,13 @@ public class PromotionRequest {
     private BigDecimal maxDiscountAmount;
 
     @NotNull(message = "Ngày bắt đầu không được để trống")
-    @FutureOrPresent(message = "Ngày bắt đầu không được ở quá khứ")
     private LocalDateTime startDate;
 
     @NotNull(message = "Ngày kết thúc không được để trống")
-    @Future(message = "Ngày kết thúc phải ở tương lai")
     private LocalDateTime endDate;
 
     @DecimalMin(value = "0.0", message = "Giá trị đơn hàng tối thiểu không được âm")
     private BigDecimal minOrderValue;
 
+    private Boolean isActive;
 }

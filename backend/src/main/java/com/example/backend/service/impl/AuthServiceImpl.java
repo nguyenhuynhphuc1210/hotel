@@ -40,8 +40,6 @@ import com.google.api.client.json.JsonFactory;
 import java.util.Collections;
 import java.util.UUID;
 
-
-
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -186,12 +184,22 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse loginWithGoogle(String idTokenString) {
+
         GoogleIdToken verifier = verifyGoogleToken(idTokenString);
         GoogleIdToken.Payload payload = verifier.getPayload();
 
         String email = payload.getEmail();
-        String fullName = (String) payload.get("name");
         String avatarUrl = (String) payload.get("picture");
+
+        String familyName = (String) payload.get("family_name");
+        String givenName = (String) payload.get("given_name");
+
+        String fullName;
+        if (familyName != null && givenName != null) {
+            fullName = familyName + " " + givenName;
+        } else {
+            fullName = (String) payload.get("name");
+        }
 
         User user = userRepository.findByEmail(email).orElseGet(() -> {
 
@@ -229,11 +237,11 @@ public class AuthServiceImpl implements AuthService {
             GoogleIdToken idToken = verifier.verify(idTokenString);
             if (idToken == null)
                 throw new IllegalArgumentException("Định dạng ID Token không hợp lệ");
-            
+
             return idToken;
         } catch (Exception e) {
-            e.printStackTrace(); // debug
-    throw new IllegalArgumentException("Xác thực Google thất bại: " + e.getMessage());
+            e.printStackTrace();
+            throw new IllegalArgumentException("Xác thực Google thất bại: " + e.getMessage());
         }
     }
 }

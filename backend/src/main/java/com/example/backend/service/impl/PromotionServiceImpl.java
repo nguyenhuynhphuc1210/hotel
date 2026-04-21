@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,6 +49,13 @@ public class PromotionServiceImpl implements PromotionService {
     @Transactional
     public PromotionResponse createPromotion(PromotionRequest request) {
 
+        if (!request.getStartDate().isBefore(request.getEndDate())) {
+            throw new IllegalArgumentException("Ngày kết thúc phải lớn hơn ngày bắt đầu!");
+        }
+        if (request.getEndDate().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Ngày kết thúc không được nằm trong quá khứ!");
+        }
+
         boolean admin = isAdmin();
         boolean owner = isHotelOwner();
 
@@ -63,7 +71,8 @@ public class PromotionServiceImpl implements PromotionService {
             }
 
             hotel = hotelRepository.findById(request.getHotelId())
-                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Không tìm thấy khách sạn với ID = " + request.getHotelId()));
 
             checkOwnerOrAdmin(hotel.getOwner().getEmail());
         }
@@ -71,9 +80,9 @@ public class PromotionServiceImpl implements PromotionService {
         if (admin) {
             if (request.getHotelId() != null) {
                 hotel = hotelRepository.findById(request.getHotelId())
-                        .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
+                        .orElseThrow(() -> new EntityNotFoundException(
+                                "Không tìm thấy khách sạn với ID = " + request.getHotelId()));
             }
-            // nếu hotel = null → global promotion
         }
 
         Promotion saved = promotionRepository.save(
@@ -85,6 +94,15 @@ public class PromotionServiceImpl implements PromotionService {
     @Override
     @Transactional
     public PromotionResponse updatePromotion(Long id, PromotionRequest request) {
+
+        if (request.getStartDate() != null && request.getEndDate() != null) {
+            if (!request.getStartDate().isBefore(request.getEndDate())) {
+                throw new IllegalArgumentException("Ngày kết thúc phải lớn hơn ngày bắt đầu!");
+            }
+            if (request.getEndDate().isBefore(LocalDateTime.now())) {
+                throw new IllegalArgumentException("Ngày kết thúc không được nằm trong quá khứ!");
+            }
+        }
 
         Promotion existing = promotionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy mã giảm giá với ID = " + id));
@@ -101,7 +119,8 @@ public class PromotionServiceImpl implements PromotionService {
 
         if (request.getHotelId() != null) {
             Hotel hotel = hotelRepository.findById(request.getHotelId())
-                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Không tìm thấy khách sạn với ID = " + request.getHotelId()));
             existing.setHotel(hotel);
         }
 
@@ -117,6 +136,8 @@ public class PromotionServiceImpl implements PromotionService {
             existing.setEndDate(request.getEndDate());
         if (request.getMinOrderValue() != null)
             existing.setMinOrderValue(request.getMinOrderValue());
+        if (request.getIsActive() != null)
+            existing.setIsActive(request.getIsActive());
 
         return promotionMapper.toPromotionResponse(promotionRepository.save(existing));
     }

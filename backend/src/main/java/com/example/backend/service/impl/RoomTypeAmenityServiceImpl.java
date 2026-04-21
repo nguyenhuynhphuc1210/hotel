@@ -73,7 +73,7 @@ public class RoomTypeAmenityServiceImpl implements RoomTypeAmenityService {
         @Transactional
         public RoomTypeAmenityResponse create(RoomTypeAmenityRequest request) {
 
-                if (roomTypeAmenityRepository.existsByRoomType_IdAndAmenity_Id(
+                if (roomTypeAmenityRepository.existsByRoomTypeAndAmenity(
                                 request.getRoomTypeId(), request.getAmenityId())) {
                         throw new IllegalArgumentException("Tiện ích này đã tồn tại trong loại phòng");
                 }
@@ -146,7 +146,7 @@ public class RoomTypeAmenityServiceImpl implements RoomTypeAmenityService {
                         checkOwnerOrAdmin(roomType.getHotel().getOwner().getEmail());
                 }
 
-                if (!roomTypeAmenityRepository.existsByRoomType_IdAndAmenity_Id(roomTypeId, amenityId)) {
+                if (!roomTypeAmenityRepository.existsByRoomTypeAndAmenity(roomTypeId, amenityId)) {
                         throw new EntityNotFoundException("Không tìm thấy tiện ích trong loại phòng để xóa");
                 }
 

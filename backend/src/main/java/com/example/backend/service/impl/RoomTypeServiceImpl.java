@@ -7,6 +7,7 @@ import com.example.backend.dto.response.RoomTypeResponse;
 import com.example.backend.dto.response.RoomTypeSummaryResponse;
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.RoomType;
+import com.example.backend.enums.HotelStatus;
 import com.example.backend.mapper.RoomTypeMapper;
 import com.example.backend.repository.HotelRepository;
 import com.example.backend.repository.RoomTypeRepository;
@@ -169,13 +170,19 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         return roomTypeMapper.toRoomTypeResponse(savedRoomType);
     }
 
-    @Override
+@Override
     @Transactional
     public RoomTypeResponse reactivateRoomType(Long id) {
         RoomType existing = roomTypeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
 
         checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
+
+        if (existing.getHotel() != null && existing.getHotel().getStatus() != HotelStatus.APPROVED) {
+            throw new IllegalArgumentException(
+                "Không thể mở bán loại phòng vì khách sạn hiện không ở trạng thái hoạt động (Trạng thái hiện tại: " + existing.getHotel().getStatus() + ")"
+            );
+        }
 
         if (existing.getDeletedAt() != null) {
             throw new IllegalArgumentException("Không thể mở bán loại phòng đang nằm trong thùng rác!");
