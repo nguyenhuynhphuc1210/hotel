@@ -1,13 +1,12 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Plus, Minus, X } from 'lucide-react'
+import { Search, MapPin, Calendar, Users, ChevronLeft, ChevronRight, X, Plus, Minus, ChevronDown } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
-import { HotelResponse } from '@/lib/api/hotel.api'
-
+import { HotelResponse, HotelStatus } from '@/lib/api/hotel.api'
 
 // ── Constants ──────────────────────────────────────────────
 const DISTRICTS = [
@@ -15,191 +14,516 @@ const DISTRICTS = [
     'Quận 8', 'Quận 9', 'Quận 10', 'Quận 11', 'Quận 12', 'Bình Thạnh',
     'Gò Vấp', 'Tân Bình', 'Tân Phú', 'Phú Nhuận', 'Thủ Đức', 'Bình Tân',
 ]
-const MONTH_NAMES = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12']
+const MONTH_NAMES = [
+    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
+]
 const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
+const WEEKDAY_NAMES = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy']
 
 // ── Types ──────────────────────────────────────────────────
-interface Room { adults: number; children: number; childAges: number[] }
-
 interface SearchBarProps {
     variant?: 'hero' | 'compact'
     defaultValues?: {
-        keyword?: string; district?: string; checkIn?: string; checkOut?: string
-        adults?: number; children?: number; rooms?: number
+        keyword?: string
+        district?: string
+        checkIn?: string
+        checkOut?: string
+        adults?: number
+        children?: number
+        rooms?: number
     }
 }
 
 // ── Helpers ────────────────────────────────────────────────
-const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
-const lastDay = new Date(2026, 11, 31)
+const getToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
+const LAST_DAY = new Date(2026, 11, 31)
 
 const sameDay = (a: Date, b: Date) =>
-    a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()
+    a.getDate() === b.getDate() &&
+    a.getMonth() === b.getMonth() &&
+    a.getFullYear() === b.getFullYear()
 
-const fmtFull = (d: Date | null) => {
-    if (!d) return 'Chọn ngày'
-    return `${d.getDate()} thg ${d.getMonth() + 1} ${d.getFullYear()}`
-}
+const fmtMain = (d: Date) =>
+    `${d.getDate()} tháng ${d.getMonth() + 1} ${d.getFullYear()}`
+
+const fmtSub = (d: Date) => WEEKDAY_NAMES[d.getDay()]
+
+const fmtShort = (d: Date | null) => d ? fmtMain(d) : 'Chọn ngày'
 
 const toISO = (d: Date | null) => {
     if (!d) return ''
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+const parseDate = (s?: string) => s ? new Date(s + 'T00:00:00') : null
+
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
-function getFirstDay(y: number, m: number) { const d = new Date(y, m, 1).getDay(); return d === 0 ? 6 : d - 1 }
+function getFirstDayMon(y: number, m: number) {
+    const d = new Date(y, m, 1).getDay()
+    return d === 0 ? 6 : d - 1 // Mon=0..Sun=6
+}
 
-export default function SearchBar({ variant = 'hero', defaultValues }: SearchBarProps) {
-    const router = useRouter()
-    const searchParams = useSearchParams()
+// ═══════════════════════════════════════════════════════════
+// DatePicker component
+// Key fix: all event handlers use e.stopPropagation() + onMouseDown
+// so clicks inside the picker never bubble to the document listener.
+// ═══════════════════════════════════════════════════════════
+interface DatePickerProps {
+    checkIn: Date | null
+    checkOut: Date | null
+    onSelect: (d: Date) => void
+    onClose: () => void
+    pickingEnd: boolean
+    setPickingEnd: (v: boolean) => void
+    calMonth: number
+    calYear: number
+    setCalMonth: (m: number) => void
+    setCalYear: (y: number) => void
+}
 
-    // ── State Initialization (Tránh lỗi Cascading Render bằng cách gán trực tiếp) ──
-    const [keyword, setKeyword] = useState(defaultValues?.keyword || defaultValues?.district || '')
-    const parseDate = (s?: string) => s ? new Date(s + 'T00:00:00') : null
-
-    const [checkIn, setCheckIn] = useState<Date | null>(parseDate(defaultValues?.checkIn))
-    const [checkOut, setCheckOut] = useState<Date | null>(parseDate(defaultValues?.checkOut))
-
-    const [showDate, setShowDate] = useState(searchParams.get('openPicker') === 'true')
-    const [pickingEnd, setPickingEnd] = useState(false)
-    const [showSuggest, setShowSuggest] = useState(false)
+function DatePicker({
+    checkIn, checkOut, onSelect, onClose,
+    pickingEnd, setPickingEnd,
+    calMonth, calYear, setCalMonth, setCalYear,
+}: DatePickerProps) {
     const [hoverDay, setHoverDay] = useState<Date | null>(null)
-    const [calMonth, setCalMonth] = useState((checkIn || today()).getMonth())
-    const [calYear, setCalYear] = useState((checkIn || today()).getFullYear())
-    const [showGuests, setShowGuests] = useState(false)
-    const [rooms, setRooms] = useState<Room[]>([{
-        adults: defaultValues?.adults || 2,
-        children: defaultValues?.children || 0,
-        childAges: []
-    }])
+    const today = getToday()
 
-    const suggestRef = useRef<HTMLDivElement>(null)
-    const dateRef = useRef<HTMLDivElement>(null)
-    const guestRef = useRef<HTMLDivElement>(null)
-
-    // Close on click outside
-    useEffect(() => {
-        const fn = (e: MouseEvent) => {
-            if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) setShowSuggest(false)
-            if (dateRef.current && !dateRef.current.contains(e.target as Node)) setShowDate(false)
-            if (guestRef.current && !guestRef.current.contains(e.target as Node)) setShowGuests(false)
-        }
-        document.addEventListener('mousedown', fn)
-        return () => document.removeEventListener('mousedown', fn)
-    }, [])
-
-    const { data: hotelPage } = useQuery({
-        queryKey: ['hotels-public'],
-        queryFn: () => axiosInstance.get(`${API_CONFIG.ENDPOINTS.HOTELS}/active`).then(r => r.data),
-    });
-
-
-    const allHotels: HotelResponse[] = hotelPage?.content || [];
-
-    const q = keyword.trim().toLowerCase();
-
-
-    const hotelSuggestions = q.length >= 1
-        ? allHotels.filter((h: HotelResponse) =>
-            h.isActive && (
-                h.hotelName.toLowerCase().includes(q) ||
-                h.district.toLowerCase().includes(q)
-            )
-        ).slice(0, 5)
-        : [];
-
-    const districtSuggestions = DISTRICTS.filter(d =>
-        !q || d.toLowerCase().includes(q)
-    ).slice(0, q ? 6 : 8)
-
-    // ── Calendar Logic ──
-    const canPrevMonth = !(calYear === today().getFullYear() && calMonth === today().getMonth())
-    const canNextMonth = !(calYear === 2026 && calMonth === 10)
-    const prevMonth = () => {
-        if (!canPrevMonth) return
-        if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1) }
-        else setCalMonth(m => m - 1)
-    }
-    const nextMonth = () => {
-        if (!canNextMonth) return
-        if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) }
-        else setCalMonth(m => m + 1)
-    }
+    const nights = checkIn && checkOut
+        ? Math.round((checkOut.getTime() - checkIn.getTime()) / 86400000)
+        : 0
 
     const month2 = calMonth === 11 ? 0 : calMonth + 1
     const year2 = calMonth === 11 ? calYear + 1 : calYear
 
-    const handleDay = (d: Date) => {
-        if (d < today() || d > lastDay) return
-        if (!checkIn || (checkIn && checkOut)) {
-            setCheckIn(d); setCheckOut(null); setPickingEnd(true)
-        } else {
-            if (d <= checkIn) { setCheckIn(d); setCheckOut(null); setPickingEnd(true) }
-            else { setCheckOut(d); setPickingEnd(false); setTimeout(() => setShowDate(false), 150) }
-        }
+    const canPrev = !(calYear === today.getFullYear() && calMonth === today.getMonth())
+    const canNext = !(calYear === 2026 && calMonth === 10)
+
+    const stop = (e: React.MouseEvent) => e.stopPropagation()
+
+    const prevMonth = (e: React.MouseEvent) => {
+        stop(e)
+        if (!canPrev) return
+        if (calMonth === 0) { setCalMonth(11); setCalYear(calYear - 1) }
+        else setCalMonth(calMonth - 1)
     }
 
-    const updateRoom = (index: number, field: 'adults' | 'children', delta: number) => {
-        setRooms(prev => prev.map((room, i) => {
-            if (i !== index) return room;
-            const newValue = Math.max(field === 'adults' ? 1 : 0, room[field] + delta);
-            return { ...room, [field]: newValue };
-        }));
-    };
+    const nextMonth = (e: React.MouseEvent) => {
+        stop(e)
+        if (!canNext) return
+        if (calMonth === 11) { setCalMonth(0); setCalYear(calYear + 1) }
+        else setCalMonth(calMonth + 1)
+    }
 
-    const addRoom = () => {
-        if (rooms.length < 8) {
-            setRooms([...rooms, { adults: 2, children: 0, childAges: [] }]);
+    const renderMonth = (y: number, m: number) => {
+        const daysCount = getDaysInMonth(y, m)
+        const firstDay = getFirstDayMon(y, m)
+        const cells: React.ReactNode[] = []
+
+        for (let i = 0; i < firstDay; i++) {
+            cells.push(<div key={`e${i}`} className="h-10" />)
         }
-    };
 
-    const removeRoom = (index: number) => {
-        if (rooms.length > 1) {
-            setRooms(rooms.filter((_, i) => i !== index));
-        }
-    };
-
-
-
-    const renderCal = (y: number, m: number) => {
-        const daysCount = getDaysInMonth(y, m); const firstDay = getFirstDay(y, m); const t = today(); const cells = []
-        for (let i = 0; i < firstDay; i++) cells.push(<div key={`e${i}`} />)
         for (let day = 1; day <= daysCount; day++) {
             const d = new Date(y, m, day)
-            const isPast = d < t; const isStart = checkIn && sameDay(d, checkIn); const isEnd = checkOut && sameDay(d, checkOut)
-            const inRange = checkIn && (checkOut || hoverDay) && d > checkIn && d < (checkOut ?? hoverDay!)
-            const isHovered = !checkOut && hoverDay && sameDay(d, hoverDay) && checkIn && d > checkIn
-            let cls = 'relative h-9 w-full text-sm flex items-center justify-center transition-all select-none '
-            if (isPast) cls += 'text-gray-300 cursor-not-allowed '
-            else {
-                cls += 'cursor-pointer text-gray-800 '
-                if (isStart || isEnd) cls += 'bg-green-600 text-white font-bold rounded-full z-10 '
-                else if (inRange) cls += 'bg-green-100 text-green-900 '
-                else if (isHovered) cls += 'bg-green-100 text-green-900 rounded-full '
-                else cls += 'hover:bg-gray-100 rounded-full '
-            }
+            const isPast = d < today
+            const isStart = !!(checkIn && sameDay(d, checkIn))
+            const isEnd = !!(checkOut && sameDay(d, checkOut))
+            const effectiveEnd = checkOut || hoverDay
+            const inRange = !!(checkIn && effectiveEnd && d > checkIn && d < effectiveEnd)
+            const isHov = !!(!checkOut && hoverDay && sameDay(d, hoverDay) && checkIn && d > checkIn)
+            const isToday = sameDay(d, today)
+
+            // Range strip background — flat rectangles connect start↔end
+            const showStrip = inRange
+            const stripLeft = isStart && !isEnd && !!effectiveEnd
+            const stripRight = isEnd && !isStart
+
             cells.push(
-                <button key={day} disabled={isPast} className={cls}
-                    onClick={() => handleDay(d)}
-                    onMouseEnter={() => { if (pickingEnd && checkIn && !checkOut) setHoverDay(d) }}
-                    onMouseLeave={() => setHoverDay(null)}
+                <div
+                    key={day}
+                    className={[
+                        'relative h-10 flex items-center justify-center',
+                        showStrip && !stripLeft && !stripRight ? 'bg-blue-50' : '',
+                        stripLeft ? 'bg-gradient-to-r from-transparent via-blue-50 to-blue-50' : '',
+                        stripRight ? 'bg-gradient-to-l from-transparent via-blue-50 to-blue-50' : '',
+                    ].join(' ')}
                 >
-                    {day}
-                </button>
+                    <button
+                        disabled={isPast}
+                        onClick={e => { stop(e); onSelect(d) }}
+                        onMouseEnter={() => { if (checkIn && !checkOut) setHoverDay(d) }}
+                        onMouseLeave={() => setHoverDay(null)}
+                        className={[
+                            'relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all',
+                            isPast
+                                ? 'text-gray-300 cursor-not-allowed'
+                                : isStart || isEnd
+                                    ? 'bg-blue-600 text-white font-bold cursor-pointer'
+                                    : isHov
+                                        ? 'bg-blue-100 text-blue-700 cursor-pointer'
+                                        : inRange
+                                            ? 'text-blue-900 hover:bg-blue-100 cursor-pointer'
+                                            : isToday
+                                                ? 'text-blue-600 font-bold ring-2 ring-blue-300 hover:bg-blue-50 cursor-pointer'
+                                                : 'text-gray-700 hover:bg-gray-100 cursor-pointer',
+                        ].join(' ')}
+                    >
+                        {day}
+                    </button>
+                </div>
             )
         }
         return cells
     }
 
-    const nights = checkIn && checkOut ? Math.round((checkOut.getTime() - checkIn.getTime()) / 86400000) : 0
-    const totalAdults = rooms.reduce((s, r) => s + r.adults, 0)
-    const totalChildren = rooms.reduce((s, r) => s + r.children, 0)
+    return (
+        <div
+            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-2xl shadow-2xl z-[400] overflow-hidden"
+            onClick={stop}
+            onMouseDown={stop}
+        >
+            {/* ─ Tab header ─ */}
+            <div className="grid grid-cols-2 border-b border-gray-200">
+                {[
+                    { label: 'Nhận phòng', date: checkIn, active: !pickingEnd, onClick: (e: React.MouseEvent) => { stop(e); setPickingEnd(false) } },
+                    { label: 'Trả phòng', date: checkOut, active: pickingEnd, onClick: (e: React.MouseEvent) => { stop(e); setPickingEnd(true) } },
+                ].map((tab, i) => (
+                    <button
+                        key={tab.label}
+                        onMouseDown={stop}
+                        onClick={tab.onClick}
+                        className={[
+                            'flex items-start gap-4 px-6 py-5 text-left transition-colors',
+                            i === 0 ? 'border-r border-gray-200' : '',
+                            tab.active ? 'bg-blue-50' : 'hover:bg-gray-50',
+                        ].join(' ')}
+                    >
+                        <Calendar size={20} className={`mt-0.5 shrink-0 ${tab.active ? 'text-blue-600' : 'text-gray-400'}`} />
+                        <div className="min-w-0">
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">{tab.label}</div>
+                            <div className={`text-lg font-bold leading-tight truncate ${tab.active ? 'text-blue-700' : tab.date ? 'text-gray-800' : 'text-gray-400'}`}>
+                                {tab.date ? fmtMain(tab.date) : 'Chọn ngày'}
+                            </div>
+                            {tab.date && (
+                                <div className="text-xs text-gray-400 mt-0.5">{fmtSub(tab.date)}</div>
+                            )}
+                        </div>
+                        {tab.active && <div className="ml-auto mt-1 w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+                    </button>
+                ))}
+            </div>
 
-    // ── Search Action ──
+            {/* ─ Night badge ─ */}
+            {nights > 0 && (
+                <div className="flex justify-center py-2.5 bg-blue-50 border-b border-blue-100">
+                    <span className="text-xs font-bold text-blue-700 bg-white border border-blue-200 rounded-full px-5 py-1.5">
+                        {nights} đêm
+                    </span>
+                </div>
+            )}
+
+            {/* ─ Two-month calendar ─ */}
+            <div className="grid grid-cols-2 p-6 pb-4 gap-8">
+                {[{ y: calYear, m: calMonth }, { y: year2, m: month2 }].map((cal, idx) => (
+                    <div key={idx}>
+                        <div className="flex items-center justify-between mb-4">
+                            {idx === 0 ? (
+                                <button
+                                    onMouseDown={stop}
+                                    onClick={prevMonth}
+                                    disabled={!canPrev}
+                                    className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 disabled:opacity-25 transition-colors text-gray-600"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                            ) : <div className="w-9" />}
+
+                            <span className="text-sm font-bold text-gray-800">
+                                {MONTH_NAMES[cal.m]} {cal.y}
+                            </span>
+
+                            {idx === 1 ? (
+                                <button
+                                    onMouseDown={stop}
+                                    onClick={nextMonth}
+                                    disabled={!canNext}
+                                    className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 disabled:opacity-25 transition-colors text-gray-600"
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
+                            ) : <div className="w-9" />}
+                        </div>
+
+                        <div className="grid grid-cols-7 mb-1">
+                            {DAY_NAMES.map(d => (
+                                <div key={d} className="h-8 flex items-center justify-center text-[11px] font-bold text-gray-400 uppercase">
+                                    {d}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-7">
+                            {renderMonth(cal.y, cal.m)}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* ─ Footer ─ */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-100">
+                <span className="text-sm text-gray-500">
+                    {nights > 0 ? `Đã chọn ${nights} đêm` : pickingEnd ? 'Chọn ngày trả phòng' : 'Chọn ngày nhận phòng'}
+                </span>
+                <div className="flex items-center gap-3">
+                    <button
+                        onMouseDown={stop}
+                        onClick={e => { stop(e); onClose() }}
+                        className="text-sm font-semibold text-gray-500 hover:text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                        Đóng
+                    </button>
+                    {checkIn && checkOut && (
+                        <button
+                            onMouseDown={stop}
+                            onClick={e => { stop(e); onClose() }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-6 py-2 rounded-lg transition-colors"
+                        >
+                            Xong
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* ─ Close X ─ */}
+            <button
+                onMouseDown={stop}
+                onClick={e => { stop(e); onClose() }}
+                className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-all"
+            >
+                <X size={16} />
+            </button>
+        </div>
+    )
+}
+
+// ═══════════════════════════════════════════════════════════
+// GuestPicker component
+// ═══════════════════════════════════════════════════════════
+interface GuestPickerProps {
+    adults: number
+    children: number
+    rooms: number
+    setAdults: React.Dispatch<React.SetStateAction<number>>
+    setChildren: React.Dispatch<React.SetStateAction<number>>
+    setRooms: React.Dispatch<React.SetStateAction<number>>
+    onClose: () => void
+}
+
+function GuestPicker({ adults, children, rooms, setAdults, setChildren, setRooms, onClose }: GuestPickerProps) {
+    const rows = [
+        { label: 'Người lớn', sub: null, val: adults, min: 1, set: setAdults },
+        { label: 'Trẻ em', sub: '0 – 17 tuổi', val: children, min: 0, set: setChildren },
+        { label: 'Phòng', sub: null, val: rooms, min: 1, set: setRooms },
+    ]
+
+    const stop = (e: React.MouseEvent) => e.stopPropagation()
+
+    return (
+        <div
+            className="absolute top-full right-0 mt-1 w-80 bg-white border border-gray-200 rounded-2xl shadow-2xl z-[400] overflow-hidden"
+            onClick={stop}
+            onMouseDown={stop}
+        >
+            <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">Khách & phòng</div>
+            </div>
+
+            <div className="px-5 divide-y divide-gray-100">
+                {rows.map(({ label, sub, val, min, set }) => (
+                    <div key={label} className="flex items-center justify-between py-4">
+                        <div>
+                            <div className="text-sm font-semibold text-gray-800">{label}</div>
+                            {sub && <div className="text-xs text-gray-400 mt-0.5">{sub}</div>}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                disabled={val <= min}
+                                onClick={() => set(v => Math.max(min, v - 1))}
+                                className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-25 transition-all"
+                            >
+                                <Minus size={14} />
+                            </button>
+                            <span className="w-5 text-center text-sm font-bold text-gray-900">{val}</span>
+                            <button
+                                onClick={() => set(v => v + 1)}
+                                className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                            >
+                                <Plus size={14} />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="px-5 py-4 border-t border-gray-100">
+                <button
+                    onClick={onClose}
+                    className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-bold py-3 rounded-xl transition-all"
+                >
+                    Xong
+                </button>
+            </div>
+        </div>
+    )
+}
+
+// ═══════════════════════════════════════════════════════════
+// SuggestDropdown component
+// ═══════════════════════════════════════════════════════════
+function SuggestDropdown({
+    hotelSuggestions, districtSuggestions, onSelectHotel, onSelectDistrict
+}: {
+    hotelSuggestions: HotelResponse[]
+    districtSuggestions: string[]
+    onSelectHotel: (name: string) => void
+    onSelectDistrict: (d: string) => void
+}) {
+    if (hotelSuggestions.length === 0 && districtSuggestions.length === 0) return null
+    const stop = (e: React.MouseEvent) => e.stopPropagation()
+
+    return (
+        <div
+            className="absolute top-full left-0 mt-1 w-[400px] bg-white border border-gray-200 rounded-2xl shadow-2xl z-[500] overflow-hidden max-h-80 overflow-y-auto"
+            onClick={stop}
+            onMouseDown={stop}
+        >
+            {hotelSuggestions.length > 0 && (
+                <>
+                    <div className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        Khách sạn
+                    </div>
+                    {hotelSuggestions.map(h => (
+                        <button key={h.id} onMouseDown={stop} onClick={() => onSelectHotel(h.hotelName)}
+                            className="flex items-center gap-3 w-full px-4 py-3 hover:bg-blue-50 text-left transition-colors">
+                            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-lg shrink-0">🏨</div>
+                            <div className="min-w-0">
+                                <div className="text-sm font-semibold text-gray-900 truncate">{h.hotelName}</div>
+                                <div className="text-xs text-gray-400 mt-0.5">{h.district}</div>
+                            </div>
+                        </button>
+                    ))}
+                </>
+            )}
+            {districtSuggestions.length > 0 && (
+                <>
+                    <div className={`px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest ${hotelSuggestions.length > 0 ? 'border-t border-gray-100' : ''}`}>
+                        Khu vực
+                    </div>
+                    {districtSuggestions.map(d => (
+                        <button key={d} onMouseDown={stop} onClick={() => onSelectDistrict(d)}
+                            className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-blue-50 text-left transition-colors">
+                            <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
+                                <MapPin size={14} className="text-gray-500" />
+                            </div>
+                            <div className="text-sm font-medium text-gray-800">{d}</div>
+                        </button>
+                    ))}
+                </>
+            )}
+        </div>
+    )
+}
+
+// ═══════════════════════════════════════════════════════════
+// Main SearchBar
+// ═══════════════════════════════════════════════════════════
+export default function SearchBar({ variant = 'hero', defaultValues }: SearchBarProps) {
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const today = getToday()
+
+    const [keyword, setKeyword] = useState(defaultValues?.keyword || defaultValues?.district || '')
+    const [checkIn, setCheckIn] = useState<Date | null>(parseDate(defaultValues?.checkIn))
+    const [checkOut, setCheckOut] = useState<Date | null>(parseDate(defaultValues?.checkOut))
+    const [adults, setAdults] = useState(defaultValues?.adults ?? 2)
+    const [children, setChildren] = useState(defaultValues?.children ?? 0)
+    const [rooms, setRooms] = useState(defaultValues?.rooms ?? 1)
+
+    const [showDate, setShowDate] = useState(searchParams.get('openPicker') === 'true')
+    const [pickingEnd, setPickingEnd] = useState(false)
+    const [showSuggest, setShowSuggest] = useState(false)
+    const [showGuests, setShowGuests] = useState(false)
+
+    // Calendar month state lives here — persists when user switches tabs inside DatePicker
+    const [calMonth, setCalMonth] = useState((checkIn || today).getMonth())
+    const [calYear, setCalYear] = useState((checkIn || today).getFullYear())
+
+    const wrapRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    // Single outside-click handler on the wrapper div
+    useEffect(() => {
+        const fn = (e: MouseEvent) => {
+            if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+                setShowSuggest(false)
+                setShowDate(false)
+                setShowGuests(false)
+            }
+        }
+        document.addEventListener('mousedown', fn)
+        return () => document.removeEventListener('mousedown', fn)
+    }, [])
+
+    // ── Hotel/district suggestions ──
+    const { data: hotelPage } = useQuery({
+        queryKey: ['hotels-public'],
+        queryFn: () => axiosInstance.get(`${API_CONFIG.ENDPOINTS.HOTELS}/active`).then(r => r.data),
+    })
+
+    const allHotels: HotelResponse[] = hotelPage?.content || []
+    const q = keyword.trim().toLowerCase()
+
+    const hotelSuggestions = q.length >= 1
+        ? allHotels.filter((h: HotelResponse) =>
+            h.status === HotelStatus.APPROVED && (
+                h.hotelName.toLowerCase().includes(q) ||
+                h.district.toLowerCase().includes(q)
+            )
+        ).slice(0, 5)
+        : []
+
+    const districtSuggestions = DISTRICTS.filter(d => !q || d.toLowerCase().includes(q)).slice(0, q ? 6 : 8)
+
+    // ── Date selection ──
+    const handleDaySelect = useCallback((d: Date) => {
+        const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    if (d < now || d > LAST_DAY) return;
+
+    if (!checkIn || (checkIn && checkOut)) {
+        setCheckIn(d);
+        setCheckOut(null);
+        setPickingEnd(true);
+    } else {
+        if (d <= checkIn) {
+            setCheckIn(d);
+            setCheckOut(null);
+            setPickingEnd(true);
+        } else {
+            setCheckOut(d);
+            setPickingEnd(false);
+        }
+    }    
+}, [checkIn, checkOut, setCheckIn, setCheckOut, setPickingEnd]);
+
+    const nights = checkIn && checkOut
+        ? Math.round((checkOut.getTime() - checkIn.getTime()) / 86400000)
+        : 0
+
+    // ── Search ──
     const handleSearch = () => {
         if (!checkIn || !checkOut) {
             setShowDate(true)
@@ -207,226 +531,260 @@ export default function SearchBar({ variant = 'hero', defaultValues }: SearchBar
             window.scrollTo({ top: 0, behavior: 'smooth' })
             return
         }
-
         const p = new URLSearchParams()
         if (keyword.trim()) {
-            if (DISTRICTS.includes(keyword.trim())) p.set('district', keyword.trim())
-            else p.set('keyword', keyword.trim())
+            DISTRICTS.includes(keyword.trim())
+                ? p.set('district', keyword.trim())
+                : p.set('keyword', keyword.trim())
         }
         p.set('checkIn', toISO(checkIn))
         p.set('checkOut', toISO(checkOut))
-        p.set('adults', String(totalAdults))
-        p.set('children', String(totalChildren))
-        p.set('rooms', String(rooms.length))
+        p.set('adults', String(adults))
+        p.set('children', String(children))
+        p.set('rooms', String(rooms))
         router.push(`/hotels?${p.toString()}`)
     }
 
-    const isHero = variant === 'hero';
+    const isHero = variant === 'hero'
 
+    // ── Shared props ──
+    const datePickerProps = {
+        checkIn, checkOut,
+        onSelect: handleDaySelect,
+        onClose: () => setShowDate(false),
+        pickingEnd, setPickingEnd,
+        calMonth, calYear, setCalMonth, setCalYear,
+    }
+
+    const guestPickerProps = {
+        adults, children, rooms,
+        setAdults, setChildren, setRooms,
+        onClose: () => setShowGuests(false),
+    }
+
+    const suggestProps = {
+        hotelSuggestions,
+        districtSuggestions,
+        onSelectHotel: (name: string) => { setKeyword(name); setShowSuggest(false) },
+        onSelectDistrict: (d: string) => { setKeyword(d); setShowSuggest(false) },
+    }
+
+    // ═══════════════════════════════════════════════
+    // HERO VARIANT
+    // ═══════════════════════════════════════════════
+    if (isHero) {
+        return (
+            <div ref={wrapRef} className="relative w-full">
+                <div className="bg-white rounded-2xl shadow-xl">
+
+                    {/* ─ Row 1: Destination ─ */}
+                    <div className="relative px-5 pt-5 pb-4 border-b border-gray-100">
+                        <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                            Điểm đến
+                        </label>
+                        <div
+                            className="flex items-center gap-3 border-2 border-gray-200 focus-within:border-blue-500 rounded-xl px-4 py-3.5 transition-colors cursor-text bg-white"
+                            onClick={() => { inputRef.current?.focus(); setShowSuggest(true); setShowDate(false); setShowGuests(false) }}
+                        >
+                            <Search size={18} className="text-gray-400 shrink-0" />
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={keyword}
+                                onChange={e => { setKeyword(e.target.value); setShowSuggest(true) }}
+                                onFocus={() => { setShowSuggest(true); setShowDate(false); setShowGuests(false) }}
+                                placeholder="Nhập điểm du lịch hoặc tên khách sạn"
+                                className="flex-1 text-sm font-semibold text-gray-900 placeholder-gray-400 bg-transparent outline-none"
+                            />
+                            {keyword && (
+                                <button
+                                    onMouseDown={e => e.stopPropagation()}
+                                    onClick={e => { e.stopPropagation(); setKeyword(''); inputRef.current?.focus() }}
+                                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+
+                        {showSuggest && <SuggestDropdown {...suggestProps} />}
+                    </div>
+
+                    {/* ─ Row 2: Dates + Guests ─ */}
+                    <div className="relative grid grid-cols-3 divide-x divide-gray-100">
+
+                        {/* Check-in */}
+                        <button
+                            onClick={() => { setShowDate(true); setPickingEnd(false); setShowGuests(false); setShowSuggest(false) }}
+                            className="flex flex-col px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+                        >
+                            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Nhận phòng</span>
+                            <span className={`text-base font-bold leading-tight ${checkIn ? 'text-gray-900' : 'text-gray-400'}`}>
+                                {checkIn ? fmtMain(checkIn) : '-- Chọn ngày --'}
+                            </span>
+                            {checkIn && <span className="text-xs text-gray-400 mt-1">{fmtSub(checkIn)}</span>}
+                        </button>
+
+                        {/* Check-out */}
+                        <button
+                            onClick={() => { setShowDate(true); setPickingEnd(true); setShowGuests(false); setShowSuggest(false) }}
+                            className="flex flex-col px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+                        >
+                            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Trả phòng</span>
+                            <span className={`text-base font-bold leading-tight ${checkOut ? 'text-gray-900' : 'text-gray-400'}`}>
+                                {checkOut ? fmtMain(checkOut) : '-- Chọn ngày --'}
+                            </span>
+                            {checkOut && <span className="text-xs text-gray-400 mt-1">{fmtSub(checkOut)}</span>}
+                        </button>
+
+                        {/* Guests */}
+                        <div className="relative">
+                            <button
+                                onClick={() => { setShowGuests(v => !v); setShowDate(false); setShowSuggest(false) }}
+                                className="w-full flex flex-col px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+                            >
+                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Khách & phòng</span>
+                                <div className="flex items-center gap-2">
+                                    <Users size={15} className="text-gray-500 shrink-0" />
+                                    <span className="text-base font-bold text-gray-900">
+                                        {adults + children} người lớn · {rooms} phòng
+                                    </span>
+                                    <ChevronDown size={14} className={`text-gray-400 ml-auto transition-transform duration-200 ${showGuests ? 'rotate-180' : ''}`} />
+                                </div>
+                            </button>
+                            {showGuests && <GuestPicker {...guestPickerProps} />}
+                        </div>
+                    </div>
+
+                    {/* DatePicker anchored below row 2 */}
+                    {showDate && <DatePicker {...datePickerProps} />}
+
+                    {/* ─ Footer: search button ─ */}
+                    <div className="px-5 py-4 bg-gray-50 rounded-b-2xl border-t border-gray-100 flex items-center justify-between">
+                        <span className="text-sm text-gray-400">
+                            {nights > 0
+                                ? <span className="font-bold text-blue-700">{nights} đêm</span>
+                                : 'Chọn ngày nhận và trả phòng'}
+                        </span>
+                        <button
+                            onClick={handleSearch}
+                            className="flex items-center gap-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white px-10 py-3.5 rounded-xl font-bold text-sm transition-all shadow-md tracking-wide"
+                        >
+                            <Search size={16} />
+                            TÌM
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // ═══════════════════════════════════════════════
+    // COMPACT VARIANT — scroll-down sticky bar
+    // Agoda-style: label + value stacked, larger text
+    // ═══════════════════════════════════════════════
     return (
-        <div className={`bg-white transition-all duration-300 ${isHero
-            ? 'rounded-2xl shadow-2xl flex flex-col'
-            : 'rounded-full shadow-lg border border-gray-200 flex flex-row items-center py-1.5 px-2 max-w-5xl mx-auto'
-            }`}>
+        <div ref={wrapRef} className="relative w-full">
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-lg">
 
-            {/* PHẦN 1: HÀNG NHẬP LIỆU - Bọc trong relative để Lịch bám sát vào đây */}
-            <div className="relative">
-                <div className={`${isHero ? 'grid grid-cols-1 md:grid-cols-12 border-b border-gray-100' : 'flex flex-1 items-center divide-x divide-gray-200'}`}>
+                <div className="flex items-stretch">
 
-                    {/* 1.1 Địa điểm / Điểm đến */}
-                    <div className={`${isHero ? 'md:col-span-4 border-r border-gray-100' : 'flex-[1.5]'} relative`} ref={suggestRef}>
-                        <div className={`${isHero ? 'px-5 pt-4 pb-4' : 'px-4 py-1'} cursor-text`} onClick={() => setShowSuggest(true)}>
-                            {isHero && <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Điểm đến</div>}
-                            <div className="flex items-center gap-2.5">
-                                <Search size={isHero ? 18 : 14} className="text-gray-400 shrink-0" />
+                    {/* Destination */}
+                    <div className="flex-[2.5] relative">
+                        <div
+                            className="flex items-center gap-3 px-5 h-full cursor-text py-3"
+                            onClick={() => { inputRef.current?.focus(); setShowSuggest(true); setShowDate(false); setShowGuests(false) }}
+                        >
+                            <Search size={17} className="text-gray-400 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Điểm đến</div>
                                 <input
+                                    ref={inputRef}
                                     type="text"
                                     value={keyword}
                                     onChange={e => { setKeyword(e.target.value); setShowSuggest(true) }}
-                                    placeholder="Bạn muốn đi đâu?"
-                                    className={`w-full outline-none bg-transparent text-gray-900 placeholder-gray-400 ${isHero ? 'text-sm font-semibold' : 'text-xs font-medium'}`}
+                                    onFocus={() => { setShowSuggest(true); setShowDate(false); setShowGuests(false) }}
+                                    placeholder="Nhập điểm du lịch hoặc tên khách sạn"
+                                    className="w-full text-sm font-bold text-gray-900 placeholder-gray-400 bg-transparent outline-none truncate"
                                 />
                             </div>
                         </div>
-
-                        {/* Dropdown gợi ý địa điểm */}
-                        {showSuggest && (
-                            <div className="absolute top-full left-0 mt-2 w-[400px] bg-white border border-gray-200 rounded-2xl shadow-2xl z-[200] overflow-hidden max-h-[400px] overflow-y-auto">
-                                {hotelSuggestions.map(h => (
-                                    <button key={h.id} onClick={() => { setKeyword(h.hotelName); setShowSuggest(false) }} className="flex items-center gap-3 w-full px-4 py-3 hover:bg-green-50 text-left transition-colors">
-                                        <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-xl shrink-0">🏨</div>
-                                        <div className="min-w-0">
-                                            <div className="text-sm font-bold text-gray-900 truncate">{h.hotelName}</div>
-                                            <div className="text-xs text-gray-400 italic">{h.district}</div>
-                                        </div>
-                                    </button>
-                                ))}
-                                {districtSuggestions.map(d => (
-                                    <button key={d} onClick={() => { setKeyword(d); setShowSuggest(false) }} className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-green-50 text-left transition-colors">
-                                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center shrink-0"><MapPin size={14} className="text-gray-500" /></div>
-                                        <div className="text-sm font-medium text-gray-800">{d}</div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        {showSuggest && <SuggestDropdown {...suggestProps} />}
                     </div>
 
-                    {/* 1.2 Nhận phòng & Trả phòng */}
-                    <div className={`${isHero ? 'md:col-span-6 border-r border-gray-100 flex divide-x' : 'flex-1 flex divide-x'}`} ref={dateRef}>
-                        <div className={`${isHero ? 'px-5 pt-4 pb-4' : 'px-4 py-1'} flex-1 cursor-pointer hover:bg-gray-50 transition-colors`} onClick={() => { setShowDate(true); setPickingEnd(false) }}>
-                            {isHero && <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Nhận phòng</div>}
-                            <div className="flex items-center gap-2.5">
-                                <Calendar size={isHero ? 18 : 14} className="text-gray-400 shrink-0" />
-                                <span className={`${isHero ? 'text-sm font-bold' : 'text-xs font-medium'} truncate ${checkIn ? 'text-gray-900' : 'text-gray-400'}`}>
-                                    {checkIn ? fmtFull(checkIn) : 'Chọn ngày'}
-                                </span>
-                            </div>
-                        </div>
+                    {/* Divider */}
+                    <div className="w-px bg-gray-200 self-stretch" />
 
-                        <div className={`${isHero ? 'px-5 pt-4 pb-4' : 'px-4 py-1'} flex-1 cursor-pointer hover:bg-gray-50 transition-colors`} onClick={() => { setShowDate(true); setPickingEnd(true) }}>
-                            {isHero && <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Trả phòng</div>}
-                            <div className="flex items-center gap-2.5">
-                                <Calendar size={isHero ? 18 : 14} className="text-gray-400 shrink-0" />
-                                <span className={`${isHero ? 'text-sm font-bold' : 'text-xs font-medium'} truncate ${checkOut ? 'text-gray-900' : 'text-gray-400'}`}>
-                                    {checkOut ? fmtFull(checkOut) : 'Chọn ngày'}
-                                </span>
+                    {/* Check-in */}
+                    <button
+                        onClick={() => { setShowDate(true); setPickingEnd(false); setShowGuests(false); setShowSuggest(false) }}
+                        className="flex-1 flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left"
+                    >
+                        <Calendar size={16} className="text-gray-400 shrink-0" />
+                        <div className="min-w-0">
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Nhận phòng</div>
+                            <div className={`text-sm font-bold truncate ${checkIn ? 'text-gray-900' : 'text-gray-400'}`}>
+                                {fmtShort(checkIn)}
                             </div>
+                            {checkIn && <div className="text-xs text-gray-400">{fmtSub(checkIn)}</div>}
                         </div>
-                    </div>
+                    </button>
 
-                    {/* 1.3 Khách & Phòng */}
-                    <div className={`${isHero ? 'md:col-span-2' : 'flex-1'} relative`} ref={guestRef}>
-                        <button onClick={() => setShowGuests(!showGuests)} className={`${isHero ? 'px-5 py-4' : 'px-4 py-1'} w-full h-full text-left hover:bg-gray-50 transition-colors`}>
-                            {isHero && <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Khách</div>}
-                            <div className="flex items-center gap-2.5">
-                                <Users size={isHero ? 18 : 14} className="text-gray-400 shrink-0" />
-                                <span className={`text-gray-900 ${isHero ? 'text-sm font-bold' : 'text-xs font-medium'} truncate`}>
-                                    {totalAdults + totalChildren} khách
-                                </span>
+                    {/* Divider */}
+                    <div className="w-px bg-gray-200 self-stretch" />
+
+                    {/* Check-out */}
+                    <button
+                        onClick={() => { setShowDate(true); setPickingEnd(true); setShowGuests(false); setShowSuggest(false) }}
+                        className="flex-1 flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left"
+                    >
+                        <Calendar size={16} className="text-gray-400 shrink-0" />
+                        <div className="min-w-0">
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Trả phòng</div>
+                            <div className={`text-sm font-bold truncate ${checkOut ? 'text-gray-900' : 'text-gray-400'}`}>
+                                {fmtShort(checkOut)}
+                            </div>
+                            {checkOut && <div className="text-xs text-gray-400">{fmtSub(checkOut)}</div>}
+                        </div>
+                    </button>
+
+                    {/* Divider */}
+                    <div className="w-px bg-gray-200 self-stretch" />
+
+                    {/* Guests */}
+                    <div className="relative">
+                        <button
+                            onClick={() => { setShowGuests(v => !v); setShowDate(false); setShowSuggest(false) }}
+                            className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors h-full"
+                        >
+                            <Users size={16} className="text-gray-400 shrink-0" />
+                            <div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Khách</div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-bold text-gray-900 whitespace-nowrap">
+                                        {adults + children} người lớn · {rooms} phòng
+                                    </span>
+                                    <ChevronDown size={13} className={`text-gray-400 transition-transform duration-200 ${showGuests ? 'rotate-180' : ''}`} />
+                                </div>
                             </div>
                         </button>
+                        {showGuests && <GuestPicker {...guestPickerProps} />}
+                    </div>
 
-                        {showGuests && (
-                            <div className="absolute top-full right-0 mt-2 w-[340px] bg-white border border-gray-200 rounded-xl shadow-2xl z-[200] overflow-hidden flex flex-col">
-                                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
-                                    <div className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Thông tin khách</div>
-                                    <div className="text-sm font-black text-gray-900">
-                                        {totalAdults + totalChildren} khách, {rooms.length} phòng
-                                    </div>
-                                </div>
-
-                                <div className="max-h-[350px] overflow-y-auto p-5 space-y-6">
-                                    {rooms.map((room, index) => (
-                                        <div key={index} className="space-y-4 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
-                                            <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest">Phòng {index + 1}</h4>
-                                            <div className="flex items-center justify-between">
-                                                <div className="text-sm font-bold text-gray-700">Người lớn</div>
-                                                <div className="flex items-center gap-4">
-                                                    <button onClick={() => updateRoom(index, 'adults', -1)} disabled={room.adults <= 1} className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-blue-600 hover:bg-blue-50 disabled:opacity-20"><Minus size={14} /></button>
-                                                    <span className="w-4 text-center font-bold text-gray-900">{room.adults}</span>
-                                                    <button onClick={() => updateRoom(index, 'adults', 1)} className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-blue-600 hover:bg-blue-50"><Plus size={14} /></button>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="text-sm font-bold text-gray-700">Trẻ em</div>
-                                                    <div className="text-[10px] text-gray-400 italic">Từ 0 đến 17 tuổi</div>
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                    <button onClick={() => updateRoom(index, 'children', -1)} disabled={room.children <= 0} className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-blue-600 hover:bg-blue-50 disabled:opacity-20"><Minus size={14} /></button>
-                                                    <span className="w-4 text-center font-bold text-gray-900">{room.children}</span>
-                                                    <button onClick={() => updateRoom(index, 'children', 1)} className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-blue-600 hover:bg-blue-50"><Plus size={14} /></button>
-                                                </div>
-                                            </div>
-                                            {rooms.length > 1 && (
-                                                <button onClick={() => removeRoom(index)} className="text-[11px] font-bold text-red-500 hover:underline">Xóa phòng này</button>
-                                            )}
-                                        </div>
-                                    ))}
-                                    <button onClick={addRoom} className="text-xs font-bold text-blue-600 flex items-center gap-1.5 hover:text-blue-700 transition-colors">
-                                        <Plus size={16} /> Thêm phòng mới
-                                    </button>
-                                </div>
-
-                                <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-white">
-                                    <span className="text-[10px] text-gray-400">Đặt trên 9 phòng?</span>
-                                    <button onClick={() => setShowGuests(false)} className="bg-blue-600 text-white px-8 py-2 rounded-full font-black text-xs hover:bg-blue-700 transition-all shadow-md active:scale-95">
-                                        XONG
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                    {/* Search button */}
+                    <div className="flex items-center px-4 border-l border-gray-200">
+                        <button
+                            onClick={handleSearch}
+                            className="bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white px-8 py-3 rounded-xl font-bold text-sm transition-all shadow-sm tracking-wide whitespace-nowrap"
+                        >
+                            TÌM
+                        </button>
                     </div>
                 </div>
 
-                {/* 2. DROPDOWN LỊCH - Đặt ở đây để nó "sát" đáy hàng nhập liệu và đè lên nút tìm kiếm */}
-                {showDate && (
-                    <div
-                        className="absolute top-full left-1/2 -translate-x-1/2 mt-0.5 bg-white border border-gray-200 rounded-2xl shadow-[0_15px_50px_rgba(0,0,0,0.3)] z-[300] p-7 w-[720px]"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {/* Header Tabs Nhận/Trả phòng */}
-                        <div className="flex items-center justify-center gap-16 mb-8 border-b border-gray-100">
-                            <button
-                                onClick={() => setPickingEnd(false)}
-                                className={`group flex flex-col items-center pb-3 border-b-2 transition-all duration-300 ${!pickingEnd ? 'border-blue-600' : 'border-transparent'}`}
-                            >
-                                <span className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${!pickingEnd ? 'text-blue-600' : 'text-gray-400'}`}>Nhận phòng</span>
-                                <span className={`text-sm font-black ${!pickingEnd ? 'text-gray-900' : 'text-gray-400'}`}>
-                                    {checkIn ? fmtFull(checkIn) : 'Chưa chọn'}
-                                </span>
-                            </button>
-                            <button
-                                onClick={() => setPickingEnd(true)}
-                                className={`group flex flex-col items-center pb-3 border-b-2 transition-all duration-300 ${pickingEnd ? 'border-blue-600' : 'border-transparent'}`}
-                            >
-                                <span className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${pickingEnd ? 'text-blue-600' : 'text-gray-400'}`}>Trả phòng</span>
-                                <span className={`text-sm font-black ${pickingEnd ? 'text-gray-900' : 'text-gray-400'}`}>
-                                    {checkOut ? fmtFull(checkOut) : 'Chưa chọn'}
-                                </span>
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-12">
-                            {[{ y: calYear, m: calMonth }, { y: year2, m: month2 }].map((cal, idx) => (
-                                <div key={idx} className="select-none">
-                                    <div className="flex items-center justify-between mb-5">
-                                        {idx === 0 ? (
-                                            <button onClick={prevMonth} disabled={!canPrevMonth} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-20"><ChevronLeft size={22} className="text-gray-600" /></button>
-                                        ) : <div className="w-9" />}
-                                        <span className="text-sm font-black text-gray-800 uppercase tracking-tight">{MONTH_NAMES[cal.m]} {cal.y}</span>
-                                        {idx === 1 ? (
-                                            <button onClick={nextMonth} disabled={!canNextMonth} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-20"><ChevronRight size={22} className="text-gray-600" /></button>
-                                        ) : <div className="w-9" />}
-                                    </div>
-                                    <div className="grid grid-cols-7 mb-3">
-                                        {DAY_NAMES.map(d => <div key={d} className="h-8 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase">{d}</div>)}
-                                    </div>
-                                    <div className="grid grid-cols-7 gap-y-1">{renderCal(cal.y, cal.m)}</div>
-                                </div>
-                            ))}
-                        </div>
-                        <button onClick={() => setShowDate(false)} className="absolute top-4 right-4 p-2 text-gray-300 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-all"><X size={20} /></button>
-                    </div>
-                )}
+                {/* DatePicker dropdown */}
+                {showDate && <DatePicker {...datePickerProps} />}
             </div>
-
-            {/* PHẦN 3: NÚT TÌM KIẾM CHÍNH (Ở phía dưới hàng nhập liệu đối với Hero) */}
-            {!isHero && (
-                <div className="pl-2 pr-1">
-                    <button onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-full text-xs font-black transition-all transform active:scale-95 shadow-md uppercase tracking-wider">
-                        Tìm
-                    </button>
-                </div>
-            )}
-
-            {isHero && (
-                <div className="px-5 py-4 bg-gray-50/50 rounded-b-2xl border-t border-gray-100">
-                    <button onClick={handleSearch} className="w-full flex items-center justify-center gap-2 bg-green-600 text-white rounded-xl font-black py-4 hover:bg-green-700 transition-all shadow-lg text-sm uppercase tracking-widest">
-                        <Search size={20} /> Tìm khách sạn ngay
-                    </button>
-                </div>
-            )}
         </div>
     )
 }

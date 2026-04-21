@@ -18,10 +18,24 @@ const roomApi = {
   update: (id: number | string, data: RoomTypeRequest) =>
     axiosInstance.put<RoomTypeResponse>(API_CONFIG.ENDPOINTS.ROOM_TYPE_BY_ID(id), data),
 
-  delete: (id: number | string) =>
+   delete: (id: number | string) =>
     axiosInstance.delete(API_CONFIG.ENDPOINTS.ROOM_TYPE_BY_ID(id)),
 
-  
+  getDeleted: () =>
+    axiosInstance.get<RoomTypeResponse[]>(`${API_CONFIG.ENDPOINTS.ROOM_TYPES}/deleted`),
+
+  restore: (id: number | string) =>
+    axiosInstance.patch<RoomTypeResponse>(`${API_CONFIG.ENDPOINTS.ROOM_TYPE_BY_ID(id)}/restore`),
+
+  suspend: (id: number | string) =>
+    axiosInstance.patch<RoomTypeResponse>(`${API_CONFIG.ENDPOINTS.ROOM_TYPE_BY_ID(id)}/suspend`),
+
+  reactivate: (id: number | string) =>
+    axiosInstance.patch<RoomTypeResponse>(`${API_CONFIG.ENDPOINTS.ROOM_TYPE_BY_ID(id)}/reactivate`),
+
+  getForManagement: (hotelId: number | string) =>
+    axiosInstance.get<RoomTypeResponse[]>(`${API_CONFIG.ENDPOINTS.ROOM_TYPES}/hotel/${hotelId}/admin`),
+
 }
 
 export default roomApi

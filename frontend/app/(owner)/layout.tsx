@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Hotel, BedDouble, CalendarDays,
   CalendarCheck, Star, Tag, LogOut, ChevronRight, ChevronDown,
-  Building2,
+  Building2
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'

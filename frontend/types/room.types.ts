@@ -17,12 +17,14 @@ export interface RoomTypeResponse {
   roomSize: number | null
   basePrice: number
   totalRooms: number | null
+  isNonSmoking: boolean | null   
   isActive: boolean | null
+  deletedAt: string | null    
   createdAt: string
   updatedAt: string
-  checkIn: string | null
-  checkOut: string | null
-  thumbnailUrl?: string;
+  checkIn: string | null         
+  checkOut: string | null        
+  thumbnailUrl?: string
   images?: RoomImageResponse[]
 }
 

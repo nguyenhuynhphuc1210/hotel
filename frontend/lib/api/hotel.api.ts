@@ -1,7 +1,13 @@
-// lib/api/hotel.api.ts
-
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
+
+export enum HotelStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  SUSPENDED = 'SUSPENDED',
+  DISABLED = 'DISABLED',
+  REJECTED = 'REJECTED',
+}
 
 export interface HotelImageResponse {
   id: number
@@ -32,8 +38,9 @@ export interface HotelResponse {
   email: string
   ownerId: number
   ownerName: string
-  isActive: boolean
-  isDeleted: boolean
+  status: HotelStatus
+  statusReason?: string
+  deletedAt?: string
   createdAt: string
   updatedAt: string
   roomTypes: RoomTypeResponse[]
@@ -108,9 +115,17 @@ const hotelApi = {
   approve: (id: number | string) =>
     axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/approve`),
 
-  disable: (id: number | string) =>
-    axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/disable`),
+  disable: (id: number | string, reason: string) =>
+    axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/disable`, { reason }),
 
+  reject: (id: number | string, reason: string) =>
+    axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/reject`, { reason }),
+
+  suspend: (id: number | string, reason?: string) =>
+    axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/suspend`, { reason }),
+ 
+  reactivate: (id: number | string) =>
+    axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/reactivate`),
 
   getActive: (page = 0, size = 9) =>
     axiosInstance.get<PageResponse<HotelSummaryResponse>>(
@@ -134,7 +149,6 @@ const hotelApi = {
       `${API_CONFIG.ENDPOINTS.HOTELS}/deleted`,
       { params: { page, size } }
     ),
-
 
   restore: (id: number | string) =>
     axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/restore`),

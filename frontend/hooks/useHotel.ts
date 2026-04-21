@@ -7,7 +7,7 @@ const KEY = 'hotels'
 // Lấy tất cả khách sạn
 export const useHotels = (page = 0, size = 10) =>
   useQuery({
-    queryKey: [KEY, page, size], 
+    queryKey: [KEY, page, size],
     queryFn: () => hotelApi.getAll(page, size).then(r => r.data),
   })
 
@@ -76,10 +76,6 @@ export const useApproveHotel = () => {
       toast.success('Đã duyệt khách sạn!')
       qc.invalidateQueries({ queryKey: [KEY] })
     },
-    onError: (err: unknown) => {
-      const e = err as { response?: { data?: { message?: string } } }
-      toast.error(e?.response?.data?.message || 'Duyệt thất bại!')
-    },
   })
 }
 
@@ -87,17 +83,25 @@ export const useApproveHotel = () => {
 export const useDisableHotel = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: number | string) => hotelApi.disable(id),
+    mutationFn: ({ id, reason }: { id: number | string; reason: string }) => 
+      hotelApi.disable(id, reason),
     onSuccess: () => {
-      toast.success('Đã vô hiệu hoá khách sạn!')
+      toast.success('Đã vô hiệu hóa khách sạn!')
       qc.invalidateQueries({ queryKey: [KEY] })
     },
-    onError: (err: unknown) => {
-      const e = err as { response?: { data?: { message?: string } } }
-      toast.error(e?.response?.data?.message || 'Thất bại!')
+  })
+}
+
+export const useRejectHotel = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number | string; reason: string }) => 
+      hotelApi.reject(id, reason),
+    onSuccess: () => {
+      toast.success('Đã từ chối khách sạn!')
+      qc.invalidateQueries({ queryKey: [KEY] })
     },
   })
-  
 }
 
 export const useDeletedHotels = (page = 0, size = 10) =>
@@ -112,7 +116,8 @@ export const useRestoreHotel = () => {
     mutationFn: (id: number | string) => hotelApi.restore(id),
     onSuccess: () => {
       toast.success('Khôi phục khách sạn thành công!')
-      qc.invalidateQueries({ queryKey: [KEY] })     },
+      qc.invalidateQueries({ queryKey: [KEY] })
+    },
     onError: (err: unknown) => {
       const error = err as { response?: { data?: { message?: string } } }
       toast.error(error?.response?.data?.message || 'Khôi phục thất bại!')

@@ -51,7 +51,6 @@ const API_CONFIG = {
 
     // Hotel Images
     HOTEL_IMAGES_UPLOAD: '/api/hotel-images/upload',
-    HOTEL_IMAGES_UPLOAD_URL: '/api/hotel-images/url',
     HOTEL_IMAGES_DELETE: '/api/hotel-images/delete',
     HOTEL_IMAGE_SET_PRIMARY: (id: number | string) => `/api/hotel-images/${id}/set-primary`,
 

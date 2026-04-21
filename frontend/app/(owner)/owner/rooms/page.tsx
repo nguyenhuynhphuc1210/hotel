@@ -9,6 +9,9 @@ import {
   Plus, Pencil, Trash2, X, Loader2, Save,
   BedDouble, Users, Maximize2, Upload, Star,
   ChevronRight, Sparkles, CheckCircle2, Settings2,
+  AlertCircle,
+  CigaretteOff,
+  Clock, Power, Play, Pause
 } from 'lucide-react'
 import hotelApi from '@/lib/api/hotel.api'
 import roomApi from '@/lib/api/room.api'
@@ -21,6 +24,7 @@ import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
 import { useOwnerHotel } from '../../owner-hotel-context'
 import { RoomImageModal } from './RoomImageModal'
+import Link from 'next/link'
 
 
 type ApiError = { response?: { data?: { message?: string } } }
@@ -38,6 +42,9 @@ const roomSchema = z.object({
   roomSize: z.coerce.number().min(0).optional(),
   basePrice: z.coerce.number().min(1000, 'Giá tối thiểu 1,000₫'),
   totalRooms: z.coerce.number().min(1, 'Tổng số phòng tối thiểu là 1'),
+  isNonSmoking: z.boolean().default(true),
+  checkIn: z.string().optional(),
+  checkOut: z.string().optional(),
 })
 
 type RoomForm = z.infer<typeof roomSchema>
@@ -54,7 +61,7 @@ export default function OwnerRoomsPage() {
     queryKey: ['owner-rooms', activeHotelId],
     queryFn: async () => {
       if (!activeHotelId) return []
-      const r = await roomApi.getByHotelId(activeHotelId)
+      const r = await roomApi.getForManagement(activeHotelId)
       return r.data
     },
     enabled: !!activeHotelId,
@@ -71,6 +78,23 @@ export default function OwnerRoomsPage() {
       toast.error(err?.response?.data?.message || 'Xoá thất bại!')
     },
   })
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: (room: RoomTypeResponse) => {
+      return room.isActive
+        ? roomApi.suspend(room.id)
+        : roomApi.reactivate(room.id)
+    },
+    onSuccess: (_, room) => {
+      toast.success(room.isActive ? 'Đã tạm ngưng kinh doanh' : 'Đã kích hoạt kinh doanh trở lại')
+      qc.invalidateQueries({ queryKey: ['owner-rooms', activeHotelId] })
+    },
+    onError: (e: unknown) => {
+      const err = e as ApiError
+      toast.error(err?.response?.data?.message || 'Thao tác thất bại!')
+    },
+  })
+
 
   const handleDelete = (room: RoomTypeResponse) => {
     if (confirm(`Xoá loại phòng "${room.typeName}"?`)) {
@@ -103,14 +127,26 @@ export default function OwnerRoomsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Quản lý loại phòng</h1>
-          <p className="text-sm text-gray-500 mt-1">{hotel.hotelName} · {allRooms.length} loại phòng</p>
+          <p className="text-sm text-gray-500 mt-1">
+            {hotel.hotelName} · {allRooms.length} loại phòng
+          </p>
         </div>
-        <button
-          onClick={() => setModalRoom('new')}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={16} /> Thêm loại phòng
-        </button>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href="rooms/trash"
+            className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+          >
+            <Trash2 size={16} /> Thùng rác
+          </Link>
+
+          <button
+            onClick={() => setModalRoom('new')}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={16} /> Thêm loại phòng
+          </button>
+        </div>
       </div>
 
       {/* List */}
@@ -137,6 +173,8 @@ export default function OwnerRoomsPage() {
               onManageImages={() => setImageRoom(room)}
               onManageAmenities={() => setAmenityRoom(room)}
               isDeleting={deleteMutation.isPending}
+              onToggleStatus={() => toggleStatusMutation.mutate(room)}
+              isToggling={toggleStatusMutation.isPending}
             />
           ))}
         </div>
@@ -173,18 +211,45 @@ export default function OwnerRoomsPage() {
 }
 
 // ─── Room Card ────────────────────────────────────────────
-function RoomCard({ room, onEdit, onDelete, onManageImages, onManageAmenities, isDeleting }: {
+
+function RoomCard({
+  room,
+  onEdit,
+  onDelete,
+  onManageImages,
+  onManageAmenities,
+  isDeleting,
+  onToggleStatus,
+  isToggling
+}: {
   room: RoomTypeResponse
   onEdit: () => void
   onDelete: () => void
   onManageImages: () => void
   onManageAmenities: () => void
   isDeleting: boolean
+  onToggleStatus: () => void
+  isToggling: boolean
 }) {
   const displayImage = room.thumbnailUrl || room.images?.find(i => i.isPrimary)?.imageUrl
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all group flex flex-col">
+    <div className={`bg-white rounded-2xl border transition-all group flex flex-col relative overflow-hidden ${
+      room.isActive 
+        ? 'border-gray-200 hover:shadow-lg' 
+        : 'border-gray-100 bg-gray-50/50 shadow-none' // Làm mờ border và đổi nền nếu tạm ngưng
+    }`}>
+
+      {/* Badge Trạng thái ở góc trái */}
+      <div className={`absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-sm backdrop-blur-md ${
+        room.isActive
+          ? 'bg-green-500/90 text-white'
+          : 'bg-gray-400/90 text-white' // Màu xám cho tạm ngưng
+        }`}>
+        {room.isActive ? <CheckCircle2 size={10} /> : <Pause size={10} />}
+        {room.isActive ? 'ĐANG KINH DOANH' : 'TẠM NGƯNG'}
+      </div>
+
       {/* ── Ảnh ── */}
       <div
         className="relative h-48 bg-gray-100 overflow-hidden cursor-pointer"
@@ -194,27 +259,40 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, onManageAmenities, i
           <img
             src={displayImage}
             alt={room.typeName}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${
+              !room.isActive && 'grayscale opacity-40' // Ảnh xám và mờ đi khi tạm ngưng
+            }`}
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-400">
+          <div className={`w-full h-full flex flex-col items-center justify-center gap-2 ${!room.isActive ? 'text-gray-300' : 'text-gray-400'}`}>
             <BedDouble size={32} />
             <span className="text-xs">Chưa có ảnh</span>
           </div>
         )}
 
         {/* Action buttons on hover */}
-        <div className="absolute top-3 right-3 flex gap-2 translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
+        <div className="absolute top-3 right-3 flex gap-2 translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all z-20">
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleStatus() }}
+            disabled={isToggling}
+            title={room.isActive ? 'Tạm ngưng kinh doanh' : 'Kích hoạt kinh doanh'}
+            className={`p-2 bg-white rounded-full shadow-lg transition-colors ${
+              room.isActive ? 'text-amber-500 hover:bg-amber-50' : 'text-green-500 hover:bg-green-50'
+            }`}
+          >
+            {isToggling ? <Loader2 size={14} className="animate-spin" /> : room.isActive ? <Pause size={14} /> : <Play size={14} />}
+          </button>
+
           <button
             onClick={(e) => { e.stopPropagation(); onEdit() }}
-            className="p-2 bg-white/90 hover:bg-white text-blue-600 rounded-full shadow-sm"
+            className="p-2 bg-white hover:bg-blue-50 text-blue-600 rounded-full shadow-lg transition-colors"
           >
             <Pencil size={14} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete() }}
             disabled={isDeleting}
-            className="p-2 bg-white/90 hover:bg-red-50 text-red-600 rounded-full shadow-sm disabled:opacity-50"
+            className="p-2 bg-white hover:bg-red-50 text-red-600 rounded-full shadow-lg disabled:opacity-50 transition-colors"
           >
             <Trash2 size={14} />
           </button>
@@ -222,29 +300,39 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, onManageAmenities, i
       </div>
 
       {/* ── Nội dung ── */}
-      <div className="p-4 flex-1 flex flex-col">
+      <div className={`p-4 flex-1 flex flex-col ${!room.isActive ? 'opacity-60' : ''}`}>
         <div className="mb-2">
-          <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">
-            {room.typeName}
-          </h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className={`font-bold transition-colors line-clamp-1 ${
+              !room.isActive ? 'text-gray-500' : 'text-gray-900 group-hover:text-blue-600'
+            }`}>
+              {room.typeName}
+            </h3>
+            {room.isActive && room.isNonSmoking && (
+              <div className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded shrink-0">
+                <CigaretteOff size={10} /> Không hút thuốc
+              </div>
+            )}
+          </div>
+
           <p className="text-xs text-gray-500 line-clamp-2 mt-1 min-h-[32px]">
             {room.description || 'Chưa có mô tả cho loại phòng này.'}
           </p>
         </div>
 
-        {/* Tags */}
-        <div className="flex flex-wrap gap-3 py-3 border-y border-gray-50 my-2">
-          <div className="flex items-center gap-1.5 text-xs text-gray-600">
-            <Users size={13} className="text-gray-400" />
-            <span>{room.maxAdults}L {room.maxChildren ? `, ${room.maxChildren}T` : ''}</span>
+        {/* Tags cơ bản */}
+        <div className="grid grid-cols-3 gap-2 py-3 border-y border-gray-50 my-2">
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <Users size={13} className="shrink-0" />
+            <span className="truncate">{room.maxAdults}L {room.maxChildren ? `+ ${room.maxChildren}T` : ''}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-gray-600">
-            <Maximize2 size={13} className="text-gray-400" />
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <Maximize2 size={13} className="shrink-0" />
             <span>{room.roomSize}m²</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-gray-600">
-            <BedDouble size={13} className="text-gray-400" />
-            <span className="truncate max-w-[80px]">{room.bedType}</span>
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <BedDouble size={13} className="shrink-0" />
+            <span className="truncate">{room.bedType || 'Tiêu chuẩn'}</span>
           </div>
         </div>
 
@@ -252,26 +340,33 @@ function RoomCard({ room, onEdit, onDelete, onManageImages, onManageAmenities, i
         <div className="mt-auto pt-2 flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Giá mỗi đêm</span>
-            <div className="text-blue-600 font-black text-base">
+            <div className={`font-black text-lg leading-none ${
+              !room.isActive ? 'text-gray-400' : 'text-blue-600'
+            }`}>
               {Number(room.basePrice).toLocaleString('vi-VN')}₫
             </div>
           </div>
 
-          {/* ── 2 nút quản lý ── */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={onManageAmenities}
-              className="flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-700 uppercase tracking-tighter border border-violet-200 hover:border-violet-400 rounded-lg px-2.5 py-1.5 bg-violet-50 hover:bg-violet-100 transition-all"
+              className={`p-2 rounded-xl border transition-all ${
+                !room.isActive 
+                  ? 'text-gray-400 border-gray-100 bg-gray-50' 
+                  : 'text-violet-600 border-violet-100 hover:bg-violet-50'
+              }`}
             >
-              <Sparkles size={11} />
-              Tiện ích
+              <Sparkles size={16} />
             </button>
             <button
               onClick={onManageImages}
-              className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-tighter border border-blue-200 hover:border-blue-400 rounded-lg px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 transition-all"
+              className={`p-2 rounded-xl border transition-all ${
+                !room.isActive 
+                  ? 'text-gray-400 border-gray-100 bg-gray-50' 
+                  : 'text-blue-600 border-blue-100 hover:bg-blue-50'
+              }`}
             >
-              <Upload size={11} />
-              Ảnh
+              <Upload size={16} />
             </button>
           </div>
         </div>
@@ -546,6 +641,30 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
         </div>
 
         <form onSubmit={handleSubmit(d => saveMutation.mutate(d))} className="px-6 py-5 space-y-4">
+
+          <div className="grid grid-cols-2 gap-4 border-t pt-4">
+            <div>
+              <label className={labelClass}>Giờ nhận phòng (Check-in)</label>
+              <input {...register('checkIn')} type="time" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Giờ trả phòng (Check-out)</label>
+              <input {...register('checkOut')} type="time" className={inputClass} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 py-2">
+            <input
+              {...register('isNonSmoking')}
+              type="checkbox"
+              id="isNonSmoking"
+              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            />
+            <label htmlFor="isNonSmoking" className="text-sm font-medium text-gray-700">
+              Phòng không hút thuốc (Non-smoking)
+            </label>
+          </div>
+
           <div>
             <label className={labelClass}>Tên loại phòng <span className="text-red-500">*</span></label>
             <input {...register('typeName')} className={inputClass} placeholder="VD: Deluxe Double, Superior Twin..." />
@@ -578,15 +697,13 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Loại giường</label>
-              <select {...register('bedType')} className={`${inputClass} bg-white`}>
-                <option value="">-- Chọn --</option>
-                <option value="Single">Single</option>
-                <option value="Double">Double</option>
-                <option value="Twin">Twin</option>
-                <option value="King">King</option>
-                <option value="Queen">Queen</option>
-                <option value="Bunk">Bunk</option>
-              </select>
+              <input
+                {...register('bedType')}
+                type="text"
+                className={inputClass}
+                placeholder="VD: 2 giường đơn, 1 giường đôi lớn..."
+              />
+              {errors.bedType && <p className="text-xs text-red-500 mt-1">{errors.bedType.message}</p>}
             </div>
             <div>
               <label className={labelClass}>Diện tích (m²)</label>
