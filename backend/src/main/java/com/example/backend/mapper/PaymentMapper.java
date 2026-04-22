@@ -25,6 +25,8 @@ public class PaymentMapper {
             return null;
         return PaymentResponse.builder()
                 .id(p.getId())
+                .hotelId(p.getBooking() != null && p.getBooking().getHotel() != null ? p.getBooking().getHotel().getId() : null)
+                .hotelName(p.getBooking() != null && p.getBooking().getHotel() != null ? p.getBooking().getHotel().getHotelName() : null)
                 .bookingId(p.getBooking() != null ? p.getBooking().getId() : null)
                 .bookingCode(p.getBooking() != null ? p.getBooking().getBookingCode() : null)
                 .paymentMethod(p.getPaymentMethod())

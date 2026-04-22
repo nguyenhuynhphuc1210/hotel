@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PaymentResponse {
     private Long id;
+    private Long hotelId; 
+    private String hotelName;
     private Long bookingId;
     private String bookingCode;
     private PaymentMethod paymentMethod;

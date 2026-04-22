@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class RoomTypeSummaryResponse {
     private Long id;
+    private Long hotelId;
+    private String hotelName;
     private String typeName;
     private Integer maxAdults;
     private Integer maxChildren;
@@ -18,5 +20,5 @@ public class RoomTypeSummaryResponse {
     private Integer totalRooms;
     private Boolean isActive;
     private Boolean isNonSmoking;
-    private String thumbnailUrl; 
+    private String thumbnailUrl;
 }

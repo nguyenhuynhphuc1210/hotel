@@ -79,6 +79,8 @@ public class RoomTypeMapper {
 
         return RoomTypeSummaryResponse.builder()
                 .id(rt.getId())
+                .hotelId(rt.getHotel() != null ? rt.getHotel().getId() : null)
+                .hotelName(rt.getHotel() != null ? rt.getHotel().getHotelName() : null)
                 .typeName(rt.getTypeName())
                 .maxAdults(rt.getMaxAdults())
                 .maxChildren(rt.getMaxChildren())
@@ -86,9 +88,7 @@ public class RoomTypeMapper {
                 .roomSize(rt.getRoomSize())
                 .basePrice(rt.getBasePrice())
                 .totalRooms(rt.getTotalRooms())
-
-                .isNonSmoking(rt.getIsNonSmoking())
-                
+                .isNonSmoking(rt.getIsNonSmoking())                
                 .isActive(rt.getIsActive())
                 .thumbnailUrl(thumbnail)
                 .build();
