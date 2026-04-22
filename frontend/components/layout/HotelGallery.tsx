@@ -1,30 +1,47 @@
 'use client'
 
-import { useState } from 'react'
-import { Images, X, ChevronLeft, ChevronRight, Star, Heart } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Images, X, ChevronLeft, ChevronRight, Star, Heart, Loader2 } from 'lucide-react'
 import { HotelImageResponse } from '@/lib/api/hotel.api'
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
 import favoriteApi from '@/lib/api/favorite.api'
 import toast from 'react-hot-toast'
+import axiosInstance from '@/lib/api/axios'
 
 interface Props {
     images: HotelImageResponse[]
     hotelId: number
-    initialFavorited?: boolean
 }
 
-export default function HotelGallery({ images, hotelId, initialFavorited = false }: Props) {
-    const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
-    const [isFavorited, setIsFavorited] = useState(initialFavorited)
-    const [isTogglingFav, setIsTogglingFav] = useState(false)
+export default function HotelGallery({ images, hotelId }: Props) {
     const { user } = useAuthStore()
+    const queryClient = useQueryClient()
     const router = useRouter()
+    const [isTogglingFav, setIsTogglingFav] = useState(false)
+    const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
+
+    // 1. Fetch trạng thái yêu thích
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+
+    const { data: favStatus, isLoading: isFavLoading } = useQuery({
+        queryKey: ['fav-status', hotelId, user?.id],
+        queryFn: () =>
+            axiosInstance
+                .get<{ isFavorited: boolean }>(`/api/favorites/${hotelId}/status`)
+                .then(r => r.data),
+        // Chạy query nếu có token (không đợi user object từ store)
+        enabled: !!token && !!hotelId,
+        staleTime: 1000 * 60 * 10, // Giữ 10 phút để không bị fetch lại liên tục
+    })
+
+    const isFavorited = favStatus?.isFavorited ?? false
 
     const handleToggleFavorite = async (e: React.MouseEvent) => {
         e.stopPropagation()
-        if (!user) {
-            toast.error('Vui lòng đăng nhập để lưu yêu thích!')
+        if (!token) {
+            toast.error('Vui lòng đăng nhập!')
             router.push(`/login?redirect=/hotels/${hotelId}`)
             return
         }
@@ -32,17 +49,14 @@ export default function HotelGallery({ images, hotelId, initialFavorited = false
         try {
             const res = await favoriteApi.toggle(hotelId)
             const favorited = res.data.isFavorited
-            setIsFavorited(favorited)
+            queryClient.setQueryData(['fav-status', hotelId, user?.id], { isFavorited: favorited })
+            queryClient.invalidateQueries({ queryKey: ['my-favorites'] })
             toast.success(favorited ? 'Đã thêm vào yêu thích!' : 'Đã xóa khỏi yêu thích!')
         } catch {
-            toast.error('Có lỗi xảy ra, vui lòng thử lại')
+            toast.error('Có lỗi xảy ra')
         } finally {
             setIsTogglingFav(false)
         }
-    }
-
-    if (!images || images.length === 0) {
-        return <div className="h-[450px] bg-gray-100 rounded-2xl flex items-center justify-center text-gray-400">Không có hình ảnh</div>
     }
 
     const primaryImage = images.find(img => img.isPrimary) || images[0]
@@ -136,18 +150,19 @@ export default function HotelGallery({ images, hotelId, initialFavorited = false
                 <button
                     onClick={handleToggleFavorite}
                     disabled={isTogglingFav}
-                    className={`absolute top-4 right-4 flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-bold shadow-lg backdrop-blur-md transition-all active:scale-95 disabled:opacity-60 ${
-                        isFavorited
-                            ? 'bg-red-500 text-white'
-                            : 'bg-white/90 text-gray-700 hover:bg-white border border-gray-200'
-                    }`}
+                    className={`absolute top-4 right-4 flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-bold shadow-lg backdrop-blur-md transition-all active:scale-95 disabled:opacity-60 
+                        ${isFavLoading ? 'bg-white/50 text-transparent' : ''} 
+                        ${!isFavLoading && isFavorited ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-700 hover:bg-white border border-gray-200'}
+                    `}
                 >
-                    <Heart
-                        size={16}
-                        className={isFavorited ? 'fill-white' : ''}
-                        fill={isFavorited ? 'white' : 'none'}
-                    />
-                    {isFavorited ? 'Đã lưu' : 'Yêu thích'}
+                    {isFavLoading ? (
+                        <Loader2 size={16} className="animate-spin text-gray-400" />
+                    ) : (
+                        <Heart size={16} fill={isFavorited ? 'white' : 'none'} />
+                    )}
+
+                    {!isFavLoading && (isTogglingFav ? '...' : isFavorited ? 'Đã lưu' : 'Yêu thích')}
+                    {isFavLoading && <span className="text-gray-400">Đang tải...</span>}
                 </button>
             </div>
 

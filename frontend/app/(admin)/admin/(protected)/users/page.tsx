@@ -22,7 +22,7 @@ const GENDER_MAP = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' }
 export default function AdminUsersPage() {
   // State phân trang
   const [currentPage, setCurrentPage] = useState(0)
-  const [pageSize, setPageSize] = useState(5)
+  const [pageSize, setPageSize] = useState(10)
 
   // Gọi API với phân trang
   const { data: pageData, isLoading } = useUsers(currentPage, pageSize)

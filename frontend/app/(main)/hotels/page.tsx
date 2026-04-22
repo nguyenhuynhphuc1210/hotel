@@ -44,7 +44,7 @@ export default function HotelsPage() {
     const [priceMin, setPriceMin] = useState('')
     const [priceMax, setPriceMax] = useState('')
     const [currentPage, setCurrentPage] = useState(0)
-    const [pageSize, setPageSize] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
     // ── Fetch hotels ──
     const { data: pageData, isLoading } = useQuery({

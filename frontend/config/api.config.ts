@@ -8,6 +8,7 @@ const API_CONFIG = {
     FORGOT_PASSWORD: '/api/auth/forgot-password',
     VERIFY_OTP: '/api/auth/verify-otp',
     RESET_PASSWORD: '/api/auth/reset-password',
+    GOOGLE_LOGIN: '/api/auth/google',
 
     // Hotels
     HOTELS: '/api/hotels',
@@ -74,6 +75,12 @@ const API_CONFIG = {
     FAVORITES_TOGGLE: (hotelId: number | string) => `/api/favorites/${hotelId}/toggle`,
     FAVORITES_MY: '/api/favorites/my-favorites',
 
+    // Payments
+    PAYMENTS: '/api/payments',
+    PAYMENT_BY_ID: (id: number | string) => `/api/payments/${id}`,
+    PAYMENT_BY_BOOKING: (bookingId: number | string) => `/api/payments/booking/${bookingId}`,
+    VNPAY_RETURN: '/api/payments/vnpay-return',
+    MOMO_RETURN: '/api/payments/momo-return',
   },
 }
 

@@ -12,30 +12,30 @@ import { HotelResponse, HotelStatus } from '@/lib/api/hotel.api'
 import {
   Search, Plus, Pencil, Trash2, CheckCircle,
   XCircle, ShieldCheck, ShieldOff, Star, 
-  Loader2, Ban, RotateCcw, AlertTriangle
+  Loader2, Ban, RotateCcw, AlertTriangle, Building2
 } from 'lucide-react'
 import HotelFormModal from '@/components/admin/hotel/HotelFormModal'
 import Pagination from '@/components/ui/Pagination'
+import HotelDetailModal from '@/components/admin/hotel/HotelDetailModal'
 
 export default function AdminHotelsPage() {
   const [currentPage, setCurrentPage] = useState(0)
-  const [pageSize, setPageSize] = useState(5)
+  const [pageSize, setPageSize] = useState(10)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<HotelStatus | ''>('')
   const [openForm, setOpenForm] = useState(false)
   const [editingHotel, setEditingHotel] = useState<HotelResponse | null>(null)
+  // ── MỚI: state cho modal chi tiết ──
+  const [detailHotel, setDetailHotel] = useState<HotelResponse | null>(null)
 
-  // 1. Lấy dữ liệu từ Hook
   const { data: pageData, isLoading } = useHotels(currentPage, pageSize)
   const hotels = pageData?.content || []
 
-  // 2. Mutations
   const deleteMutation = useDeleteHotel()
   const approveMutation = useApproveHotel()
   const rejectMutation = useRejectHotel()
   const disableMutation = useDisableHotel()
 
-  // 3. Logic xử lý hành động
   const handleDelete = (h: HotelResponse) => {
     if (confirm(`Chuyển khách sạn "${h.hotelName}" vào thùng rác?`)) {
       deleteMutation.mutate(h.id)
@@ -50,9 +50,8 @@ export default function AdminHotelsPage() {
 
   const handleReject = (h: HotelResponse) => {
     const reason = prompt(`Lý do từ chối khách sạn "${h.hotelName}":`)
-    if (reason === null) return // Người dùng nhấn Cancel
+    if (reason === null) return
     if (!reason.trim()) return alert("Vui lòng nhập lý do từ chối!")
-    
     rejectMutation.mutate({ id: h.id, reason })
   }
 
@@ -60,7 +59,6 @@ export default function AdminHotelsPage() {
     const reason = prompt(`Lý do vô hiệu hóa khách sạn "${h.hotelName}":`)
     if (reason === null) return 
     if (!reason.trim()) return alert("Vui lòng nhập lý do vô hiệu hóa!")
-
     disableMutation.mutate({ id: h.id, reason })
   }
 
@@ -69,23 +67,18 @@ export default function AdminHotelsPage() {
     setOpenForm(true)
   }
 
-  // 4. Lọc dữ liệu trên trang hiện tại
   const filtered = hotels.filter(h => {
     const matchKeyword =
       h.hotelName.toLowerCase().includes(keyword.toLowerCase()) ||
       h.email.toLowerCase().includes(keyword.toLowerCase()) ||
       h.district.toLowerCase().includes(keyword.toLowerCase())
-    
     const matchStatus = statusFilter === '' ? true : h.status === statusFilter
-    
     return matchKeyword && matchStatus
   })
 
-  // 5. Thống kê
   const totalPending = hotels.filter(h => h.status === HotelStatus.PENDING).length
   const totalApproved = hotels.filter(h => h.status === HotelStatus.APPROVED).length
 
-  // Helper render Badge trạng thái
   const renderStatusBadge = (status: HotelStatus) => {
     const configs = {
       [HotelStatus.PENDING]: { color: 'text-amber-700 bg-amber-50', label: 'Chờ duyệt', icon: <XCircle size={12} /> },
@@ -157,7 +150,7 @@ export default function AdminHotelsPage() {
         </div>
         <select
           value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value as HotelStatus | ''); setCurrentPage(0); }}
+          onChange={e => { setStatusFilter(e.target.value as HotelStatus | ''); setCurrentPage(0) }}
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
         >
           <option value="">Tất cả trạng thái</option>
@@ -177,7 +170,7 @@ export default function AdminHotelsPage() {
               <th className="text-left px-4 py-3">Khách sạn</th>
               <th className="text-left px-4 py-3">Địa chỉ</th>
               <th className="text-left px-4 py-3">Liên hệ</th>
-              <th className="text-left px-4 py-3 text-center">Sao</th>
+              <th className="text-center px-4 py-3">Sao</th>
               <th className="text-left px-4 py-3">Chủ sở hữu</th>
               <th className="text-left px-4 py-3">Trạng thái</th>
               <th className="text-right px-4 py-3">Hành động</th>
@@ -185,16 +178,47 @@ export default function AdminHotelsPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {isLoading ? (
-              <tr><td colSpan={7} className="text-center py-12"><Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-500" /></td></tr>
+              <tr>
+                <td colSpan={7} className="text-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-500" />
+                </td>
+              </tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-12 text-gray-400">Không tìm thấy khách sạn nào</td></tr>
+              <tr>
+                <td colSpan={7} className="text-center py-12 text-gray-400">
+                  Không tìm thấy khách sạn nào
+                </td>
+              </tr>
             ) : (
               filtered.map(h => (
                 <tr key={h.id} className="hover:bg-gray-50 transition-colors">
+                  {/* ── Cột Khách sạn: có thumbnail + click mở detail ── */}
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{h.hotelName}</div>
-                    <div className="text-xs text-gray-400">#{h.id}</div>
+                    <div
+                      className="flex items-center gap-3 cursor-pointer group"
+                      onClick={() => setDetailHotel(h)}
+                    >
+                      {/* Thumbnail */}
+                      <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-gray-200 bg-gray-100 flex items-center justify-center">
+                        {h.thumbnailUrl ? (
+                          <img
+                            src={h.thumbnailUrl}
+                            alt={h.hotelName}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                        ) : (
+                          <Building2 size={18} className="text-gray-300" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                          {h.hotelName}
+                        </div>
+                        <div className="text-xs text-gray-400">#{h.id}</div>
+                      </div>
+                    </div>
                   </td>
+
                   <td className="px-4 py-3 text-gray-600">
                     <div>{h.district}</div>
                     <div className="text-xs text-gray-400">{h.ward}, {h.city}</div>
@@ -216,19 +240,16 @@ export default function AdminHotelsPage() {
                   <td className="px-4 py-3">
                     {renderStatusBadge(h.status)}
                     {h.statusReason && (
-                       <div className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 italic max-w-[120px] truncate" title={h.statusReason}>
-                          <AlertTriangle size={10} /> {h.statusReason}
-                       </div>
+                      <div className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1 italic max-w-[120px] truncate" title={h.statusReason}>
+                        <AlertTriangle size={10} /> {h.statusReason}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {/* Nút sửa */}
                       <button onClick={() => handleEdit(h)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50">
                         <Pencil size={15} />
                       </button>
-
-                      {/* Nút Duyệt / Từ chối (Chỉ cho PENDING) */}
                       {h.status === HotelStatus.PENDING && (
                         <>
                           <button onClick={() => handleApprove(h)} title="Duyệt" className="p-1.5 rounded-lg text-gray-500 hover:text-green-600 hover:bg-green-50">
@@ -239,22 +260,16 @@ export default function AdminHotelsPage() {
                           </button>
                         </>
                       )}
-
-                      {/* Nút Khóa (Chỉ cho APPROVED) */}
                       {h.status === HotelStatus.APPROVED && (
                         <button onClick={() => handleDisable(h)} title="Vô hiệu hóa" className="p-1.5 rounded-lg text-gray-500 hover:text-amber-600 hover:bg-amber-50">
                           <ShieldOff size={15} />
                         </button>
                       )}
-
-                      {/* Nút Kích hoạt lại (Cho DISABLED hoặc REJECTED) */}
                       {(h.status === HotelStatus.DISABLED || h.status === HotelStatus.REJECTED) && (
                         <button onClick={() => handleApprove(h)} title="Kích hoạt lại" className="p-1.5 rounded-lg text-gray-500 hover:text-green-600 hover:bg-green-50">
                           <RotateCcw size={15} />
                         </button>
                       )}
-
-                      {/* Nút Xóa (Mềm) */}
                       <button onClick={() => handleDelete(h)} className="p-1.5 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50">
                         <Trash2 size={15} />
                       </button>
@@ -266,7 +281,6 @@ export default function AdminHotelsPage() {
           </tbody>
         </table>
 
-        {/* Phân trang */}
         {pageData && pageData.totalPages > 0 && (
           <div className="px-4 py-3 border-t border-gray-100">
             <Pagination
@@ -281,11 +295,20 @@ export default function AdminHotelsPage() {
         )}
       </div>
 
+      {/* Form modal */}
       <HotelFormModal
         open={openForm}
-        onClose={() => { setOpenForm(false); setEditingHotel(null); }}
+        onClose={() => { setOpenForm(false); setEditingHotel(null) }}
         hotel={editingHotel}
       />
+
+      {/* ── Detail modal ── */}
+      {detailHotel && (
+        <HotelDetailModal
+          hotel={detailHotel}
+          onClose={() => setDetailHotel(null)}
+        />
+      )}
     </div>
   )
 }

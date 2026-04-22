@@ -14,13 +14,11 @@ interface RoomGalleryModalProps {
     nights: number
 }
 
-type TabKey = 'all' | 'room' | 'bathroom' | 'view'
+type TabKey = 'all' 
 
 const TABS: { key: TabKey; label: string }[] = [
     { key: 'all', label: 'Tất cả' },
-    { key: 'room', label: 'Phòng' },
-    { key: 'bathroom', label: 'Phòng tắm' },
-    { key: 'view', label: 'View' },
+    
 ]
 
 export default function RoomGalleryModal({
@@ -240,19 +238,7 @@ export default function RoomGalleryModal({
                                     <div className="pt-4 border-t border-gray-100">
                                         <p className="text-xs text-gray-500 leading-relaxed italic">{room.description}</p>
                                     </div>
-                                )}
-
-                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                    <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">Giá mỗi đêm</p>
-                                    <div className="text-2xl font-black text-blue-700">
-                                        {Number(room.basePrice).toLocaleString('vi-VN')}₫
-                                    </div>
-                                    {hasFullDates && (
-                                        <p className="text-[11px] text-blue-500 font-bold mt-1">
-                                            Tổng {nights} đêm: {totalPrice.toLocaleString('vi-VN')}₫
-                                        </p>
-                                    )}
-                                </div>
+                                )}                                
                             </div>
 
                             <div className="mt-6 space-y-2">

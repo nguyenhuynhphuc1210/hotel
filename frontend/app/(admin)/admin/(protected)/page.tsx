@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Hotel, CalendarCheck, Users, TrendingUp, Clock, CheckCircle, XCircle } from 'lucide-react'
-import hotelApi, { HotelResponse, PageResponse } from '@/lib/api/hotel.api'
+import hotelApi, { HotelResponse, HotelStatus, PageResponse } from '@/lib/api/hotel.api'
 import bookingApi from '@/lib/api/booking.api'
 import userApi from '@/lib/api/user.api'
 import { BookingResponse } from '@/types/booking.types'
@@ -59,8 +59,8 @@ export default function AdminDashboardPage() {
       .reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0)
   , [bookingList])
 
-  const pendingHotels = hotelList.filter(h => !h.isActive).length
-  const activeHotels = hotelList.filter(h => h.isActive).length
+  const pendingHotels = hotelList.filter(h => h.status === HotelStatus.PENDING).length
+  const activeHotels = hotelList.filter(h => h.status === HotelStatus.APPROVED).length
   
   const pendingBookings = bookingList.filter(b => b.status === 'PENDING').length
   const confirmedBookings = bookingList.filter(b => b.status === 'CONFIRMED').length
@@ -174,7 +174,7 @@ export default function AdminDashboardPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {hotelList.filter(h => !h.isActive).slice(0, 5).map(hotel => (
+              {hotelList.filter(h => h.status === HotelStatus.PENDING).slice(0, 5).map(hotel => (
                 <div key={hotel.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 px-2 rounded-lg transition-colors">
                   <div>
                     <div className="text-sm font-bold text-gray-900">{hotel.hotelName}</div>

@@ -53,7 +53,7 @@ const FALLBACK = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=40
 export default function HomePage() {
     const router = useRouter()
     const [currentPage, setCurrentPage] = useState(0)
-    const pageSize = 4
+    const pageSize = 8
 
     const { data: hotelsPage, isLoading: hotelsLoading } = useQuery({
         queryKey: ['hotels-active', currentPage],

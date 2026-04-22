@@ -50,7 +50,7 @@ function ProfilePage() {
 
     // Pagination state for bookings
     const [bookingPage, setBookingPage] = useState(0)
-    const [bookingSize] = useState(5)
+    const [bookingSize] = useState(10)
 
     // Cancel confirmation state
     const [cancellingId, setCancellingId] = useState<number | null>(null)
@@ -420,15 +420,15 @@ function ProfilePage() {
                                     <div className="grid grid-cols-1 gap-4">
                                         {favorites.map((fav: FavoriteResponse, index: number) => (
                                             <div
-                                                key={fav.hotelId || index}
+                                                key={fav.hotel.id || index}
                                                 className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden flex"
                                             >
                                                 <div
                                                     className="w-36 shrink-0 bg-gray-100 cursor-pointer overflow-hidden"
-                                                    onClick={() => router.push(`/hotels/${fav.hotelId}`)}
+                                                    onClick={() => router.push(`/hotels/${fav.hotel.id}`)}
                                                 >
-                                                    {fav.hotelThumbnail ? (
-                                                        <img src={fav.hotelThumbnail} alt={fav.hotelName} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                                                    {fav.hotel.thumbnailUrl ? (
+                                                        <img src={fav.hotel.thumbnailUrl} alt={fav.hotel.hotelName} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                                                     ) : (
                                                         <div className="w-full h-full flex items-center justify-center">
                                                             <Hotel size={32} className="text-gray-300" />
@@ -440,20 +440,20 @@ function ProfilePage() {
                                                     <div>
                                                         <h4
                                                             className="font-bold text-gray-900 text-base mb-1 cursor-pointer hover:text-blue-600 transition-colors"
-                                                            onClick={() => router.push(`/hotels/${fav.hotelId}`)}
+                                                            onClick={() => router.push(`/hotels/${fav.hotel.id}`)}
                                                         >
-                                                            {fav.hotelName}
+                                                            {fav.hotel.hotelName}
                                                         </h4>
-                                                        {fav.hotelCity && (
+                                                        {fav.hotel.city && (
                                                             <div className="flex items-center gap-1 text-xs text-gray-400 mb-2">
-                                                                <MapPin size={11} /> {fav.hotelCity}
+                                                                <MapPin size={11} /> {fav.hotel.city}
                                                             </div>
                                                         )}
-                                                        {fav.hotelStarRating && (
+                                                        {fav.hotel.starRating && (
                                                             <div className="flex items-center gap-0.5">
-                                                                {[...Array(Math.round(fav.hotelStarRating))].map((_, i) => (
+                                                                {[...Array(Math.round(fav.hotel.starRating))].map((_, i) => (
                                                                     <Star
-                                                                        key={`${fav.hotelId}-star-${i}`}
+                                                                        key={`${fav.hotel.id}-star-${i}`}
                                                                         size={11}
                                                                         fill="#f59e0b"
                                                                         className="text-amber-400"
@@ -470,18 +470,18 @@ function ProfilePage() {
                                                         </div>
                                                         <div className="flex gap-2">
                                                             <button
-                                                                onClick={() => router.push(`/hotels/${fav.hotelId}`)}
+                                                                onClick={() => router.push(`/hotels/${fav.hotel.id}`)}
                                                                 className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors"
                                                             >
                                                                 Xem khách sạn
                                                             </button>
                                                             <button
-                                                                onClick={() => handleRemoveFavorite(fav.hotelId)}
-                                                                disabled={removingId === fav.hotelId}
+                                                                onClick={() => handleRemoveFavorite(fav.hotel.id)}
+                                                                disabled={removingId === fav.hotel.id}
                                                                 className="p-1.5 rounded-xl border border-red-100 text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
                                                                 title="Xóa khỏi yêu thích"
                                                             >
-                                                                {removingId === fav.hotelId
+                                                                {removingId === fav.hotel.id
                                                                     ? <Loader2 size={14} className="animate-spin" />
                                                                     : <X size={14} />}
                                                             </button>

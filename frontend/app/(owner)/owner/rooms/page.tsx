@@ -641,30 +641,6 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
         </div>
 
         <form onSubmit={handleSubmit(d => saveMutation.mutate(d))} className="px-6 py-5 space-y-4">
-
-          <div className="grid grid-cols-2 gap-4 border-t pt-4">
-            <div>
-              <label className={labelClass}>Giờ nhận phòng (Check-in)</label>
-              <input {...register('checkIn')} type="time" className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>Giờ trả phòng (Check-out)</label>
-              <input {...register('checkOut')} type="time" className={inputClass} />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 py-2">
-            <input
-              {...register('isNonSmoking')}
-              type="checkbox"
-              id="isNonSmoking"
-              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-            />
-            <label htmlFor="isNonSmoking" className="text-sm font-medium text-gray-700">
-              Phòng không hút thuốc (Non-smoking)
-            </label>
-          </div>
-
           <div>
             <label className={labelClass}>Tên loại phòng <span className="text-red-500">*</span></label>
             <input {...register('typeName')} className={inputClass} placeholder="VD: Deluxe Double, Superior Twin..." />
@@ -707,8 +683,20 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
             </div>
             <div>
               <label className={labelClass}>Diện tích (m²)</label>
-              <input {...register('roomSize')} type="number" min={0} className={inputClass} placeholder="VD: 25" />
+              <input {...register('roomSize')} step="any" min={0} className={inputClass} placeholder="VD: 25" />
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 py-2">
+            <input
+              {...register('isNonSmoking')}
+              type="checkbox"
+              id="isNonSmoking"
+              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            />
+            <label htmlFor="isNonSmoking" className="text-sm font-medium text-gray-700">
+              Phòng không hút thuốc (Non-smoking)
+            </label>
           </div>
 
           <div>

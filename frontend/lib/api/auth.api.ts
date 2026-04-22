@@ -19,6 +19,9 @@ const authApi = {
   resetPassword: (email: string, otp: string, newPassword: string) =>
     axiosInstance.post(API_CONFIG.ENDPOINTS.RESET_PASSWORD, { email, otp, newPassword }),
 
+  loginWithGoogle: (idToken: string) =>
+    axiosInstance.post<AuthResponse>(API_CONFIG.ENDPOINTS.GOOGLE_LOGIN, { idToken }),
+
   logout: () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('user')

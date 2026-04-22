@@ -1,11 +1,12 @@
+// types/favorite.types.ts
 export interface FavoriteResponse {
-    userId: number
-    userEmail: string
-    hotelId: number
-    hotelName: string
-    hotelCity?: string
-    hotelThumbnail?: string
-    hotelStarRating?: number
+    hotel: {
+        id: number
+        hotelName: string
+        city?: string
+        thumbnailUrl?: string
+        starRating?: number
+    }
     createdAt: string
 }
 
