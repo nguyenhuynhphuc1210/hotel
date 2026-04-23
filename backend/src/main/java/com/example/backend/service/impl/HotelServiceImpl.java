@@ -323,12 +323,18 @@ public class HotelServiceImpl implements HotelService {
     public Page<HotelSummaryResponse> searchHotels(String district, String keyword,
             LocalDate checkIn, LocalDate checkOut, Integer guests, int page, int size) {
 
-        String searchDistrict = (district != null && !district.isBlank()) ? district.trim() : null;
-        String searchKeyword = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
+        String searchDistrict = (district != null && !district.trim().isEmpty()) ? district.trim() : null;
+        String searchKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+
+        Integer searchGuests = (guests != null && guests > 0) ? guests : 1;
 
         Long nights = 0L;
         if (checkIn != null && checkOut != null) {
-            nights = checkOut.toEpochDay() - checkIn.toEpochDay();
+            if (!checkIn.isBefore(checkOut)) {
+                throw new IllegalArgumentException("Ngày nhận phòng phải diễn ra trước ngày trả phòng.");
+            }
+
+            nights = java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
         }
 
         Pageable pageable = PageRequest.of(page, size);
@@ -339,6 +345,7 @@ public class HotelServiceImpl implements HotelService {
                 checkIn,
                 checkOut,
                 nights,
+                searchGuests, 
                 pageable);
 
         return hotelPage.map(hotelMapper::toHotelSummaryResponse);

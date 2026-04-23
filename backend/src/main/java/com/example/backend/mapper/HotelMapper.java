@@ -60,7 +60,7 @@ public class HotelMapper {
                 .email(hotel.getEmail())
                 .ownerId(hotel.getOwner() != null ? hotel.getOwner().getId() : null)
                 .ownerName(hotel.getOwner() != null ? hotel.getOwner().getFullName() : null)
-
+                .ownerEmail(hotel.getOwner() != null ? hotel.getOwner().getEmail() : null)
                 .status(hotel.getStatus())
                 .statusReason(hotel.getStatusReason())
                 .deletedAt(hotel.getDeletedAt())

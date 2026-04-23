@@ -1,14 +1,19 @@
 package com.example.backend.service.impl;
 
+import com.example.backend.dto.response.ChatMessageResponse;
+import com.example.backend.dto.response.ConversationResponse;
 import com.example.backend.entity.ChatMessage;
 import com.example.backend.entity.Conversation;
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.User;
+import com.example.backend.mapper.ChatMapper;
 import com.example.backend.repository.ChatMessageRepository;
 import com.example.backend.repository.ConversationRepository;
 import com.example.backend.repository.HotelRepository;
 import com.example.backend.repository.UserRepository;
+import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.ChatService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,18 +29,18 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
     private final HotelRepository hotelRepository;
+    private final ChatMapper chatMapper;
 
     @Override
     @Transactional
-    public ChatMessage saveMessage(Long userId, Long hotelId, String senderEmail, String content) {
-        
+    public ChatMessageResponse saveMessage(Long userId, Long hotelId, String senderEmail, String content) {
         Conversation conversation = conversationRepository.findByUser_IdAndHotel_Id(userId, hotelId)
                 .orElseGet(() -> {
                     User user = userRepository.findById(userId)
-                            .orElseThrow(() -> new RuntimeException("Không tìm thấy User"));
+                            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy User"));
                     Hotel hotel = hotelRepository.findById(hotelId)
-                            .orElseThrow(() -> new RuntimeException("Không tìm thấy Hotel"));
-                    
+                            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Hotel"));
+
                     Conversation newConv = Conversation.builder()
                             .user(user)
                             .hotel(hotel)
@@ -54,29 +59,44 @@ public class ChatServiceImpl implements ChatService {
                 .isRead(false)
                 .build();
 
-        return chatMessageRepository.save(message);
-    }
+        ChatMessage savedMessage = chatMessageRepository.save(message);
 
-    // --- CÁC HÀM MỚI ĐỂ LẤY DỮ LIỆU INBOX & LỊCH SỬ ---
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Conversation> getUserInbox(Long userId) {
-        // Trả về danh sách đoạn chat, tin nhắn mới nhất xếp lên đầu
-        return conversationRepository.findByUser_IdOrderByLastMessageAtDesc(userId);
+        return chatMapper.toResponse(savedMessage);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Conversation> getHotelInbox(Long hotelId) {
-        // Trả về danh sách đoạn chat cho chủ KS, tin nhắn mới nhất xếp lên đầu
-        return conversationRepository.findByHotel_IdOrderByLastMessageAtDesc(hotelId);
+    public List<ConversationResponse> getUserInbox(String userEmail) {
+        // Logic được chuyển từ Controller xuống
+        Long userId = userRepository.findIdByEmail(userEmail);
+        if (userId == null) {
+            throw new EntityNotFoundException("Không tìm thấy người dùng");
+        }
+
+        List<Conversation> inbox = conversationRepository.findByUser_IdOrderByLastMessageAtDesc(userId);
+        return chatMapper.toConversationResponseList(inbox);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ChatMessage> getChatHistory(Long conversationId) {
-        // Trả về danh sách tin nhắn của 1 phòng chat, xếp từ cũ đến mới (trên xuống dưới)
-        return chatMessageRepository.findByConversation_IdOrderByTimestampAsc(conversationId);
+    public List<ConversationResponse> getHotelInbox(Long hotelId, String currentUserEmail) {
+        // Logic check quyền và lấy hotel được chuyển từ Controller xuống
+        String ownerEmail = hotelRepository.findOwnerEmailByHotelId(hotelId);
+        if (ownerEmail == null) {
+            throw new EntityNotFoundException("Không tìm thấy khách sạn");
+        }
+
+        // Gọi SecurityUtils để check quyền dựa trên ownerEmail (có thể truyền cả role nếu hàm của bạn cần)
+        SecurityUtils.checkOwnerOrAdmin(ownerEmail);
+
+        List<Conversation> inbox = conversationRepository.findByHotel_IdOrderByLastMessageAtDesc(hotelId);
+        return chatMapper.toConversationResponseList(inbox);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ChatMessageResponse> getChatHistory(Long conversationId) {
+        List<ChatMessage> history = chatMessageRepository.findByConversation_IdOrderByTimestampAsc(conversationId);
+        return chatMapper.toResponseList(history);
     }
 }

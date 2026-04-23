@@ -24,7 +24,7 @@ public class HotelResponse {
     private String email;
     private Long ownerId;
     private String ownerName;
-
+    private String ownerEmail;
     private HotelStatus status;
     private String statusReason;
     private LocalDateTime deletedAt;

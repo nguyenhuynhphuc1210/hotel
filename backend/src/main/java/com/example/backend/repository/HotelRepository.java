@@ -1,7 +1,7 @@
 package com.example.backend.repository;
 
 import com.example.backend.entity.Hotel;
-import com.example.backend.enums.HotelStatus; // Nhớ import Enum
+import com.example.backend.enums.HotelStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,7 +23,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
     Page<Hotel> findByDeletedAtIsNull(Pageable pageable);
 
     @Query("""
-            SELECT h FROM Hotel h
+            SELECT DISTINCT h FROM Hotel h
             WHERE h.status = com.example.backend.enums.HotelStatus.APPROVED AND h.deletedAt IS NULL
             AND (:district IS NULL OR LOWER(h.district) LIKE LOWER(CONCAT('%', :district, '%')))
             AND (:keyword IS NULL OR LOWER(h.hotelName) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -32,6 +32,8 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                 SELECT 1 FROM RoomType rt
                 JOIN RoomCalendar rc ON rt.id = rc.roomType.id
                 WHERE rt.hotel.id = h.id
+                AND rt.isActive = true AND rt.deletedAt IS NULL
+                AND (rt.maxAdults + COALESCE(rt.maxChildren, 0)) >= :guests
                 AND rc.date >= :checkIn AND rc.date < :checkOut
                 AND rc.isAvailable = true
                 AND (rc.totalRooms - rc.bookedRooms) > 0
@@ -45,6 +47,12 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
             @Param("checkIn") LocalDate checkIn,
             @Param("checkOut") LocalDate checkOut,
             @Param("nights") Long nights,
-            Pageable pageable
-    );
+            @Param("guests") Integer guests,
+            Pageable pageable);
+
+    @Query("""
+                SELECT h.owner.email FROM Hotel h
+                WHERE h.id = :id
+            """)
+    String findOwnerEmailByHotelId(@Param("id") Long id);
 }
