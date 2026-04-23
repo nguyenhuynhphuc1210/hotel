@@ -38,6 +38,7 @@ export interface HotelResponse {
   email: string
   ownerId: number
   ownerName: string
+  ownerEmail: string
   status: HotelStatus
   statusReason?: string
   deletedAt?: string

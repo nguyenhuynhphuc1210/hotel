@@ -890,7 +890,7 @@ export default function HotelDetailPage() {
             <HotelChatWidget
                 hotelId={hotelId}
                 hotelName={hotel?.hotelName ?? ''}
-                // hotelOwnerEmail={hotel?.ownerEmail}  
+                hotelOwnerEmail={hotel?.ownerEmail}  
             />
         </div>
     )

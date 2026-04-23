@@ -43,7 +43,7 @@ export default function HotelFormModal({ open, onClose, hotel }: Props) {
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
-    defaultValues: { city: 'TP Hồ Chí Minh' },
+    defaultValues: { city: 'Hồ Chí Minh' },
   })
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export default function HotelFormModal({ open, onClose, hotel }: Props) {
       })
     } else {
       reset({
-        city: 'TP Hồ Chí Minh',
+        city: 'Hồ Chí Minh',
         hotelName: '',
         description: '',
         addressLine: '',

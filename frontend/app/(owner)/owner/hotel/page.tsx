@@ -79,17 +79,16 @@ export default function OwnerHotelPage() {
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
         {tabs.map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === key ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === key ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             <Icon size={15} />{label}
           </button>
         ))}
       </div>
 
-      {tab === 'info'    && <InfoTab    key={activeHotel.id} hotel={activeHotel} qc={qc} />}
-      {tab === 'policy'  && <PolicyTab  key={activeHotel.id} hotel={activeHotel} qc={qc} />}
+      {tab === 'info' && <InfoTab key={activeHotel.id} hotel={activeHotel} qc={qc} />}
+      {tab === 'policy' && <PolicyTab key={activeHotel.id} hotel={activeHotel} qc={qc} />}
       {tab === 'amenity' && <AmenityTab key={activeHotel.id} hotel={activeHotel} qc={qc} />}
     </div>
   )
@@ -113,14 +112,14 @@ function InfoTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
   const { register, handleSubmit, formState: { errors } } = useForm<HotelForm>({
     resolver: zodResolver(hotelSchema) as Resolver<HotelForm>,
     defaultValues: {
-      hotelName:   hotel.hotelName,
+      hotelName: hotel.hotelName,
       description: hotel.description ?? '',
       addressLine: hotel.addressLine,
-      ward:        hotel.ward,
-      district:    hotel.district,
-      city:        hotel.city,
-      phone:       hotel.phone,
-      email:       hotel.email,
+      ward: hotel.ward,
+      district: hotel.district,
+      city: hotel.city,
+      phone: hotel.phone,
+      email: hotel.email,
     },
   })
 
@@ -197,7 +196,6 @@ function InfoTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
 
 // ─── Image Section ────────────────────────────────────────
 function ImageSection({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
-  const [urlInput, setUrlInput] = useState('')
 
   const uploadMutation = useMutation({
     mutationFn: (files: File[]) => hotelImageApi.upload(hotel.id, files),
@@ -208,26 +206,10 @@ function ImageSection({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) 
     onError: () => toast.error('Upload thất bại!')
   })
 
-  const addUrlMutation = useMutation({
-    mutationFn: (url: string) => hotelImageApi.uploadByUrl(hotel.id, url),
-    onSuccess: () => {
-      toast.success('Đã thêm ảnh từ URL!')
-      setUrlInput('')
-      qc.invalidateQueries({ queryKey: ['owner-hotels'] })
-    },
-    onError: () => toast.error('Không thể thêm ảnh từ URL này!')
-  })
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
     if (!files.length) return
     uploadMutation.mutate(files)
-  }
-
-  const handleAddByUrl = () => {
-    if (!urlInput.trim()) return
-    if (!urlInput.startsWith('http')) { toast.error('URL không hợp lệ'); return }
-    addUrlMutation.mutate(urlInput)
   }
 
   const handleDelete = async (publicId: string) => {
@@ -247,28 +229,15 @@ function ImageSection({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) 
     } catch { toast.error('Thất bại!') }
   }
 
-  const isProcessing = uploadMutation.isPending || addUrlMutation.isPending
+  const isProcessing = uploadMutation.isPending
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <h2 className="text-sm font-semibold text-gray-900">Ảnh khách sạn</h2>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex items-center min-w-[280px]">
-            <div className="absolute left-3 text-gray-400"><LinkIcon size={14} /></div>
-            <input
-              type="text" placeholder="Dán URL ảnh vào đây..."
-              value={urlInput} onChange={e => setUrlInput(e.target.value)}
-              className="pl-9 pr-20 w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              onClick={handleAddByUrl} disabled={isProcessing || !urlInput.trim()}
-              className="absolute right-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold uppercase hover:bg-blue-100 disabled:opacity-50 transition-colors"
-            >
-              {addUrlMutation.isPending ? '...' : 'Thêm'}
-            </button>
-          </div>
-          <div className="h-6 w-px bg-gray-200 mx-1 hidden md:block" />
+          {/* 5. Đã xóa phần input nhập URL và icon LinkIcon ở đây */}
+          
           <label className={`flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer transition-colors ${isProcessing ? 'opacity-60 pointer-events-none' : ''}`}>
             {uploadMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
             Upload file
@@ -279,7 +248,7 @@ function ImageSection({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) 
 
       {!hotel.images?.length ? (
         <div className="border-2 border-dashed border-gray-200 rounded-xl py-10 text-center text-gray-400 text-sm">
-          Chưa có ảnh nào. Upload ảnh hoặc dán URL để hiển thị trên trang khách sạn.
+          Chưa có ảnh nào. Upload ảnh để hiển thị trên trang khách sạn.
         </div>
       ) : (
         <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
@@ -311,9 +280,7 @@ function ImageSection({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) 
   )
 }
 
-// ─── Tab Chính sách ───────────────────────────────────────
-// FIX: Tách việc fetch data ra ngoài, dùng useEffect + reset() để điền form
-// sau khi data load xong thay vì dùng defaultValues (chỉ chạy 1 lần lúc mount)
+
 function PolicyTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
   const { data: policies = [], isLoading: isPoliciesLoading } = useQuery({
     queryKey: ['hotel-policies', hotel.id],
@@ -327,11 +294,11 @@ function PolicyTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<PolicyForm>({
     resolver: zodResolver(policySchema) as Resolver<PolicyForm>,
     defaultValues: {
-      checkInTime:        '14:00',
-      checkOutTime:       '12:00',
+      checkInTime: '14:00',
+      checkOutTime: '12:00',
       cancellationPolicy: '',
-      childrenPolicy:     '',
-      petPolicy:          '',
+      childrenPolicy: '',
+      petPolicy: '',
     },
   })
 
@@ -339,11 +306,11 @@ function PolicyTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
   useEffect(() => {
     if (policy) {
       reset({
-        checkInTime:        policy.checkInTime        ?? '14:00',
-        checkOutTime:       policy.checkOutTime       ?? '12:00',
+        checkInTime: policy.checkInTime ?? '14:00',
+        checkOutTime: policy.checkOutTime ?? '12:00',
         cancellationPolicy: policy.cancellationPolicy ?? '',
-        childrenPolicy:     policy.childrenPolicy     ?? '',
-        petPolicy:          policy.petPolicy          ?? '',
+        childrenPolicy: policy.childrenPolicy ?? '',
+        petPolicy: policy.petPolicy ?? '',
       })
     }
   }, [policy, reset])
@@ -472,7 +439,7 @@ export function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClien
   )
 
   // ✅ Lọc từ hotelTypeAmenities (chỉ type HOTEL) thay vì allAmenities
-  const selectedAmenities  = hotelTypeAmenities.filter(a =>  linkedIds.has(String(a.id)))
+  const selectedAmenities = hotelTypeAmenities.filter(a => linkedIds.has(String(a.id)))
   const availableAmenities = hotelTypeAmenities.filter(a => !linkedIds.has(String(a.id)))
 
   if (isLoading) {

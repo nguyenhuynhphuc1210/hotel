@@ -26,7 +26,7 @@ const hotelSchema = z.object({
     addressLine: z.string().min(1, 'Không được để trống'),
     ward: z.string().min(1, 'Không được để trống'),
     district: z.string().min(1, 'Không được để trống'),
-    city: z.string().default('TP Hồ Chí Minh'),
+    city: z.string().default('Hồ Chí Minh'),
     phone: z.string().regex(/^\d{10,11}$/, 'Số điện thoại 10-11 chữ số'),
     email: z.string().email('Email không đúng định dạng'),
 })
@@ -196,7 +196,7 @@ export default function OwnerMyHotelsPage() {
 
     const { register, handleSubmit, reset, formState: { errors } } = useForm<HotelForm>({
         resolver: zodResolver(hotelSchema) as Resolver<HotelForm>,
-        defaultValues: { city: 'TP Hồ Chí Minh' },
+        defaultValues: { city: 'Hồ Chí Minh' },
     })
 
     if (isLoading) {
