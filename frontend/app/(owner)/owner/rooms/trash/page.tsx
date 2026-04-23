@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import roomApi from '@/lib/api/room.api'
 import { 
   RefreshCcw, ArrowLeft, Loader2, BedDouble, 
-  Search, Trash2, Calendar, MapPin, AlertCircle, Info 
+  Search, Trash2, Calendar, Info 
 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -16,24 +16,33 @@ export default function RoomTrashPage() {
   const [keyword, setKeyword] = useState('')
   const { activeHotel, activeHotelId } = useOwnerHotel()
   
-  // 1. Lấy dữ liệu phòng đã xóa
+  // 1. Lấy tất cả dữ liệu phòng đã xóa của chủ sở hữu
   const { data: deletedRooms = [], isLoading } = useQuery({
-    queryKey: ['rooms-deleted', activeHotelId],
+    queryKey: ['rooms-deleted'], // Không nhất thiết để activeHotelId ở key nếu API trả về all, nhưng để đồng bộ logic fetch lại khi đổi ks thì có thể giữ
     queryFn: () => roomApi.getDeleted().then(r => r.data)
   })
 
-  // 2. Logic tìm kiếm local
-  const filteredRooms = deletedRooms.filter(room => 
-    room.typeName.toLowerCase().includes(keyword.toLowerCase())
-  )
+  // 2. Lọc theo Hotel ID (Lấy ý tưởng từ trang Payment)
+  const hotelDeletedRooms = useMemo(() => {
+    if (!activeHotelId) return []
+    return deletedRooms.filter(room => room.hotelId === activeHotelId)
+  }, [deletedRooms, activeHotelId])
 
-  // 3. Mutation khôi phục
+  // 3. Lọc theo từ khóa tìm kiếm trên danh sách của khách sạn hiện tại
+  const filteredRooms = useMemo(() => {
+    return hotelDeletedRooms.filter(room => 
+      room.typeName.toLowerCase().includes(keyword.toLowerCase())
+    )
+  }, [hotelDeletedRooms, keyword])
+
+  // 4. Mutation khôi phục
   const restoreMutation = useMutation({
     mutationFn: (id: number) => roomApi.restore(id),
     onSuccess: () => {
       toast.success('Khôi phục loại phòng thành công!')
+      // Invalidate cả 2 query để cập nhật lại dữ liệu ở trang quản lý và trang thùng rác
       qc.invalidateQueries({ queryKey: ['rooms-deleted'] })
-      qc.invalidateQueries({ queryKey: ['owner-rooms'] })
+      qc.invalidateQueries({ queryKey: ['owner-rooms', activeHotelId] })
     },
     onError: (err: unknown) => {
       const error = err as { response?: { data?: { message?: string } } }
@@ -57,8 +66,8 @@ export default function RoomTrashPage() {
               <Trash2 className="text-red-500" size={24} />
               Thùng rác loại phòng
             </h1>
-            <p className="text-sm text-gray-500">
-              {activeHotel?.hotelName || 'Tất cả khách sạn'}
+            <p className="text-sm text-gray-500 font-medium">
+              Khách sạn: <span className="text-blue-600">{activeHotel?.hotelName || 'Đang tải...'}</span>
             </p>
           </div>
         </div>
@@ -75,7 +84,7 @@ export default function RoomTrashPage() {
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Tìm theo tên loại phòng..."
+            placeholder="Tìm theo tên loại phòng trong thùng rác..."
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
@@ -113,7 +122,7 @@ export default function RoomTrashPage() {
                       <BedDouble size={40} className="opacity-20" />
                     </div>
                     <p className="text-lg font-medium text-gray-400">Thùng rác trống</p>
-                    <p className="text-sm">Không tìm thấy loại phòng nào bị xóa</p>
+                    <p className="text-sm">Không có loại phòng nào bị xóa cho khách sạn này</p>
                   </div>
                 </td>
               </tr>
@@ -125,9 +134,9 @@ export default function RoomTrashPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 shrink-0 overflow-hidden">
+                      <div className="w-12 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 shrink-0 overflow-hidden border border-gray-200">
                         {room.thumbnailUrl ? (
-                          <img src={room.thumbnailUrl} className="w-full h-full object-cover grayscale" />
+                          <img src={room.thumbnailUrl} alt="" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
                         ) : <BedDouble size={18} />}
                       </div>
                       <div>
@@ -181,8 +190,9 @@ export default function RoomTrashPage() {
 
         {/* Footer info */}
         {!isLoading && filteredRooms.length > 0 && (
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-100 text-[11px] text-gray-400">
-            Hiển thị {filteredRooms.length} loại phòng trong thùng rác
+          <div className="bg-gray-50 px-6 py-3 border-t border-gray-100 text-[11px] text-gray-400 flex justify-between">
+            <span>Hiển thị {filteredRooms.length} loại phòng thuộc {activeHotel?.hotelName}</span>
+            <span>ID Khách sạn: {activeHotelId}</span>
           </div>
         )}
       </div>

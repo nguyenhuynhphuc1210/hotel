@@ -29,7 +29,7 @@ export interface UserResponse {
   gender: string | null
   isActive: boolean
   roleId: number
-  roleName: 'ROLE_ADMIN' | 'ROLE_HOTEL_OWNER' | 'ROLE_USER'  // ← thẳng, không lồng
+  roleName: 'ROLE_ADMIN' | 'ROLE_HOTEL_OWNER' | 'ROLE_USER' 
   createdAt: string
   updatedAt: string
 }

@@ -27,6 +27,7 @@ import RoomGalleryModal from '@/components/layout/RoomGalleryModal'
 import { HotelPolicyResponse } from '@/types/policy.types'
 import { BookingResponse } from '@/types/booking.types'
 import Pagination from '@/components/ui/PaginationDetail'
+import HotelChatWidget from '@/components/chat/HotelChatWidget'
 
 // ── Hook: fetch calendar cho 1 room trong khoảng checkIn/checkOut ──────────
 function useRoomCalendarPricing(
@@ -246,7 +247,7 @@ export default function HotelDetailPage() {
     const [lightboxOpen, setLightboxOpen] = useState(false)
     const [galleryRoom, setGalleryRoom] = useState<RoomTypeResponse | null>(null)
     const [reviewPage, setReviewPage] = useState(0)
-    const reviewSize = 1
+    const reviewSize = 10
     const reviewSectionRef = useRef<HTMLDivElement>(null);
 
     const handlePageChange = (page: number) => {
@@ -396,6 +397,13 @@ export default function HotelDetailPage() {
 
     const handleBooking = (roomTypeId: number) => {
         if (!hasFullDates) { handleShowPrice(); return }
+
+        if (!user) {
+            const currentUrl = `/hotels/${hotelId}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`
+            router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`)
+            return
+        }
+
         const price = roomTypes.find(r => r.id === roomTypeId)?.basePrice ?? 0
         const params = new URLSearchParams({
             hotelId: hotelId.toString(),
@@ -579,7 +587,10 @@ export default function HotelDetailPage() {
                                     <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4">
                                         <LogIn size={18} className="text-blue-500 shrink-0" />
                                         <p className="text-sm text-blue-700">
-                                            Vui lòng <button onClick={() => router.push(`/login?redirect=/hotels/${hotelId}`)} className="font-bold underline">đăng nhập</button> và đặt phòng để gửi đánh giá.
+                                            Vui lòng <button onClick={() => {
+                                                const currentUrl = `/hotels/${hotelId}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`
+                                                router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`)
+                                            }} className="font-bold underline">đăng nhập</button> và đặt phòng để gửi đánh giá.
                                         </p>
                                     </div>
                                 ) : !eligibleBooking ? (
@@ -875,6 +886,12 @@ export default function HotelDetailPage() {
                     </div>
                 </div>
             </div>
+
+            <HotelChatWidget
+                hotelId={hotelId}
+                hotelName={hotel?.hotelName ?? ''}
+                // hotelOwnerEmail={hotel?.ownerEmail}  
+            />
         </div>
     )
 }

@@ -8,7 +8,7 @@ import {
     Info, ImageIcon, CheckCircle2, Baby, Dog, Cigarette,
     ChevronDown, ChevronUp
 } from 'lucide-react'
-import { HotelResponse, HotelStatus } from '@/lib/api/hotel.api'
+import { HotelAdminResponse, HotelResponse, HotelStatus } from '@/lib/api/hotel.api'
 import roomApi from '@/lib/api/room.api'
 import { RoomTypeResponse } from '@/types/room.types'
 import axiosInstance from '@/lib/api/axios'
@@ -17,7 +17,7 @@ import { hotelAmenityApi, roomTypeAmenityApi } from '@/lib/api/amenity.api'
 import { RoomTypeAmenityResponse } from '@/types/amenity.types'
 
 interface Props {
-    hotel: HotelResponse
+    hotel: HotelAdminResponse
     onClose: () => void
 }
 
@@ -143,7 +143,7 @@ export default function HotelDetailModal({ hotel, onClose }: Props) {
                                     <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">Chủ sở hữu</h4>
                                     <div className="bg-gray-50 rounded-xl p-4 space-y-1">
                                         <p className="font-semibold text-gray-900">{hotel.ownerName}</p>
-                                        <p className="text-xs text-gray-400">ID: {hotel.ownerId}</p>
+                                        <p className="text-xs text-gray-400">ID: {hotel.ownerEmail}</p>
                                     </div>
                                     {hotel.statusReason && (
                                         <div className="bg-red-50 border border-red-100 rounded-xl p-3">

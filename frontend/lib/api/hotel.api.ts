@@ -94,6 +94,30 @@ export interface HotelSearchParams {
   size?: number
 }
 
+export interface HotelAdminResponse {
+  id: number
+  hotelName: string
+  description: string | null
+  starRating: number
+  addressLine: string
+  ward: string
+  district: string
+  city: string
+  phone: string
+  email: string
+  ownerId: number
+  ownerName: string
+  ownerEmail: string
+  status: HotelStatus
+  statusReason?: string
+  deletedAt?: string
+  createdAt: string
+  updatedAt: string
+  roomTypes: RoomTypeResponse[]
+  thumbnailUrl?: string
+  images?: HotelImageResponse[]
+}
+
 const hotelApi = {
   getAll: (page = 0, size = 100) =>
     axiosInstance.get<PageResponse<HotelResponse>>(API_CONFIG.ENDPOINTS.HOTELS, {

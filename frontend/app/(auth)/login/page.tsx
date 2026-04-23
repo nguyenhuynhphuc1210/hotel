@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
-import { useGoogleLogin } from '@react-oauth/google'
 import authApi from '@/lib/api/auth.api'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
@@ -19,8 +18,10 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>
 
-export default function LoginPage() {
+// Tách component đọc searchParams ra riêng để wrap Suspense
+function LoginForm() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const setAuth = useAuthStore((s) => s.setAuth)
     const [showPass, setShowPass] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -32,10 +33,8 @@ export default function LoginPage() {
         formState: { errors },
     } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
 
-    const getRedirectUrl = () => {
-        const params = new URLSearchParams(window.location.search)
-        return params.get('redirect') || '/home'
-    }
+    // ✅ Đọc redirect param — nếu có thì về đó, không thì về /home
+    const redirectTo = searchParams.get('redirect') || '/home'
 
     const onSubmit = async (data: LoginForm) => {
         try {
@@ -44,7 +43,7 @@ export default function LoginPage() {
             const { token, user } = res.data
             setAuth(token, user)
             toast.success(`Chào mừng, ${user.fullName}!`)
-            router.push(getRedirectUrl())
+            router.push(redirectTo)
         } catch (err) {
             const error = err as { response?: { data?: { message?: string } } }
             toast.error(error?.response?.data?.message || 'Email hoặc mật khẩu không đúng')
@@ -52,23 +51,6 @@ export default function LoginPage() {
             setLoading(false)
         }
     }
-
-    // ✅ Google OAuth – dùng Authorization Code flow để lấy idToken từ BE
-    const loginWithGoogle = useGoogleLogin({
-        onSuccess: async (tokenResponse) => {
-            try {
-                setGoogleLoading(true)
-                // tokenResponse.access_token là access token của Google,
-                // nhưng BE cần idToken → dùng endpoint userinfo để lấy id_token
-                // Cách đúng: dùng flow="auth-code" + server-side exchange
-                // Hoặc dùng GoogleLogin component để nhận credential (id_token) trực tiếp
-                toast.error('Vui lòng dùng nút Google bên dưới.')
-            } finally {
-                setGoogleLoading(false)
-            }
-        },
-        onError: () => toast.error('Đăng nhập Google thất bại'),
-    })
 
     return (
         <div className="w-full max-w-md mx-auto">
@@ -150,7 +132,7 @@ export default function LoginPage() {
                     <span className="text-xs text-gray-400">hoặc</span>
                     <div className="flex-1 h-px bg-gray-100" />
                 </div>
-               
+
                 <GoogleLoginButton
                     onSuccess={async (idToken) => {
                         try {
@@ -159,7 +141,8 @@ export default function LoginPage() {
                             const { token, user } = res.data
                             setAuth(token, user)
                             toast.success(`Chào mừng, ${user.fullName}!`)
-                            router.push(getRedirectUrl())
+                            
+                            router.push(redirectTo)
                         } catch (err) {
                             const error = err as { response?: { data?: { message?: string } } }
                             toast.error(error?.response?.data?.message || 'Đăng nhập Google thất bại')
@@ -170,10 +153,13 @@ export default function LoginPage() {
                     loading={googleLoading}
                 />
 
-                {/* Footer */}
+                {/* Footer — giữ redirect param khi chuyển sang register */}
                 <p className="text-center text-sm text-gray-500 mt-5">
                     Chưa có tài khoản?{' '}
-                    <a href="/register" className="text-[#1A56DB] font-semibold hover:underline">
+                    <a
+                        href={`/register${redirectTo !== '/home' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
+                        className="text-[#1A56DB] font-semibold hover:underline"
+                    >
                         Đăng ký ngay
                     </a>
                 </p>
@@ -183,5 +169,17 @@ export default function LoginPage() {
                 © 2025 Vago Hotel. All rights reserved.
             </p>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="w-full max-w-md mx-auto flex items-center justify-center py-20">
+                <Loader2 size={24} className="animate-spin text-[#1A56DB]" />
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     )
 }

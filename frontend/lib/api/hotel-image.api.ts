@@ -14,12 +14,6 @@ const hotelImageApi = {
     )
   },
 
-  uploadByUrl: (hotelId: number, imageUrl: string) =>
-    axiosInstance.post(API_CONFIG.ENDPOINTS.HOTEL_IMAGES_UPLOAD_URL, {
-      hotelId,
-      imageUrl
-    }),
-
   // Xoá ảnh theo publicId
   delete: (publicId: string) =>
     axiosInstance.delete(API_CONFIG.ENDPOINTS.HOTEL_IMAGES_DELETE, {

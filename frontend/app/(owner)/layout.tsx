@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Hotel, BedDouble, CalendarDays,
   CalendarCheck, Star, Tag, LogOut, ChevronRight, ChevronDown,
-  Building2
+  Building2, CreditCard, MessageSquare
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
@@ -20,8 +20,10 @@ const navItems = [
   { href: '/owner/rooms', label: 'Loại phòng', icon: BedDouble },
   { href: '/owner/calendar', label: 'Lịch & Giá', icon: CalendarDays },
   { href: '/owner/bookings', label: 'Đặt phòng', icon: CalendarCheck },
+  { href: '/owner/payments', label: 'Thanh toán', icon: CreditCard },
   { href: '/owner/reviews', label: 'Đánh giá', icon: Star },
   { href: '/owner/promotions', label: 'Khuyến mãi', icon: Tag },
+  { href: '/owner/messages', label: 'Tin nhắn', icon: MessageSquare },
 ]
 
 // Component nội dung Layout để có thể dùng được Hook từ Context

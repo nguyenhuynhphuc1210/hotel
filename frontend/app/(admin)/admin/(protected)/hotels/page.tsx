@@ -1,17 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { 
-  useHotels, 
-  useApproveHotel, 
-  useDisableHotel, 
-  useDeleteHotel, 
-  useRejectHotel 
+import {
+  useHotels,
+  useApproveHotel,
+  useDisableHotel,
+  useDeleteHotel,
+  useRejectHotel
 } from '@/hooks/useHotel'
-import { HotelResponse, HotelStatus } from '@/lib/api/hotel.api'
+import { HotelResponse, HotelStatus, HotelAdminResponse } from '@/lib/api/hotel.api'
 import {
   Search, Plus, Pencil, Trash2, CheckCircle,
-  XCircle, ShieldCheck, ShieldOff, Star, 
+  XCircle, ShieldCheck, ShieldOff, Star,
   Loader2, Ban, RotateCcw, AlertTriangle, Building2
 } from 'lucide-react'
 import HotelFormModal from '@/components/admin/hotel/HotelFormModal'
@@ -26,10 +26,10 @@ export default function AdminHotelsPage() {
   const [openForm, setOpenForm] = useState(false)
   const [editingHotel, setEditingHotel] = useState<HotelResponse | null>(null)
   // ── MỚI: state cho modal chi tiết ──
-  const [detailHotel, setDetailHotel] = useState<HotelResponse | null>(null)
+  const [detailHotel, setDetailHotel] = useState<HotelAdminResponse | null>(null)
 
   const { data: pageData, isLoading } = useHotels(currentPage, pageSize)
-  const hotels = pageData?.content || []
+  const hotels = (pageData?.content || []) as HotelAdminResponse[]
 
   const deleteMutation = useDeleteHotel()
   const approveMutation = useApproveHotel()
@@ -57,7 +57,7 @@ export default function AdminHotelsPage() {
 
   const handleDisable = (h: HotelResponse) => {
     const reason = prompt(`Lý do vô hiệu hóa khách sạn "${h.hotelName}":`)
-    if (reason === null) return 
+    if (reason === null) return
     if (!reason.trim()) return alert("Vui lòng nhập lý do vô hiệu hóa!")
     disableMutation.mutate({ id: h.id, reason })
   }
@@ -71,7 +71,8 @@ export default function AdminHotelsPage() {
     const matchKeyword =
       h.hotelName.toLowerCase().includes(keyword.toLowerCase()) ||
       h.email.toLowerCase().includes(keyword.toLowerCase()) ||
-      h.district.toLowerCase().includes(keyword.toLowerCase())
+      h.district.toLowerCase().includes(keyword.toLowerCase()) ||
+      (h.ownerEmail && h.ownerEmail.toLowerCase().includes(keyword.toLowerCase()))
     const matchStatus = statusFilter === '' ? true : h.status === statusFilter
     return matchKeyword && matchStatus
   })
@@ -235,7 +236,7 @@ export default function AdminHotelsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-gray-700">{h.ownerName}</div>
-                    <div className="text-xs text-gray-400">ID: {h.ownerId}</div>
+                    <div className="text-xs text-gray-400">ID: {h.ownerEmail}</div>
                   </td>
                   <td className="px-4 py-3">
                     {renderStatusBadge(h.status)}

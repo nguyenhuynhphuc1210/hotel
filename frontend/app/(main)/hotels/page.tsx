@@ -24,6 +24,15 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
     { value: 'star_desc', label: 'Hạng sao cao nhất' },
 ]
 
+// Danh sách Quận Huyện TP.HCM
+const ALL_DISTRICTS = [
+    'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5',
+    'Quận 6', 'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10',
+    'Quận 11', 'Quận 12', 'Bình Thạnh', 'Gò Vấp', 'Tân Bình',
+    'Tân Phú', 'Phú Nhuận', 'Thủ Đức', 'Bình Tân',
+    'H. Củ Chi', 'H. Hóc Môn', 'H. Nhà Bè', 'H. Bình Chánh', 'H. Cần Giờ',
+]
+
 // ── Page ──────────────────────────────────────────────────
 export default function HotelsPage() {
     const router = useRouter()
@@ -63,7 +72,6 @@ export default function HotelsPage() {
     })
 
     const hotels = pageData?.content || []
-
     const hotelIds = hotels.map((h: HotelResponse) => h.id).join(',')
 
     const { data: minPrices = {} } = useQuery<MinPriceMap>({
@@ -84,24 +92,33 @@ export default function HotelsPage() {
         enabled: hasFullDates && hotels.length > 0,
     })
 
+    // Cập nhật tham số District lên URL
+    const updateDistrictParams = (newDistrict: string) => {
+        const newParams = new URLSearchParams(params.toString());
+        if (newDistrict) {
+            newParams.set('district', newDistrict);
+            newParams.delete('keyword'); // Thường khi lọc theo quận sẽ ưu tiên hơn keyword
+        } else {
+            newParams.delete('district');
+        }
+        newParams.set('page', '0'); // Reset về trang 1
+        router.push(`/hotels?${newParams.toString()}`);
+    }
+
     const goToDetail = (id: number) => {
-        // Luôn luôn vào trang chi tiết, có ngày hay không cũng vào
         const query = hasFullDates
             ? `?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${rooms}`
             : ''
         router.push(`/hotels/${id}${query}`)
     }
 
-    // 2. Hàm này xử lý riêng cho nút "Hiển thị giá"
     const handlePriceButtonClick = () => {
-        // Cuộn lên đầu và mở DatePicker thông qua SearchBar
         window.scrollTo({ top: 0, behavior: 'smooth' });
         const newParams = new URLSearchParams(params.toString());
         newParams.set('openPicker', 'true');
         router.replace(`/hotels?${newParams.toString()}`);
     }
 
-    // ── Filter + Sort (plain function, no useMemo) ──
     function getFiltered(): HotelResponse[] {
         let list: HotelResponse[] = [...hotels]
 
@@ -113,18 +130,12 @@ export default function HotelsPage() {
 
         if (priceMin) {
             const min = Number(priceMin)
-            list = list.filter(h => {
-                const p = minPrices[h.id] ?? 0
-                return p >= min
-            })
+            list = list.filter(h => (minPrices[h.id] ?? 0) >= min)
         }
 
         if (priceMax) {
             const max = Number(priceMax)
-            list = list.filter(h => {
-                const p = minPrices[h.id] ?? 0
-                return p <= max
-            })
+            list = list.filter(h => (minPrices[h.id] ?? 0) <= max)
         }
 
         list.sort((a, b) => {
@@ -140,9 +151,7 @@ export default function HotelsPage() {
     }
 
     const filtered = getFiltered()
-
     const nights = hasFullDates ? Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000) : 0
-
     const totalElements = pageData?.totalElements || 0
     const title = keyword || district
         ? `${keyword || district}: tìm thấy ${totalElements} khách sạn`
@@ -171,6 +180,23 @@ export default function HotelsPage() {
                     {/* Filter sidebar */}
                     {showFilter && (
                         <aside className="w-64 shrink-0 space-y-4">
+
+                            {/* ── BỘ LỌC QUẬN HUYỆN (MỚI) ── */}
+                            <div className="bg-white rounded-xl border border-gray-200 p-4">
+                                <h3 className="text-sm font-semibold text-gray-900 mb-3">Khu vực / Quận</h3>
+                                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                                    {ALL_DISTRICTS.filter(d => d !== district).map(d => (
+                                        <button
+                                            key={d}
+                                            onClick={() => updateDistrictParams(d)}
+                                            className="flex items-center gap-2.5 w-full text-left py-1.5 px-2 rounded-lg hover:bg-green-50 hover:text-green-700 transition-all group"
+                                        >
+                                            <div className="w-4 h-4 rounded border border-gray-300 group-hover:border-green-500 shrink-0" />
+                                            <span className="text-sm text-gray-600 group-hover:text-green-700">{d}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
                             {/* Star rating */}
                             <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -226,7 +252,6 @@ export default function HotelsPage() {
                                     </div>
                                 </div>
 
-                                {/* Quick buttons */}
                                 <div className="mt-3 flex flex-wrap gap-1.5">
                                     {[
                                         { label: '< 500K', min: '', max: '500000' },
@@ -248,7 +273,6 @@ export default function HotelsPage() {
                                 </div>
                             </div>
 
-                            {/* Clear filters */}
                             {activeFilterCount > 0 && (
                                 <button
                                     onClick={() => { setStarFilter([]); setPriceMin(''); setPriceMax('') }}
@@ -270,8 +294,7 @@ export default function HotelsPage() {
                                 {nights > 0 && (
                                     <p className="text-sm text-gray-500 mt-0.5">
                                         {new Date(checkIn).toLocaleDateString('vi-VN')} →{' '}
-                                        {new Date(checkOut).toLocaleDateString('vi-VN')} · {nights} đêm ·{' '}
-                                        {adults} người lớn{children > 0 ? `, ${children} trẻ em` : ''} · {rooms} phòng
+                                        {new Date(checkOut).toLocaleDateString('vi-VN')} · {nights} đêm
                                     </p>
                                 )}
                             </div>
@@ -308,30 +331,37 @@ export default function HotelsPage() {
                             </div>
                         </div>
 
-                        {/* Active filter chips */}
-                        {activeFilterCount > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                                {starFilter.map(s => (
-                                    <span key={s} className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-medium">
-                                        {s} sao
-                                        <button onClick={() => setStarFilter(p => p.filter(x => x !== s))}>
-                                            <X size={12} />
-                                        </button>
-                                    </span>
-                                ))}
-                                {(priceMin || priceMax) && (
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-medium">
-                                        {priceMin ? `${Number(priceMin).toLocaleString('vi-VN')}₫` : '0'} –{' '}
-                                        {priceMax ? `${Number(priceMax).toLocaleString('vi-VN')}₫` : '∞'}
-                                        <button onClick={() => { setPriceMin(''); setPriceMax('') }}>
-                                            <X size={12} />
-                                        </button>
-                                    </span>
-                                )}
-                            </div>
-                        )}
+                        {/* Active filter chips (Cập nhật hiển thị District chip) */}
+                        <div className="flex flex-wrap gap-2">
+                            {district && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-medium">
+                                    <MapPin size={12} />
+                                    {district}
+                                    <button onClick={() => updateDistrictParams('')}>
+                                        <X size={12} />
+                                    </button>
+                                </span>
+                            )}
+                            {starFilter.map(s => (
+                                <span key={s} className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-medium">
+                                    {s} sao
+                                    <button onClick={() => setStarFilter(p => p.filter(x => x !== s))}>
+                                        <X size={12} />
+                                    </button>
+                                </span>
+                            ))}
+                            {(priceMin || priceMax) && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-medium">
+                                    {priceMin ? `${Number(priceMin).toLocaleString('vi-VN')}₫` : '0'} –{' '}
+                                    {priceMax ? `${Number(priceMax).toLocaleString('vi-VN')}₫` : '∞'}
+                                    <button onClick={() => { setPriceMin(''); setPriceMax('') }}>
+                                        <X size={12} />
+                                    </button>
+                                </span>
+                            )}
+                        </div>
 
-                        {/* List */}
+                        {/* List ... (Giữ nguyên phần List và HotelCard) */}
                         {isLoading ? (
                             <div className="space-y-4">
                                 {[1, 2, 3].map(i => (
@@ -344,10 +374,10 @@ export default function HotelsPage() {
                                 <p className="text-gray-500 font-medium">Không tìm thấy khách sạn nào</p>
                                 <p className="text-gray-400 text-sm mt-1">Thử thay đổi bộ lọc hoặc tìm địa điểm khác</p>
                                 <button
-                                    onClick={() => { setStarFilter([]); setPriceMin(''); setPriceMax('') }}
+                                    onClick={() => { setStarFilter([]); setPriceMin(''); setPriceMax(''); updateDistrictParams('') }}
                                     className="mt-4 px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
                                 >
-                                    Xoá bộ lọc
+                                    Xoá tất cả bộ lọc
                                 </button>
                             </div>
                         ) : (
@@ -359,12 +389,13 @@ export default function HotelsPage() {
                                         minPrice={minPrices[h.id]}
                                         nights={nights}
                                         hasFullDates={hasFullDates}
-                                        onCardClick={() => goToDetail(h.id)} // Truyền hàm vào detail
-                                        onPriceButtonClick={handlePriceButtonClick} // Truyền hàm mở lịch
+                                        onCardClick={() => goToDetail(h.id)}
+                                        onPriceButtonClick={handlePriceButtonClick}
                                     />
                                 ))}
                             </div>
                         )}
+                        
                         {pageData && pageData.totalPages > 1 && (
                             <div className="mt-8 bg-white p-4 rounded-2xl border border-gray-200">
                                 <Pagination
@@ -381,22 +412,29 @@ export default function HotelsPage() {
                             </div>
                         )}
                     </div>
-
                 </div>
             </div>
+
+            {/* Thêm CSS cho scrollbar tinh tế hơn */}
+            <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+            `}</style>
         </div>
     )
 }
 
-// ─── Hotel Card ───────────────────────────────────────────
+// ─── Hotel Card (Giữ nguyên) ───────────────────────────────
 function HotelCard({
     hotel: h, minPrice, nights, onCardClick, onPriceButtonClick, hasFullDates
 }: {
     hotel: HotelResponse
     minPrice: number | null | undefined
     nights: number
-    onCardClick: () => void        // Prop mới
-    onPriceButtonClick: () => void // Prop mới
+    onCardClick: () => void
+    onPriceButtonClick: () => void
     hasFullDates: boolean
 }) {
     const stars = Math.round(Number(h.starRating ?? 0))
@@ -407,7 +445,6 @@ function HotelCard({
             onClick={onCardClick}
             className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group flex"
         >
-            {/* Left: Image */}
             <div className="w-72 shrink-0 relative overflow-hidden bg-gray-100">
                 {displayImage ? (
                     <img src={displayImage} alt={h.hotelName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -416,24 +453,20 @@ function HotelCard({
                 )}
             </div>
 
-            {/* Right: Info */}
             <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
                 <div>
                     <h3 className="text-lg font-bold text-gray-900 group-hover:text-green-700 transition-colors truncate mb-1">
                         {h.hotelName}
                     </h3>
-
                     <div className="flex items-center gap-0.5 mb-2">
                         {Array.from({ length: 5 }).map((_, i) => (
                             <Star key={i} size={14} fill={i < stars ? "#f59e0b" : "none"} className={i < stars ? "text-amber-400" : "text-gray-200"} />
                         ))}
                     </div>
-
                     <div className="flex items-center gap-1 text-sm text-green-600 mb-3">
                         <MapPin size={14} />
                         <span>{h.district}, {h.city}</span>
                     </div>
-
                     {h.description && (
                         <p className="text-sm text-gray-500 line-clamp-2 mb-3 leading-relaxed">{h.description}</p>
                     )}
@@ -458,15 +491,11 @@ function HotelCard({
                             </>
                         )}
                     </div>
-
                     <button
                         onClick={(e) => {
-                            e.stopPropagation(); // QUAN TRỌNG: Ngăn không cho sự kiện onCardClick chạy
-                            if (hasFullDates) {
-                                onCardClick(); // Nếu có ngày rồi thì vào xem phòng
-                            } else {
-                                onPriceButtonClick(); // Nếu chưa có ngày mới hiện DatePicker
-                            }
+                            e.stopPropagation();
+                            if (hasFullDates) onCardClick();
+                            else onPriceButtonClick();
                         }}
                         className="bg-green-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-green-700 active:scale-95 transition-all shrink-0 shadow-sm"
                     >

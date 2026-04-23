@@ -4,13 +4,15 @@ export type PaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLE
 
 export interface PaymentResponse {
   id: number;
+  hotelId: number;
+  hotelName: string;
   bookingId: number;
   bookingCode: string;
   paymentMethod: PaymentMethod;
   transactionId: string | null;
   amount: number;
   status: PaymentStatus;
-  paymentDate: string | null; 
+  paymentDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
