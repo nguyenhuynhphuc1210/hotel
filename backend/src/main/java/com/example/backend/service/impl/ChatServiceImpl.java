@@ -15,6 +15,8 @@ import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.ChatService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class ChatServiceImpl implements ChatService {
     private final UserRepository userRepository;
     private final HotelRepository hotelRepository;
     private final ChatMapper chatMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -67,7 +70,6 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional(readOnly = true)
     public List<ConversationResponse> getUserInbox(String userEmail) {
-        // Logic được chuyển từ Controller xuống
         Long userId = userRepository.findIdByEmail(userEmail);
         if (userId == null) {
             throw new EntityNotFoundException("Không tìm thấy người dùng");
@@ -80,13 +82,11 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional(readOnly = true)
     public List<ConversationResponse> getHotelInbox(Long hotelId, String currentUserEmail) {
-        // Logic check quyền và lấy hotel được chuyển từ Controller xuống
         String ownerEmail = hotelRepository.findOwnerEmailByHotelId(hotelId);
         if (ownerEmail == null) {
             throw new EntityNotFoundException("Không tìm thấy khách sạn");
         }
 
-        // Gọi SecurityUtils để check quyền dựa trên ownerEmail (có thể truyền cả role nếu hàm của bạn cần)
         SecurityUtils.checkOwnerOrAdmin(ownerEmail);
 
         List<Conversation> inbox = conversationRepository.findByHotel_IdOrderByLastMessageAtDesc(hotelId);
@@ -98,5 +98,18 @@ public class ChatServiceImpl implements ChatService {
     public List<ChatMessageResponse> getChatHistory(Long conversationId) {
         List<ChatMessage> history = chatMessageRepository.findByConversation_IdOrderByTimestampAsc(conversationId);
         return chatMapper.toResponseList(history);
+    }
+
+    @Override
+    @Transactional
+    public void markAsRead(Long conversationId, String readerEmail, String senderEmail) {
+
+        chatMessageRepository.markMessagesAsRead(conversationId, readerEmail);
+
+        messagingTemplate.convertAndSendToUser(
+                senderEmail, 
+                "/queue/read", 
+                conversationId
+        );
     }
 }

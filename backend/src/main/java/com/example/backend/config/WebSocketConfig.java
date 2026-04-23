@@ -28,43 +28,40 @@ import java.util.List;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final UserDetailsService userDetailsService; // Dùng Service load User có sẵn của bạn
+    private final UserDetailsService userDetailsService;
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Cổng này để Next.js gọi hàm connect()
+
         registry.addEndpoint("/ws/chat")
-                .setAllowedOriginPatterns("*") // Cho phép mọi domain kết nối
-                .withSockJS(); // Tự động fallback nếu mạng của khách bị lỗi WebSocket
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/user"); // Tiền tố để Frontend lắng nghe tin nhắn đến
-        registry.setApplicationDestinationPrefixes("/app"); // Tiền tố để Frontend gửi tin nhắn đi
-        registry.setUserDestinationPrefix("/user"); // Định tuyến chat cá nhân (1-1)
+        registry.enableSimpleBroker("/queue", "/topic");
+        registry.setApplicationDestinationPrefixes("/app");
+        registry.setUserDestinationPrefix("/user");
     }
 
-    // 🔥 BỘ CHẶN CỬA: Kiểm tra JWT Token khi bắt đầu kết nối (Handshake)
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(new ChannelInterceptor() {
             @Override
             public Message<?> preSend(Message<?> message, MessageChannel channel) {
                 StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-                
-                // Chỉ kiểm tra Token ở lần kết nối đầu tiên (CONNECT)
+
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {
                     List<String> authorization = accessor.getNativeHeader("Authorization");
                     
                     if (authorization != null && !authorization.isEmpty()) {
-                        String token = authorization.get(0).substring(7); // Bỏ chữ "Bearer "
+                        String token = authorization.get(0).substring(7);
                         
                         if (jwtTokenProvider.validateToken(token)) {
                             String email = jwtTokenProvider.getEmailFromJWT(token);
                             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                            
-                            // Xác thực thành công -> Gắn thẻ chứng minh nhân dân (Principal) vào đường ống
+
                             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                                     userDetails, null, userDetails.getAuthorities());
                             accessor.setUser(auth);

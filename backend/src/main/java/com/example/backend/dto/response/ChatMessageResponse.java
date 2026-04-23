@@ -13,4 +13,5 @@ public class ChatMessageResponse {
     private String senderEmail;
     private String content;
     private LocalDateTime timestamp;
+    private String clientMessageId;
 }

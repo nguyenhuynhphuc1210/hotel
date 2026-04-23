@@ -1,9 +1,11 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.request.ChatMessageRequest;
+import com.example.backend.dto.request.ChatReadRequest;
 import com.example.backend.dto.response.ChatMessageResponse;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.ChatService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+
 
 @Slf4j
 @RestController
@@ -35,6 +38,11 @@ public class ChatController {
                 request.getReceiverEmail(),
                 "/queue/messages",
                 responsePayload);
+
+        messagingTemplate.convertAndSendToUser(
+                principal.getName(), 
+                "/queue/messages",
+                responsePayload);
     }
 
     @GetMapping("/api/chat/user-inbox")
@@ -47,7 +55,6 @@ public class ChatController {
     @GetMapping("/api/chat/hotel-inbox/{hotelId}")
     @PreAuthorize("hasRole('HOTEL_OWNER')")
     public ResponseEntity<?> getHotelInbox(@PathVariable Long hotelId) {
-        // Controller chỉ truyền tham số cần thiết xuống Service
         String currentUserEmail = SecurityUtils.getCurrentUserEmail();
         return ResponseEntity.ok(chatService.getHotelInbox(hotelId, currentUserEmail));
     }
@@ -56,5 +63,14 @@ public class ChatController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getChatHistory(@PathVariable Long conversationId) {
         return ResponseEntity.ok(chatService.getChatHistory(conversationId));
+    }
+
+    @MessageMapping("/chat.read")
+    public void markAsRead(@Payload ChatReadRequest request, Principal principal) {
+        chatService.markAsRead(
+                request.getConversationId(), 
+                principal.getName(),
+                request.getSenderEmail()
+        );
     }
 }
