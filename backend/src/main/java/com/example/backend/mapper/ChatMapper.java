@@ -24,6 +24,7 @@ public class ChatMapper {
                 .senderEmail(entity.getSenderEmail())
                 .content(entity.getContent())
                 .timestamp(entity.getTimestamp())
+                .isRead(entity.isRead())
                 .build();
     }
 
@@ -44,6 +45,7 @@ public class ChatMapper {
                 .userFullName(entity.getUser().getFullName())
                 .userEmail(entity.getUser().getEmail())
                 .userAvatar(entity.getUser().getAvatarUrl())
+                .bookingId(entity.getBooking() != null ? entity.getBooking().getId() : null)
                 .lastMessageAt(entity.getLastMessageAt())
                 .build();
     }

@@ -14,5 +14,6 @@ public class ConversationResponse {
     private String userFullName;
     private String userEmail;
     private String userAvatar;
+    private Long bookingId;
     private LocalDateTime lastMessageAt;
 }

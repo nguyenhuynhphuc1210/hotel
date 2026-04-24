@@ -10,7 +10,9 @@ import java.util.Optional;
 @Repository
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
 
-    Optional<Conversation> findByUser_IdAndHotel_Id(Long userId, Long hotelId);
+    Optional<Conversation> findByUser_IdAndHotel_IdAndBookingIsNull(Long userId, Long hotelId);
+    
+    Optional<Conversation> findByBooking_Id(Long bookingId);
 
     List<Conversation> findByUser_IdOrderByLastMessageAtDesc(Long userId);
 

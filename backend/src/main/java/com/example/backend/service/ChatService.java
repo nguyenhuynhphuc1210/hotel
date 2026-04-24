@@ -5,7 +5,7 @@ import com.example.backend.dto.response.ConversationResponse;
 import java.util.List;
 
 public interface ChatService {
-    ChatMessageResponse saveMessage(Long userId, Long hotelId, String senderEmail, String content);
+    ChatMessageResponse saveMessage(Long userId, Long hotelId, Long bookingId, String senderEmail, String content);
 
     List<ConversationResponse> getUserInbox(String userEmail); 
 

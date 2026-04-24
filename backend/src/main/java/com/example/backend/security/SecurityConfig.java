@@ -66,7 +66,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
 
                         .requestMatchers("/ws/chat/**").permitAll()
+                        .requestMatchers("/api/chat/ai").permitAll()
                         .requestMatchers("/api/chat/**").authenticated()
+
 
                         .requestMatchers(HttpMethod.GET, "/api/room-types/deleted").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PATCH, "/api/room-types/*/suspend")

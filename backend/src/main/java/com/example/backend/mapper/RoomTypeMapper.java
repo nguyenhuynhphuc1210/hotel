@@ -82,6 +82,7 @@ public class RoomTypeMapper {
                 .hotelId(rt.getHotel() != null ? rt.getHotel().getId() : null)
                 .hotelName(rt.getHotel() != null ? rt.getHotel().getHotelName() : null)
                 .typeName(rt.getTypeName())
+                .description(rt.getDescription())
                 .maxAdults(rt.getMaxAdults())
                 .maxChildren(rt.getMaxChildren())
                 .bedType(rt.getBedType())

@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Optional;
 
 import java.time.LocalDate;
 
@@ -55,4 +56,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                 WHERE h.id = :id
             """)
     String findOwnerEmailByHotelId(@Param("id") Long id);
+
+    @Query("SELECT h FROM Hotel h LEFT JOIN FETCH h.roomTypes WHERE h.id = :id")
+    Optional<Hotel> findByIdWithRoomTypes(@Param("id") Long id);
 }

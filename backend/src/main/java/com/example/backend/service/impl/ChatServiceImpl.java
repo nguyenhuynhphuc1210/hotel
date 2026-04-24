@@ -2,11 +2,13 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.response.ChatMessageResponse;
 import com.example.backend.dto.response.ConversationResponse;
+import com.example.backend.entity.Booking;
 import com.example.backend.entity.ChatMessage;
 import com.example.backend.entity.Conversation;
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.User;
 import com.example.backend.mapper.ChatMapper;
+import com.example.backend.repository.BookingRepository;
 import com.example.backend.repository.ChatMessageRepository;
 import com.example.backend.repository.ConversationRepository;
 import com.example.backend.repository.HotelRepository;
@@ -33,23 +35,47 @@ public class ChatServiceImpl implements ChatService {
     private final HotelRepository hotelRepository;
     private final ChatMapper chatMapper;
     private final SimpMessagingTemplate messagingTemplate;
+    private final BookingRepository bookingRepository;
 
     @Override
     @Transactional
-    public ChatMessageResponse saveMessage(Long userId, Long hotelId, String senderEmail, String content) {
-        Conversation conversation = conversationRepository.findByUser_IdAndHotel_Id(userId, hotelId)
-                .orElseGet(() -> {
-                    User user = userRepository.findById(userId)
-                            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy User"));
-                    Hotel hotel = hotelRepository.findById(hotelId)
-                            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Hotel"));
+    public ChatMessageResponse saveMessage(Long userId, Long hotelId, Long bookingId, String senderEmail, String content) {
+        
+        Conversation conversation;
 
-                    Conversation newConv = Conversation.builder()
-                            .user(user)
-                            .hotel(hotel)
-                            .build();
-                    return conversationRepository.save(newConv);
-                });
+        if (bookingId != null) {
+            conversation = conversationRepository.findByBooking_Id(bookingId)
+                    .orElseGet(() -> {
+                        User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy User"));
+                        Hotel hotel = hotelRepository.findById(hotelId)
+                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Hotel"));
+
+                        Booking booking = bookingRepository.findById(bookingId)
+                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Booking"));
+
+                        Conversation newConv = Conversation.builder()
+                                .user(user)
+                                .hotel(hotel)
+                                .booking(booking)
+                                .build();
+                        return conversationRepository.save(newConv);
+                    });
+        } else {
+            conversation = conversationRepository.findByUser_IdAndHotel_IdAndBookingIsNull(userId, hotelId)
+                    .orElseGet(() -> {
+                        User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy User"));
+                        Hotel hotel = hotelRepository.findById(hotelId)
+                                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Hotel"));
+
+                        Conversation newConv = Conversation.builder()
+                                .user(user)
+                                .hotel(hotel)
+                                .build();
+                        return conversationRepository.save(newConv);
+                    });
+        }
 
         conversation.setLastMessageAt(LocalDateTime.now());
         conversationRepository.save(conversation);

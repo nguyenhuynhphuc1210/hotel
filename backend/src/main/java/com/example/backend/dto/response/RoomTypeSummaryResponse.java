@@ -12,6 +12,7 @@ public class RoomTypeSummaryResponse {
     private Long hotelId;
     private String hotelName;
     private String typeName;
+    private String description;
     private Integer maxAdults;
     private Integer maxChildren;
     private String bedType;
