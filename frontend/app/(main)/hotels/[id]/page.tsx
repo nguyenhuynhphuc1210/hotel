@@ -28,6 +28,8 @@ import { HotelPolicyResponse } from '@/types/policy.types'
 import { BookingResponse } from '@/types/booking.types'
 import Pagination from '@/components/ui/PaginationDetail'
 import HotelChatWidget from '@/components/chat/HotelChatWidget'
+import { roomTypeAmenityApi } from '@/lib/api/amenity.api'
+import { RoomTypeAmenityResponse } from '@/types/amenity.types'
 
 // ── Hook: fetch calendar cho 1 room trong khoảng checkIn/checkOut ──────────
 function useRoomCalendarPricing(
@@ -97,6 +99,12 @@ function RoomCard({
         hasFullDates
     )
 
+    const { data: amenities = [] } = useQuery<RoomTypeAmenityResponse[]>({
+        queryKey: ['room-type-amenities-public', room.id],
+        queryFn: () => roomTypeAmenityApi.getByRoomType(room.id).then(r => r.data),
+        staleTime: 1000 * 60 * 10,
+    })
+
     const { avgPrice, allAvailable } = useMemo(
         () => calcAvgPrice(calendarData, Number(room.basePrice)),
         [calendarData, room.basePrice]
@@ -164,6 +172,34 @@ function RoomCard({
                     <p className="text-sm text-gray-500 line-clamp-2 italic leading-relaxed">
                         {room.description || 'Phòng đầy đủ tiện nghi với không gian thoáng mát, sạch sẽ, mang lại cảm giác thoải mái cho kỳ nghỉ của bạn.'}
                     </p>
+
+                    {amenities.length > 0 && (
+                        <div className="border-t border-gray-100 pt-3 mt-1">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
+                                Tiện ích phòng
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {amenities.slice(0, 4).map(a => (
+                                    <span
+                                        key={a.amenityId}
+                                        className="flex items-center gap-1 text-[11px] bg-blue-50 text-blue-700 px-2 py-1 rounded-md"
+                                    >
+                                        {a.iconUrl
+                                            ? <img src={a.iconUrl} className="w-3 h-3 object-contain" alt="" />
+                                            : <CheckCircle2 size={10} />
+                                        }
+                                        {a.amenityName}
+                                    </span>
+                                ))}
+                                {amenities.length > 4 && (
+                                    <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md">
+                                        + {amenities.length - 4} tiện ích khác
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
 
                 {/* Giá + nút đặt */}
@@ -890,7 +926,7 @@ export default function HotelDetailPage() {
             <HotelChatWidget
                 hotelId={hotelId}
                 hotelName={hotel?.hotelName ?? ''}
-                hotelOwnerEmail={hotel?.ownerEmail}  
+                hotelOwnerEmail={hotel?.ownerEmail}
             />
         </div>
     )
