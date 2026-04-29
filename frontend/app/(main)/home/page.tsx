@@ -36,7 +36,7 @@ const DISTRICT_IMAGES: Record<string, string> = {
     'Quận 11': 'https://statics.vinpearl.com/cong-vien-van-hoa-dam-sen-1_1630425408.jpg',
     'Quận 12': 'http://chuaviettoancau.com/userfiles/166_01.jpg',
     'Q. Bình Thạnh': 'https://www.vinhomescentralpark.co/wp-content/uploads/2021/04/landmark81.jpeg',
-    'Q. Gò Vấp': 'http://reviewvilla.vn/wp-content/uploads/2022/06/mieu-noi-go-vap-1.jpeg',
+    'Q. Gò Vấp': 'https://statics.vinpearl.com/mieu-noi-go-vap-0_1630427238.png',
     'Q. Tân Bình': 'https://statics.vinpearl.com/dien-tich-san-bay-tan-son-nhat-1_1685770904.png',
     'Q. Tân Phú': 'https://vnanet.vn/Data/Articles/2022/08/04/6260752/vna_potal_tpho_chi_minh_xay_dung_khu_di_tich_lich_su_tro_thanh_noi_giao_duc_truyen_thong_cach_mang_cho_the_he_tre_stand.jpg',
     'Q. Phú Nhuận': 'https://vntravel.org.vn/uploads/images/2023/10/27/img-3507-1698382722.JPG',

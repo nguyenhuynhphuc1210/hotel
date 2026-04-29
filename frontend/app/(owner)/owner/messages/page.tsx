@@ -63,6 +63,7 @@ export default function OwnerMessagesPage() {
     const [isLoadingMsgs, setIsLoadingMsgs] = useState(false)
     const [isConnected, setIsConnected] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
+    // ✅ Set lưu conversationId có tin nhắn chưa đọc
     const [unreadConvIds, setUnreadConvIds] = useState<Set<number>>(new Set())
 
     const stompClientRef = useRef<Client | null>(null)
@@ -106,6 +107,7 @@ export default function OwnerMessagesPage() {
                     const current = selectedConvRef.current
 
                     if (current && msg.conversationId === current.id) {
+                        // Đang xem conversation này → thêm tin + gửi read receipt ngay
                         setMessages(prev => {
                             const idx = prev.findIndex(m => m.id < 0 && m.senderEmail === msg.senderEmail && m.content === msg.content)
                             if (idx !== -1) { const next = [...prev]; next[idx] = msg; return next }
@@ -115,6 +117,7 @@ export default function OwnerMessagesPage() {
                         if (msg.senderEmail !== user.email)
                             sendReadReceipt(msg.conversationId, msg.senderEmail, client)
                     } else {
+                        // ✅ Tin đến từ conversation khác → đánh dấu unread
                         setUnreadConvIds(prev => new Set(prev).add(msg.conversationId))
                     }
 
@@ -140,6 +143,7 @@ export default function OwnerMessagesPage() {
         setSelectedConv(conv)
         setIsLoadingMsgs(true)
         setMessages([])
+        // ✅ Xóa unread khi mở conversation
         setUnreadConvIds(prev => { const next = new Set(prev); next.delete(conv.id); return next })
         try {
             const res = await axiosInstance.get<ChatMsg[]>(`/api/chat/history/${conv.id}`)
@@ -210,27 +214,51 @@ export default function OwnerMessagesPage() {
                         filtered.map(conv => {
                             const isActive = selectedConv?.id === conv.id
                             const hasUnread = unreadConvIds.has(conv.id)
+
                             return (
-                                <button key={conv.id} onClick={() => loadMessages(conv)}
-                                    className={`w-full text-left px-4 py-3.5 flex items-start gap-3 border-b border-gray-50 transition-colors
-                                        ${isActive ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-white'}`}>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden
-                                        ${isActive ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'}`}>
-                                        {conv.userAvatar
-                                            ? <img src={conv.userAvatar} alt={conv.userFullName} className="w-full h-full object-cover" />
-                                            : initials(conv.userFullName)}
+                                <button
+                                    key={conv.id}
+                                    onClick={() => loadMessages(conv)}
+                                    className={`w-full text-left px-4 py-3.5 flex items-center gap-3 border-b border-gray-50 transition-colors
+                                        ${isActive ? 'bg-blue-50 border-l-2 border-l-blue-500' : hasUnread ? 'bg-white hover:bg-gray-50' : 'hover:bg-white'}`}
+                                >
+                                    {/* Avatar */}
+                                    <div className="relative shrink-0">
+                                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden
+                                            ${isActive ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'}`}>
+                                            {conv.userAvatar
+                                                ? <img src={conv.userAvatar} alt={conv.userFullName} className="w-full h-full object-cover" />
+                                                : initials(conv.userFullName)}
+                                        </div>
+                                        {/* ✅ Chấm đỏ thông báo chưa đọc — góc dưới phải avatar */}
+                                        {hasUnread && !isActive && (
+                                            <span className="absolute bottom-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+                                        )}
                                     </div>
+
+                                    {/* Nội dung */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-0.5">
-                                            <span className={`text-sm truncate ${isActive ? 'text-blue-700 font-semibold' : hasUnread ? 'text-gray-900 font-bold' : 'text-gray-900 font-semibold'}`}>
+                                            {/* ✅ Tên đậm nếu chưa đọc, nhạt nếu đã đọc */}
+                                            <span className={`text-sm truncate
+                                                ${isActive
+                                                    ? 'text-blue-700 font-semibold'
+                                                    : hasUnread
+                                                        ? 'text-gray-900 font-bold'      // chưa đọc → đậm
+                                                        : 'text-gray-500 font-normal'    // đã đọc → nhạt
+                                                }`}>
                                                 {conv.userFullName}
                                             </span>
-                                            <div className="flex items-center gap-1 shrink-0 ml-1">
-                                                {hasUnread && !isActive && <span className="w-2 h-2 bg-blue-500 rounded-full" />}
-                                                <span className="text-[10px] text-gray-400">{timeAgo(conv.lastMessageAt)}</span>
-                                            </div>
+                                            {/* ✅ Giờ đậm nếu chưa đọc */}
+                                            <span className={`text-[10px] shrink-0 ml-2
+                                                ${hasUnread && !isActive ? 'text-gray-700 font-semibold' : 'text-gray-400'}`}>
+                                                {timeAgo(conv.lastMessageAt)}
+                                            </span>
                                         </div>
-                                        <p className="text-xs text-gray-400 truncate">{conv.userEmail}</p>
+                                        {/* ✅ Email nhạt hơn nếu đã đọc */}
+                                        <p className={`text-xs truncate ${hasUnread && !isActive ? 'text-gray-500' : 'text-gray-400'}`}>
+                                            {conv.userEmail}
+                                        </p>
                                     </div>
                                 </button>
                             )
@@ -287,7 +315,6 @@ export default function OwnerMessagesPage() {
                                                 ${isMine ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white text-gray-800 border border-gray-100 rounded-bl-sm shadow-sm'}`}>
                                                 {msg.content}
                                             </div>
-                                            {/* ── Trạng thái đọc dạng chữ ── */}
                                             <div className={`flex items-center gap-1.5 px-1 ${isMine ? 'flex-row-reverse' : ''}`}>
                                                 <span className="text-[10px] text-gray-400">{fmt(msg.timestamp)}</span>
                                                 {isMine && (
