@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const token   = request.cookies.get('access_token')?.value
+  const token = request.cookies.get('access_token')?.value
   const userStr = request.cookies.get('user')?.value
 
   // ── Parse role ──
@@ -19,8 +19,8 @@ export function middleware(request: NextRequest) {
 
   // ── /admin/login — không cần auth, nhưng nếu đã login đúng role thì redirect ──
   if (pathname === '/admin/login') {
-    if (token && roleName === 'ROLE_ADMIN')        return NextResponse.redirect(new URL('/admin', request.url))
-    if (token && roleName === 'ROLE_HOTEL_OWNER')  return NextResponse.redirect(new URL('/owner', request.url))
+    if (token && roleName === 'ROLE_ADMIN') return NextResponse.redirect(new URL('/admin', request.url))
+    if (token && roleName === 'ROLE_HOTEL_OWNER') return NextResponse.redirect(new URL('/owner', request.url))
     return NextResponse.next()
   }
 
@@ -46,6 +46,15 @@ export function middleware(request: NextRequest) {
 
   // ── Bảo vệ /profile, /booking ──
   if (pathname.startsWith('/profile') || pathname.startsWith('/booking')) {
+
+    if (
+      pathname === '/booking/success' ||
+      pathname === '/booking/failed' ||
+      pathname.startsWith('/booking/detail')
+    ) {
+      return NextResponse.next()
+    }
+
     if (!token) return NextResponse.redirect(new URL('/login', request.url))
     return NextResponse.next()
   }

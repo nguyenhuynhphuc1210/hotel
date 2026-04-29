@@ -1,306 +1,345 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, X, RotateCcw, Bot, User, ChevronDown } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useParams } from 'next/navigation'
+import { 
+    Send, Loader2, X, RotateCcw, Bot, User, 
+    ChevronDown, Sparkles, Trash2, MessageSquare,
+    RefreshCw, AlertCircle
+} from 'lucide-react'
 import axiosInstance from '@/lib/api/axios'
+import { cn } from '@/lib/utils'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Message {
-    id: number
+    id: string
     role: 'user' | 'assistant'
     content: string
-    timestamp: Date
-    isLoading?: boolean
+    timestamp: number
+    status?: 'sending' | 'sent' | 'error'
 }
 
-// ── Markdown render nhẹ ───────────────────────────────────────────────────────
+// ── Markdown Parser Cải Tiến ─────────────────────────────────────────────────
 function renderMarkdown(text: string) {
+    if (!text) return ''
     return text
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/^- (.*$)/gm, '<li class="flex gap-1.5 mb-0.5"><span class="text-blue-400 shrink-0">•</span><span>$1</span></li>')
-        .replace(/(<li[\s\S]*?<\/li>)/g, '<ul class="my-1.5">$1</ul>')
-        .replace(/\n\n/g, '<br/><br/>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-blue-900">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+        .replace(/^- (.*$)/gm, '<li class="flex gap-2 mb-1.5"><span class="text-blue-500 shrink-0 mt-1">•</span><span>$1</span></li>')
+        .replace(/(<li[\s\S]*?<\/li>)/g, '<ul class="my-2 pl-1">$1</ul>')
+        .replace(/\n\n/g, '<div class="h-2"></div>')
         .replace(/\n/g, '<br/>')
 }
 
-// ── Typing dots ───────────────────────────────────────────────────────────────
-function TypingDots() {
-    return (
-        <div className="flex items-center gap-1 py-0.5 px-1">
-            {[0, 1, 2].map(i => (
-                <span key={i} className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
-                    style={{ animationDelay: `${i * 0.15}s`, animationDuration: '0.7s' }} />
-            ))}
-        </div>
-    )
-}
+// ── Components nhỏ ───────────────────────────────────────────────────────────
+const TypingIndicator = () => (
+    <div className="flex items-center gap-1.5 py-2 px-3 bg-white border border-gray-100 rounded-2xl w-fit shadow-sm">
+        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+        <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+        <span className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-bounce" />
+    </div>
+)
 
-// ── Quick suggestions ─────────────────────────────────────────────────────────
-const QUICK_QUESTIONS = [
-    '🏨 Gợi ý khách sạn tốt?',
-    '💰 Đặt phòng giá rẻ?',
-    '📅 Chính sách hủy phòng?',
-    '🛏️ Phòng nào phù hợp nhất?',
-]
+const WELCOME_TEXT = 'Xin chào! Tôi là **Vago AI** 🤖\n\nTôi có thể giúp bạn tìm phòng, kiểm tra giá, tư vấn lịch trình hoặc giải đáp chính sách khách sạn. Bạn cần hỗ trợ gì hôm nay?'
 
-const WELCOME = 'Xin chào! Tôi là **Vago AI** 🤖\nTôi có thể tư vấn về khách sạn, phòng nghỉ và lịch trình du lịch cho bạn!'
-
-// ── Widget ────────────────────────────────────────────────────────────────────
+// ── Main Widget ───────────────────────────────────────────────────────────────
 export default function AIChatWidget() {
+    const params = useParams()
+    const hotelId = params?.id ? Number(params.id) : null
+
     const [isOpen, setIsOpen] = useState(false)
-    const [messages, setMessages] = useState<Message[]>([
-        { id: 0, role: 'assistant', content: WELCOME, timestamp: new Date() }
-    ])
+    const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
-    const [isLoading, setIsLoading] = useState(false)
+    const [isTyping, setIsTyping] = useState(false)
     const [showBubble, setShowBubble] = useState(true)
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
-    const inputRef = useRef<HTMLInputElement>(null)
+    const inputRef = useRef<HTMLTextAreaElement>(null)
 
+    // 1. Khởi tạo & Load lịch sử từ LocalStorage
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [messages])
-
-    // Ẩn bubble sau 5 giây
-    useEffect(() => {
-        const t = setTimeout(() => setShowBubble(false), 5000)
+        const saved = localStorage.getItem('vago_ai_chat')
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved)
+                setMessages(parsed)
+            } catch (e) {
+                setMessages([{ id: 'init', role: 'assistant', content: WELCOME_TEXT, timestamp: Date.now() }])
+            }
+        } else {
+            setMessages([{ id: 'init', role: 'assistant', content: WELCOME_TEXT, timestamp: Date.now() }])
+        }
+        
+        const t = setTimeout(() => setShowBubble(false), 8000)
         return () => clearTimeout(t)
     }, [])
+
+    // 2. Lưu lịch sử khi có tin nhắn mới
+    useEffect(() => {
+        if (messages.length > 0) {
+            localStorage.setItem('vago_ai_chat', JSON.stringify(messages))
+        }
+        scrollToBottom()
+    }, [messages])
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
 
     const handleOpen = () => {
         setIsOpen(true)
         setShowBubble(false)
-        setTimeout(() => inputRef.current?.focus(), 200)
+        setTimeout(() => inputRef.current?.focus(), 300)
     }
 
-    const sendMessage = async (promptOverride?: string) => {
-        const prompt = (promptOverride ?? input).trim()
-        if (!prompt || isLoading) return
+    const sendMessage = async (overrideText?: string) => {
+        const content = (overrideText ?? input).trim()
+        if (!content || isTyping) return
 
         setInput('')
-        setIsLoading(true)
+        if (inputRef.current) inputRef.current.style.height = 'auto'
 
-        const userMsg: Message = { id: Date.now(), role: 'user', content: prompt, timestamp: new Date() }
-        const loadingMsg: Message = { id: Date.now() + 1, role: 'assistant', content: '', timestamp: new Date(), isLoading: true }
-        setMessages(prev => [...prev, userMsg, loadingMsg])
+        const userMsg: Message = {
+            id: Date.now().toString(),
+            role: 'user',
+            content,
+            timestamp: Date.now(),
+            status: 'sent'
+        }
+
+        setMessages(prev => [...prev, userMsg])
+        setIsTyping(true)
 
         try {
             const res = await axiosInstance.post<{ reply: string }>('/api/chat/ai', {
-                prompt,
-                hotelId: null,
+                prompt: content,
+                hotelId: hotelId, // Tự động gửi context hotel nếu đang ở trang chi tiết
+                history: messages.slice(-5).map(m => ({ role: m.role, content: m.content })) // Gửi kèm lịch sử ngắn
             })
-            setMessages(prev => prev.map(m =>
-                m.id === loadingMsg.id
-                    ? { ...m, content: res.data.reply, isLoading: false, timestamp: new Date() }
-                    : m
-            ))
-        } catch {
-            setMessages(prev => prev.map(m =>
-                m.id === loadingMsg.id
-                    ? { ...m, content: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại! 😔', isLoading: false, timestamp: new Date() }
-                    : m
-            ))
+
+            const aiMsg: Message = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: res.data.reply,
+                timestamp: Date.now()
+            }
+            setMessages(prev => [...prev, aiMsg])
+        } catch (error) {
+            const errorMsg: Message = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: 'Rất tiếc, kết nối của tôi đang gặp sự cố. Bạn vui lòng thử lại nhé! 🛠️',
+                timestamp: Date.now(),
+                status: 'error'
+            }
+            setMessages(prev => [...prev, errorMsg])
         } finally {
-            setIsLoading(false)
+            setIsTyping(false)
         }
     }
 
-    const handleReset = () => {
-        setMessages([{ id: Date.now(), role: 'assistant', content: WELCOME, timestamp: new Date() }])
-        setInput('')
+    const clearChat = () => {
+        if (confirm('Bạn có muốn xóa toàn bộ lịch sử trò chuyện?')) {
+            const initMsg: Message = { id: 'init', role: 'assistant', content: WELCOME_TEXT, timestamp: Date.now() }
+            setMessages([initMsg])
+            localStorage.removeItem('vago_ai_chat')
+        }
     }
 
-    const unreadCount = 0 // có thể mở rộng sau
+    // Gợi ý câu hỏi dựa trên việc có đang ở trang khách sạn hay không
+    const suggestions = hotelId 
+        ? ['Giá phòng đêm nay?', 'Khách sạn có cho nuôi thú cưng không?', 'Giờ nhận/trả phòng?']
+        : ['Tìm khách sạn ở TP. Hồ Chí Minh', 'Chính sách hoàn tiền?', 'Ưu đãi hôm nay']
 
     return (
-        // Đặt ở góc phải dưới, trên HotelChatWidget (z-index cao hơn 1 chút)
-        // HotelChatWidget ở bottom-6 right-6
-        // Widget này ở bottom-6 right-24 (cách sang trái)
-        <div className="fixed bottom-6 right-24 z-50 flex flex-col items-end gap-2">
-
-            {/* ── Popup chat ──────────────────────────────────────────── */}
+        <div className="fixed bottom-6 right-24 z-[60] flex flex-col items-end gap-3">
+            
+            {/* ── Chat Window ────────────────────────────────────────── */}
             {isOpen && (
-                <div
-                    className="w-[360px] flex flex-col rounded-2xl overflow-hidden shadow-2xl border border-gray-100"
-                    style={{
-                        height: '520px',
-                        boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
-                        animation: 'slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1)',
-                    }}
+                <div 
+                    className="w-[380px] md:w-[420px] flex flex-col bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden animate-in slide-in-from-bottom-5 duration-300"
+                    style={{ height: '600px' }}
                 >
-                    <style>{`
-                        @keyframes slideUp {
-                            from { opacity: 0; transform: translateY(20px) scale(0.95); }
-                            to   { opacity: 1; transform: translateY(0)    scale(1); }
-                        }
-                        @keyframes fadeIn {
-                            from { opacity: 0; transform: translateY(6px); }
-                            to   { opacity: 1; transform: translateY(0); }
-                        }
-                        .msg-enter { animation: fadeIn 0.2s ease; }
-                    `}</style>
-
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3.5 flex items-center gap-3 shrink-0">
-                        {/* Avatar */}
-                        <div className="w-9 h-9 rounded-full bg-white/20 border-2 border-white/30 flex items-center justify-center shrink-0">
-                            <Bot size={18} className="text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-white font-bold text-sm">Vago AI</p>
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 bg-green-300 rounded-full animate-pulse" />
-                                <span className="text-white/75 text-[11px]">Trợ lý du lịch thông minh</span>
+                    <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 p-4 text-white shrink-0">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                                        <Bot size={22} className="text-white" />
+                                    </div>
+                                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-blue-600 rounded-full"></span>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-sm flex items-center gap-1.5">
+                                        Vago AI Assistant
+                                        <Sparkles size={12} className="text-yellow-300 fill-yellow-300" />
+                                    </h3>
+                                    <p className="text-[10px] text-blue-100 flex items-center gap-1">
+                                        <span className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"></span>
+                                        Phản hồi ngay lập tức
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <button onClick={clearChat} className="p-2 hover:bg-white/10 rounded-full transition-colors text-blue-100" title="Xóa lịch sử">
+                                    <Trash2 size={16} />
+                                </button>
+                                <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                    <ChevronDown size={20} />
+                                </button>
                             </div>
                         </div>
-                        <button onClick={handleReset} title="Cuộc trò chuyện mới"
-                            className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                            <RotateCcw size={15} />
-                        </button>
-                        <button onClick={() => setIsOpen(false)}
-                            className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                            <ChevronDown size={18} />
-                        </button>
                     </div>
 
-                    {/* Messages */}
-                    <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-3 space-y-3"
-                        style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
-
-                        {messages.map((msg, idx) => {
-                            const isUser = msg.role === 'user'
-                            const isFirst = idx === 0
-                            return (
-                                <div key={msg.id} className={`msg-enter flex gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    {/* Avatar */}
-                                    {!isUser && (
-                                        <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center shrink-0 mt-auto mb-4">
-                                            <Bot size={13} className="text-white" />
-                                        </div>
+                    {/* Messages Area */}
+                    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] p-4 space-y-4 scroll-smooth custom-scrollbar">
+                        {messages.map((msg, idx) => (
+                            <div key={msg.id} className={cn("flex flex-col animate-in fade-in slide-in-from-top-1", msg.role === 'user' ? "items-end" : "items-start")}>
+                                <div className={cn(
+                                    "max-w-[85%] px-4 py-3 rounded-2xl text-sm shadow-sm",
+                                    msg.role === 'user' 
+                                        ? "bg-blue-600 text-white rounded-br-none" 
+                                        : "bg-white text-gray-800 border border-gray-100 rounded-bl-none"
+                                )}>
+                                    {msg.role === 'assistant' ? (
+                                        <div 
+                                            className="prose prose-sm prose-blue leading-relaxed"
+                                            dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} 
+                                        />
+                                    ) : (
+                                        msg.content
                                     )}
-                                    {isUser && (
-                                        <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center shrink-0 mt-auto mb-4">
-                                            <User size={13} className="text-gray-600" />
-                                        </div>
-                                    )}
-
-                                    <div className={`flex flex-col gap-1 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
-                                        <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed
-                                            ${isUser
-                                                ? 'bg-blue-600 text-white rounded-br-sm'
-                                                : 'bg-white text-gray-800 border border-gray-100 rounded-bl-sm shadow-sm'
-                                            }`}>
-                                            {msg.isLoading ? (
-                                                <TypingDots />
-                                            ) : isUser ? (
-                                                <span>{msg.content}</span>
-                                            ) : (
-                                                <div dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
-                                            )}
-                                        </div>
-
-                                        {/* Quick questions chỉ hiện dưới tin welcome */}
-                                        {isFirst && !isUser && messages.length === 1 && (
-                                            <div className="flex flex-col gap-1.5 mt-1 w-full">
-                                                {QUICK_QUESTIONS.map(q => (
-                                                    <button key={q} onClick={() => sendMessage(q)} disabled={isLoading}
-                                                        className="text-left text-xs px-3 py-2 bg-white border border-blue-100 text-blue-600 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all font-medium disabled:opacity-40 shadow-sm">
-                                                        {q}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        <span className="text-[10px] text-gray-400 px-1">
-                                            {msg.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
                                 </div>
-                            )
-                        })}
+                                
+                                <div className="flex items-center gap-1 mt-1 px-1">
+                                    {msg.status === 'error' && <AlertCircle size={10} className="text-red-500" />}
+                                    <span className="text-[9px] text-gray-400">
+                                        {new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+
+                                {/* Suggestions (Chỉ hiện sau tin nhắn cuối cùng của AI) */}
+                                {idx === messages.length - 1 && msg.role === 'assistant' && !isTyping && (
+                                    <div className="flex flex-wrap gap-2 mt-3">
+                                        {suggestions.map((s, i) => (
+                                            <button 
+                                                key={i}
+                                                onClick={() => sendMessage(s)}
+                                                className="text-[11px] bg-white border border-blue-100 text-blue-600 px-3 py-1.5 rounded-full hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm active:scale-95"
+                                            >
+                                                {s}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        {isTyping && <TypingIndicator />}
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Disclaimer */}
-                    <div className="bg-gray-50 px-4 py-1.5 border-t border-gray-100 shrink-0">
-                        <p className="text-[10px] text-gray-400 text-center">
-                            Thông tin chỉ mang tính tham khảo, được tư vấn bởi Trí Tuệ Nhân Tạo
+                    {/* Input Area */}
+                    <div className="p-4 bg-white border-t border-gray-100 shrink-0">
+                        <div className="flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+                            <textarea
+                                ref={inputRef}
+                                rows={1}
+                                value={input}
+                                onChange={(e) => {
+                                    setInput(e.target.value);
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        sendMessage();
+                                    }
+                                }}
+                                placeholder="Hỏi Vago AI về phòng, giá, ưu đãi..."
+                                className="flex-1 bg-transparent border-none focus:ring-0 text-sm resize-none py-1 max-h-[100px] custom-scrollbar"
+                            />
+                            <button
+                                onClick={() => sendMessage()}
+                                disabled={!input.trim() || isTyping}
+                                className={cn(
+                                    "w-8 h-8 rounded-xl flex items-center justify-center transition-all shrink-0",
+                                    input.trim() && !isTyping ? "bg-blue-600 text-white shadow-lg shadow-blue-200 active:scale-90" : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                )}
+                            >
+                                {isTyping ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400 text-center mt-2 flex items-center justify-center gap-1">
+                            <Bot size={10} /> AI có thể nhầm lẫn, hãy kiểm tra lại thông tin quan trọng.
                         </p>
-                    </div>
-
-                    {/* Input */}
-                    <div className="bg-white px-3 py-3 border-t border-gray-100 flex items-center gap-2 shrink-0">
-                        <input
-                            ref={inputRef}
-                            value={input}
-                            onChange={e => setInput(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); sendMessage() } }}
-                            placeholder="Nhập tin nhắn..."
-                            className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent placeholder-gray-400"
-                        />
-                        <button
-                            onClick={() => sendMessage()}
-                            disabled={!input.trim() || isLoading}
-                            className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-40 shrink-0 shadow-md shadow-blue-200"
-                        >
-                            {isLoading ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                        </button>
                     </div>
                 </div>
             )}
 
-            {/* ── Preview bubble (hiện 5s rồi tắt) ──────────────────── */}
+            {/* ── Bubble Preview ──────────────────────────────────────── */}
             {showBubble && !isOpen && (
-                <div
+                <div 
+                    className="bg-white p-3 rounded-2xl rounded-br-sm shadow-xl border border-blue-50 max-w-[200px] animate-in slide-in-from-right-5 cursor-pointer hover:bg-blue-50 transition-colors"
                     onClick={handleOpen}
-                    className="bg-white rounded-2xl rounded-br-sm shadow-xl border border-gray-100 px-4 py-3 max-w-[220px] cursor-pointer hover:shadow-2xl transition-all"
-                    style={{ animation: 'slideUp 0.3s ease' }}
                 >
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1.5">
                         <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
-                            <Bot size={11} className="text-white" />
+                            <Bot size={12} className="text-white" />
                         </div>
-                        <span className="text-xs font-bold text-gray-800">Vago AI</span>
+                        <span className="text-[11px] font-bold text-gray-800">Vago AI</span>
                     </div>
-                    <p className="text-xs text-gray-600 leading-relaxed">
-                        Xin chào! Tôi là trợ lý AI của Vago Hotel 😊
+                    <p className="text-[11px] text-gray-600 leading-snug">
+                        {hotelId ? "Bạn cần thông tin về khách sạn này?" : "Tôi có thể giúp bạn tìm khách sạn ưng ý!"}
                     </p>
                 </div>
             )}
 
             {/* ── FAB Button ─────────────────────────────────────────── */}
             <button
-                onClick={isOpen ? () => setIsOpen(false) : handleOpen}
-                className="relative flex flex-col items-center gap-1 group"
-                title="Chat với Vago AI"
+                onClick={() => isOpen ? setIsOpen(false) : handleOpen()}
+                className={cn(
+                    "w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 relative group active:scale-90",
+                    isOpen ? "bg-gray-800 rotate-90" : "bg-gradient-to-tr from-blue-600 to-indigo-600"
+                )}
             >
-                {/* Circle button */}
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95
-                    ${isOpen
-                        ? 'bg-gray-600 hover:bg-gray-700'
-                        : 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-violet-600'
-                    }`}
-                    style={{ boxShadow: isOpen ? undefined : '0 8px 24px rgba(37,99,235,0.4)' }}
-                >
-                    {isOpen
-                        ? <X size={22} className="text-white" />
-                        : <Bot size={22} className="text-white" />
-                    }
-
-                    {/* Pulse ring khi đóng */}
-                    {!isOpen && (
-                        <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20" />
-                    )}
-                </div>
-
-                {/* Label dưới button */}
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all
-                    ${isOpen ? 'text-gray-500' : 'text-blue-700 bg-blue-50'}`}>
-                    Trợ lý AI
-                </span>
+                {isOpen ? (
+                    <X size={24} className="text-white" />
+                ) : (
+                    <>
+                        <Bot size={26} className="text-white group-hover:scale-110 transition-transform" />
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center">
+                            1
+                        </span>
+                        <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20"></div>
+                    </>
+                )}
             </button>
+            
+            {/* Label dưới nút */}
+            <span className={cn(
+                "text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm transition-all",
+                isOpen ? "bg-gray-100 text-gray-500" : "bg-blue-50 text-blue-600 border border-blue-100"
+            )}>
+                VAGO AI
+            </span>
+
+            <style jsx global>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #E2E8F0;
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #CBD5E1;
+                }
+            `}</style>
         </div>
     )
 }

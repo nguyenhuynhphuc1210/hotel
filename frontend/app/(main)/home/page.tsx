@@ -17,9 +17,9 @@ import { PromotionResponse } from '@/types/promotion.types'
 const DISTRICTS = [
     'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5',
     'Quận 6', 'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10',
-    'Quận 11', 'Quận 12', 'Q. Bình Thạnh', 'Q. Gò Vấp', 'Q. Tân Bình',
-    'Q. Tân Phú', 'Q. Phú Nhuận', 'Q. Thủ Đức', 'Q. Bình Tân',
-    'H. Củ Chi', 'H. Hóc Môn', 'H. Nhà Bè', 'H. Bình Chánh', 'H. Cần Giờ',
+    'Quận 11', 'Quận 12', 'Quận Bình Thạnh', 'Quận Gò Vấp', 'Quận Tân Bình',
+    'Quận Tân Phú', 'Quận Phú Nhuận', 'Quận Thủ Đức', 'Quận Bình Tân',
+    'Huyện Củ Chi', 'Huyện Hóc Môn', 'Huyện Nhà Bè', 'Huyện Bình Chánh', 'Huyện Cần Giờ',
 ]
 
 const DISTRICT_IMAGES: Record<string, string> = {
@@ -35,18 +35,18 @@ const DISTRICT_IMAGES: Record<string, string> = {
     'Quận 10': 'https://ticotravel.com.vn/wp-content/uploads/2022/10/cho-hoa-Ho-Thi-Ky-3.jpg',
     'Quận 11': 'https://statics.vinpearl.com/cong-vien-van-hoa-dam-sen-1_1630425408.jpg',
     'Quận 12': 'http://chuaviettoancau.com/userfiles/166_01.jpg',
-    'Q. Bình Thạnh': 'https://www.vinhomescentralpark.co/wp-content/uploads/2021/04/landmark81.jpeg',
-    'Q. Gò Vấp': 'https://statics.vinpearl.com/mieu-noi-go-vap-0_1630427238.png',
-    'Q. Tân Bình': 'https://statics.vinpearl.com/dien-tich-san-bay-tan-son-nhat-1_1685770904.png',
-    'Q. Tân Phú': 'https://vnanet.vn/Data/Articles/2022/08/04/6260752/vna_potal_tpho_chi_minh_xay_dung_khu_di_tich_lich_su_tro_thanh_noi_giao_duc_truyen_thong_cach_mang_cho_the_he_tre_stand.jpg',
-    'Q. Phú Nhuận': 'https://vntravel.org.vn/uploads/images/2023/10/27/img-3507-1698382722.JPG',
-    'Q. Thủ Đức': 'https://quocbaobds.com/wp-content/uploads/2020/10/Lang-dai-hoc-thu-duc.jpg',
-    'Q. Bình Tân': 'https://aeonmall-vietnam.com/wp-content/uploads/2017/04/DSC2455-1.jpg',
-    'H. Củ Chi': 'https://botohongdao.com/wp-content/uploads/2023/10/dia-dao-cu-chi-1.jpg',
-    'H. Hóc Môn': 'https://cdn.vntrip.vn/cam-nang/wp-content/uploads/2017/09/cong-tam-quan.jpg',
-    'H. Nhà Bè': 'https://media-cdn-v2.laodong.vn/Storage/NewsPortal/2021/1/7/868650/Cau-Phuoc-Loc-2.jpg',
-    'H. Bình Chánh': 'https://cdn3.ivivu.com/2020/04/nhung-canh-dong-hoa-ruc-ro-the-gioi-ivivu-1.png',
-    'H. Cần Giờ': 'https://tiimtravel.vn/uploads/files/2023/04/02/bien-can-gio.jpg',
+    'Quận Bình Thạnh': 'https://www.vinhomescentralpark.co/wp-content/uploads/2021/04/landmark81.jpeg',
+    'Quận Gò Vấp': 'https://statics.vinpearl.com/mieu-noi-go-vap-0_1630427238.png',
+    'Quận Tân Bình': 'https://statics.vinpearl.com/dien-tich-san-bay-tan-son-nhat-1_1685770904.png',
+    'Quận Tân Phú': 'https://vnanet.vn/Data/Articles/2022/08/04/6260752/vna_potal_tpho_chi_minh_xay_dung_khu_di_tich_lich_su_tro_thanh_noi_giao_duc_truyen_thong_cach_mang_cho_the_he_tre_stand.jpg',
+    'Quận Phú Nhuận': 'https://vntravel.org.vn/uploads/images/2023/10/27/img-3507-1698382722.JPG',
+    'Quận Thủ Đức': 'https://quocbaobds.com/wp-content/uploads/2020/10/Lang-dai-hoc-thu-duc.jpg',
+    'Quận Bình Tân': 'https://aeonmall-vietnam.com/wp-content/uploads/2017/04/DSC2455-1.jpg',
+    'Huyện Củ Chi': 'https://botohongdao.com/wp-content/uploads/2023/10/dia-dao-cu-chi-1.jpg',
+    'Huyện Hóc Môn': 'https://cdn.vntrip.vn/cam-nang/wp-content/uploads/2017/09/cong-tam-quan.jpg',
+    'Huyện Nhà Bè': 'https://media-cdn-v2.laodong.vn/Storage/NewsPortal/2021/1/7/868650/Cau-Phuoc-Loc-2.jpg',
+    'Huyện Bình Chánh': 'https://cdn3.ivivu.com/2020/04/nhung-canh-dong-hoa-ruc-ro-the-gioi-ivivu-1.png',
+    'Huyện Cần Giờ': 'https://tiimtravel.vn/uploads/files/2023/04/02/bien-can-gio.jpg',
 }
 const FALLBACK = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=300&fit=crop'
 

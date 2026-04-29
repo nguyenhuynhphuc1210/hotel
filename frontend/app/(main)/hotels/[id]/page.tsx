@@ -23,6 +23,7 @@ import bookingApi from '@/lib/api/booking.api'
 import { ReviewResponse } from '@/types/review.types'
 import toast from 'react-hot-toast'
 import HotelGallery from '@/components/layout/HotelGallery'
+import RoomGalleryModal from '@/components/layout/RoomGalleryModal'
 import { HotelPolicyResponse } from '@/types/policy.types'
 import { BookingResponse } from '@/types/booking.types'
 import Pagination from '@/components/ui/PaginationDetail'
@@ -30,6 +31,7 @@ import HotelChatWidget from '@/components/chat/HotelChatWidget'
 import { roomTypeAmenityApi } from '@/lib/api/amenity.api'
 import { RoomTypeAmenityResponse } from '@/types/amenity.types'
 
+// ── Hook: fetch calendar cho 1 room trong khoảng checkIn/checkOut ──────────
 function useRoomCalendarPricing(
     roomTypeId: number,
     checkIn: string,
@@ -79,7 +81,7 @@ function RoomCard({
     checkOut: string
     nights: number
     onBook: (id: number) => void
-    onOpenGallery: () => void
+    onOpenGallery: (room: RoomTypeResponse) => void
 }) {
     // Fetch calendar chỉ khi có đủ ngày
     // checkOut trừ 1 ngày vì ngày trả phòng không tính giá
@@ -118,7 +120,7 @@ function RoomCard({
             {/* Ảnh trái — click mở gallery */}
             <div
                 className="w-80 h-60 shrink-0 relative overflow-hidden bg-gray-100 flex items-center justify-center cursor-pointer group/img"
-                onClick={onOpenGallery}
+                onClick={() => onOpenGallery(room)}
             >
                 {roomImage ? (
                     <img
@@ -140,12 +142,12 @@ function RoomCard({
                     <div className="flex justify-between items-start mb-2">
                         <h4
                             className="font-bold text-xl text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer"
-                            onClick={onOpenGallery}
+                            onClick={() => onOpenGallery(room)}
                         >
                             {room.typeName}
                         </h4>
                         <button
-                            onClick={onOpenGallery}
+                            onClick={() => onOpenGallery(room)}
                             className="text-blue-600 text-xs font-bold hover:bg-blue-50 px-2 py-1 rounded transition-colors"
                         >
                             Chi tiết &amp; Ảnh
@@ -279,17 +281,10 @@ export default function HotelDetailPage() {
     const [lightboxImages, setLightboxImages] = useState<string[]>([])
     const [lightboxIndex, setLightboxIndex] = useState(0)
     const [lightboxOpen, setLightboxOpen] = useState(false)
+    const [galleryRoom, setGalleryRoom] = useState<RoomTypeResponse | null>(null)
     const [reviewPage, setReviewPage] = useState(0)
     const reviewSize = 10
     const reviewSectionRef = useRef<HTMLDivElement>(null);
-    const [galleryOpen, setGalleryOpen] = useState(false)
-    const [galleryTab, setGalleryTab] = useState<'all' | 'rooms'>('all')
-
-    const handleOpenRoomGallery = () => {
-        setGalleryTab('rooms')
-        setGalleryOpen(true)
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
 
     const handlePageChange = (page: number) => {
         setReviewPage(page);
@@ -497,22 +492,20 @@ export default function HotelDetailPage() {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 py-6">
+                <div className="mb-8">
+                    <HotelGallery images={hotel.images || []} hotelId={hotelId} />
+                </div>
 
                 {/* Room Gallery Modal */}
-                <div className="mb-8">
-                    <HotelGallery
-                        images={hotel.images || []}
-                        hotelId={hotelId}
-                        roomTypes={roomTypes}
+                {galleryRoom && (
+                    <RoomGalleryModal
+                        room={galleryRoom}
+                        onClose={() => setGalleryRoom(null)}
                         onBook={handleBooking}
                         hasFullDates={hasFullDates}
                         nights={nights}
-                        
-                        externalOpen={galleryOpen}
-                        externalTab={galleryTab}
-                        onExternalClose={() => setGalleryOpen(false)}
                     />
-                </div>
+                )}
 
                 <div className="grid grid-cols-12 gap-8">
                     <div className="col-span-8 space-y-8">
@@ -578,8 +571,7 @@ export default function HotelDetailPage() {
                                     checkOut={checkOut}
                                     nights={nights}
                                     onBook={handleBooking}
-                                    // Truyền hàm đã viết ở Bước 1 vào đây
-                                    onOpenGallery={handleOpenRoomGallery}
+                                    onOpenGallery={setGalleryRoom}
                                 />
                             ))}
 
