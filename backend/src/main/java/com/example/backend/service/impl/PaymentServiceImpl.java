@@ -133,9 +133,9 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (isSuccess) {
-            return "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode();
+            return "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode()+ "&id=" + booking.getId();
         } else {
-            return "http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode();
+            return "http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode()+ "&id=" + booking.getId();
         }
     }
 
@@ -162,9 +162,9 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (isSuccess) {
-            return "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode();
+            return "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode()+ "&id=" + booking.getId();
         } else {
-            return "http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode();
+            return "http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode()+ "&id=" + booking.getId();
         }
     }
 
