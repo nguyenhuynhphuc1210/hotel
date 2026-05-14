@@ -179,7 +179,7 @@ function RoomCard({
                                 Tiện ích phòng
                             </p>
                             <div className="flex flex-wrap gap-1.5">
-                                {amenities.slice(0, 4).map(a => (
+                                {amenities.map(a => (
                                     <span
                                         key={a.amenityId}
                                         className="flex items-center gap-1 text-[11px] bg-blue-50 text-blue-700 px-2 py-1 rounded-md"
@@ -191,9 +191,17 @@ function RoomCard({
                                         {a.amenityName}
                                     </span>
                                 ))}
-                                {amenities.length > 4 && (
-                                    <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md">
-                                        + {amenities.length - 4} tiện ích khác
+                            </div>
+
+                            {/* Badge hút thuốc */}
+                            <div className="mt-2">
+                                {room.isNonSmoking ? (
+                                    <span className="inline-flex items-center gap-1 text-[11px] bg-red-50 text-red-600 px-2 py-1 rounded-md font-medium">
+                                        🚭 Không hút thuốc
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 text-amber-600 px-2 py-1 rounded-md font-medium">
+                                        🚬 Cho phép hút thuốc
                                     </span>
                                 )}
                             </div>

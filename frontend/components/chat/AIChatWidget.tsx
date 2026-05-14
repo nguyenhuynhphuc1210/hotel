@@ -152,7 +152,7 @@ export default function AIChatWidget() {
         : ['Tìm khách sạn ở TP. Hồ Chí Minh', 'Chính sách hoàn tiền?', 'Ưu đãi hôm nay']
 
     return (
-        <div className="fixed bottom-6 right-24 z-[60] flex flex-col items-end gap-3">
+        <div className="fixed bottom-6 left-6 z-[60] flex flex-col items-end gap-3">
             
             {/* ── Chat Window ────────────────────────────────────────── */}
             {isOpen && (
@@ -195,7 +195,7 @@ export default function AIChatWidget() {
                     {/* Messages Area */}
                     <div className="flex-1 overflow-y-auto bg-[#F8FAFC] p-4 space-y-4 scroll-smooth custom-scrollbar">
                         {messages.map((msg, idx) => (
-                            <div key={msg.id} className={cn("flex flex-col animate-in fade-in slide-in-from-top-1", msg.role === 'user' ? "items-end" : "items-start")}>
+                            <div key={msg.id} className={cn("flex flex-col animate-in fade-in slide-in-from-top-1", msg.role === 'user' ? "items-start" : "items-start")}>
                                 <div className={cn(
                                     "max-w-[85%] px-4 py-3 rounded-2xl text-sm shadow-sm",
                                     msg.role === 'user' 
@@ -281,7 +281,7 @@ export default function AIChatWidget() {
             {/* ── Bubble Preview ──────────────────────────────────────── */}
             {showBubble && !isOpen && (
                 <div 
-                    className="bg-white p-3 rounded-2xl rounded-br-sm shadow-xl border border-blue-50 max-w-[200px] animate-in slide-in-from-right-5 cursor-pointer hover:bg-blue-50 transition-colors"
+                    className="bg-white p-3 rounded-2xl rounded-bl-sm shadow-xl border border-blue-50 max-w-[200px] animate-in slide-in-from-left-5 cursor-pointer hover:bg-blue-50 transition-colors"
                     onClick={handleOpen}
                 >
                     <div className="flex items-center gap-2 mb-1.5">
