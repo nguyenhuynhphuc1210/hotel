@@ -22,7 +22,7 @@ function Pagination({
   totalElements: number; onPageChange: (p: number) => void; onPageSizeChange: (s: number) => void
 }) {
   const start = currentPage * pageSize + 1
-  const end   = Math.min((currentPage + 1) * pageSize, totalElements)
+  const end = Math.min((currentPage + 1) * pageSize, totalElements)
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-500">
       <span className="text-xs">
@@ -54,21 +54,21 @@ function Pagination({
 
 // ─── Config ────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<PaymentStatus, { label: string; dot: string; badge: string }> = {
-  PAID:      { label: 'Đã thanh toán',   dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
-  PENDING:   { label: 'Chờ xử lý',       dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' },
-  UNPAID:    { label: 'Chưa thanh toán', dot: 'bg-slate-400',   badge: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200' },
-  FAILED:    { label: 'Thất bại',        dot: 'bg-red-500',     badge: 'bg-red-50 text-red-700 ring-1 ring-red-200' },
-  CANCELLED: { label: 'Đã hủy',          dot: 'bg-gray-400',    badge: 'bg-gray-50 text-gray-600 ring-1 ring-gray-200' },
-  REFUNDED:  { label: 'Hoàn tiền',       dot: 'bg-violet-500',  badge: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200' },
+  PAID: { label: 'Đã thanh toán', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
+  PENDING: { label: 'Chờ xử lý', dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' },
+  UNPAID: { label: 'Chưa thanh toán', dot: 'bg-slate-400', badge: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200' },
+  FAILED: { label: 'Thất bại', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 ring-1 ring-red-200' },
+  CANCELLED: { label: 'Đã hủy', dot: 'bg-gray-400', badge: 'bg-gray-50 text-gray-600 ring-1 ring-gray-200' },
+  REFUNDED: { label: 'Hoàn tiền', dot: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200' },
 }
 
-const METHOD_COLOR: Record<string, string> = {
-  VNPAY:         'text-blue-600 bg-blue-50 ring-1 ring-blue-200',
-  MOMO:          'text-pink-600 bg-pink-50 ring-1 ring-pink-200',
-  ZALOPAY:       'text-cyan-600 bg-cyan-50 ring-1 ring-cyan-200',
-  CREDIT_CARD:   'text-indigo-600 bg-indigo-50 ring-1 ring-indigo-200',
-  BANK_TRANSFER: 'text-teal-600 bg-teal-50 ring-1 ring-teal-200',
-  CASH:          'text-orange-600 bg-orange-50 ring-1 ring-orange-200',
+const METHOD_CONFIG: Record<string, { label: string; badge: string }> = {
+  VNPAY: { label: 'VNPay', badge: 'text-blue-600 bg-blue-50 ring-1 ring-blue-200' },
+  MOMO: { label: 'MoMo', badge: 'text-pink-600 bg-pink-50 ring-1 ring-pink-200' },
+  ZALOPAY: { label: 'ZaloPay', badge: 'text-cyan-600 bg-cyan-50 ring-1 ring-cyan-200' },
+  CREDIT_CARD: { label: 'Thẻ tín dụng', badge: 'text-indigo-600 bg-indigo-50 ring-1 ring-indigo-200' },
+  BANK_TRANSFER: { label: 'Chuyển khoản', badge: 'text-teal-600 bg-teal-50 ring-1 ring-teal-200' },
+  CASH: { label: 'Tiền mặt', badge: 'text-orange-600 bg-orange-50 ring-1 ring-orange-200' },
 }
 
 // ─── Detail Drawer ─────────────────────────────────────────────────────────
@@ -94,7 +94,9 @@ function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | 
               <span className={`inline-block w-1.5 h-1.5 rounded-full ${cfg.dot} mr-1.5`} />
               {cfg.label}
             </span>
-            <span className="text-teal-200 text-xs">{payment.paymentMethod}</span>
+            <span className="text-teal-200 text-xs">
+              {METHOD_CONFIG[payment.paymentMethod]?.label ?? payment.paymentMethod}
+            </span>
           </div>
         </div>
 
@@ -108,13 +110,13 @@ function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | 
 
         <div className="p-6 space-y-4 flex-1">
           {[
-            { label: 'Khách sạn',          value: payment.hotelName,       mono: false, accent: false },
-            { label: 'Mã đặt phòng',       value: payment.bookingCode,     mono: true,  accent: true  },
-            { label: 'Booking ID',          value: `#${payment.bookingId}`, mono: true,  accent: false },
-            { label: 'Phương thức',         value: payment.paymentMethod,   mono: false, accent: false },
-            { label: 'Ngày thanh toán',     value: payment.paymentDate ? new Date(payment.paymentDate).toLocaleString('vi-VN') : '---', mono: false, accent: false },
-            { label: 'Ngày tạo',            value: new Date(payment.createdAt).toLocaleString('vi-VN'), mono: false, accent: false },
-            { label: 'Cập nhật lần cuối',  value: new Date(payment.updatedAt).toLocaleString('vi-VN'), mono: false, accent: false },
+            { label: 'Khách sạn', value: payment.hotelName, mono: false, accent: false },
+            { label: 'Mã đặt phòng', value: payment.bookingCode, mono: true, accent: true },
+            { label: 'Booking ID', value: `#${payment.bookingId}`, mono: true, accent: false },
+            { label: 'Phương thức', value: METHOD_CONFIG[payment.paymentMethod]?.label ?? payment.paymentMethod, mono: false, accent: false },
+            { label: 'Ngày thanh toán', value: payment.paymentDate ? new Date(payment.paymentDate).toLocaleString('vi-VN') : '---', mono: false, accent: false },
+            { label: 'Ngày tạo', value: new Date(payment.createdAt).toLocaleString('vi-VN'), mono: false, accent: false },
+            { label: 'Cập nhật lần cuối', value: new Date(payment.updatedAt).toLocaleString('vi-VN'), mono: false, accent: false },
           ].map(({ label, value, mono, accent }) => (
             <div key={label} className="flex justify-between items-start">
               <span className="text-xs text-slate-500 pt-0.5">{label}</span>
@@ -139,9 +141,9 @@ function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | 
 export default function OwnerPaymentsPage() {
   const { activeHotel, activeHotelId, hotels, setActiveHotelId, isLoading: isHotelLoading } = useOwnerHotel()
 
-  const [pageSize, setPageSize]         = useState(10)
-  const [currentPage, setCurrentPage]   = useState(0)
-  const [search, setSearch]             = useState('')
+  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | ''>('')
   const [selectedPayment, setSelectedPayment] = useState<PaymentResponse | null>(null)
 
@@ -163,7 +165,7 @@ export default function OwnerPaymentsPage() {
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const paid    = hotelPayments.filter(p => p.status === 'PAID')
+    const paid = hotelPayments.filter(p => p.status === 'PAID')
     const pending = hotelPayments.filter(p => p.status === 'PENDING')
     const revenue = paid.reduce((s, p) => s + p.amount, 0)
     return { total: hotelPayments.length, paid: paid.length, pending: pending.length, revenue }
@@ -180,7 +182,7 @@ export default function OwnerPaymentsPage() {
   }), [hotelPayments, search, statusFilter])
 
   // ── Client-side paging ────────────────────────────────────────────────────
-  const totalPages   = Math.ceil(filtered.length / pageSize)
+  const totalPages = Math.ceil(filtered.length / pageSize)
   const pagedResults = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize)
 
   const handleHotelSwitch = (id: number) => {
@@ -377,7 +379,7 @@ export default function OwnerPaymentsPage() {
                 </tr>
               ) : pagedResults.map(p => {
                 const cfg = STATUS_CONFIG[p.status]
-                const methodClass = METHOD_COLOR[p.paymentMethod] || 'text-slate-600 bg-slate-50 ring-1 ring-slate-200'
+                const method = METHOD_CONFIG[p.paymentMethod] || 'text-slate-600 bg-slate-50 ring-1 ring-slate-200'
                 return (
                   <tr key={p.id} className="hover:bg-teal-50/30 transition-colors group">
                     <td className="px-6 py-4 font-mono text-xs text-slate-400">
@@ -389,8 +391,8 @@ export default function OwnerPaymentsPage() {
                       <span className="text-slate-400 text-xs ml-1">₫</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${methodClass}`}>
-                        {p.paymentMethod}
+                      <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${method?.badge ?? 'text-slate-600 bg-slate-50 ring-1 ring-slate-200'}`}>
+                        {method?.label ?? p.paymentMethod}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-500 text-xs whitespace-nowrap">

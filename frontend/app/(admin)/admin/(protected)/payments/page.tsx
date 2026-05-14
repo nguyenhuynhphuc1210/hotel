@@ -4,11 +4,95 @@ import { useState, useMemo } from 'react'
 import { usePayments } from '@/hooks/usePayment'
 // Import types
 import { PaymentStatus, PaymentMethod, PaymentResponse } from '@/types/payment.types'
-import { 
-  Search, CreditCard, CheckCircle2, 
-  Download, Eye, Loader2
+import {
+  Search, CreditCard, CheckCircle2,
+  Download, Eye, Loader2,
+  XCircle
 } from 'lucide-react'
 import Pagination from '@/components/ui/Pagination'
+
+const STATUS_CONFIG: Record<PaymentStatus, { label: string; dot: string; badge: string }> = {
+  PAID: { label: 'Đã thanh toán', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
+  PENDING: { label: 'Chờ xử lý', dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' },
+  UNPAID: { label: 'Chưa thanh toán', dot: 'bg-slate-400', badge: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200' },
+  FAILED: { label: 'Thất bại', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 ring-1 ring-red-200' },
+  CANCELLED: { label: 'Đã hủy', dot: 'bg-gray-400', badge: 'bg-gray-50 text-gray-600 ring-1 ring-gray-200' },
+  REFUNDED: { label: 'Hoàn tiền', dot: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200' },
+}
+
+const METHOD_CONFIG: Record<string, { label: string; dot: string }> = {
+  VNPAY: { label: 'VNPay', dot: 'bg-blue-500' },
+  MOMO: { label: 'MoMo', dot: 'bg-pink-500' },
+  ZALOPAY: { label: 'ZaloPay', dot: 'bg-cyan-500' },
+  CREDIT_CARD: { label: 'Thẻ tín dụng', dot: 'bg-indigo-500' },
+  BANK_TRANSFER: { label: 'Chuyển khoản', dot: 'bg-teal-500' },
+  CASH: { label: 'Tiền mặt', dot: 'bg-orange-500' },
+}
+
+function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | null; onClose: () => void }) {
+  if (!payment) return null
+  const cfg = STATUS_CONFIG[payment.status]
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={onClose} />
+      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col overflow-y-auto">
+        <div className="p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <p className="text-blue-200 text-xs font-medium uppercase tracking-widest mb-1">Chi tiết giao dịch</p>
+              <h2 className="text-xl font-bold font-mono">{payment.transactionId || 'N/A'}</h2>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/20 transition-colors">
+              <XCircle size={20} />
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${cfg.badge} bg-white/90`}>
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${cfg.dot} mr-1.5`} />
+              {cfg.label}
+            </span>
+            <span className="text-blue-200 text-xs">
+              {METHOD_CONFIG[payment.paymentMethod]?.label ?? payment.paymentMethod}
+            </span>
+          </div>
+        </div>
+
+        <div className="p-6 border-b border-slate-100 bg-slate-50">
+          <p className="text-xs text-slate-500 mb-1">Số tiền</p>
+          <p className="text-3xl font-black text-blue-700 tracking-tight">
+            {payment.amount.toLocaleString('vi-VN')}
+            <span className="text-lg font-semibold text-blue-400 ml-1">₫</span>
+          </p>
+        </div>
+
+        <div className="p-6 space-y-4 flex-1">
+          {[
+            { label: 'Mã đặt phòng', value: payment.bookingCode, mono: true, accent: true },
+            { label: 'Booking ID', value: `#${payment.bookingId}`, mono: true, accent: false },
+            { label: 'Phương thức', value: METHOD_CONFIG[payment.paymentMethod]?.label ?? payment.paymentMethod, mono: false, accent: false },
+            { label: 'Trạng thái', value: cfg.label, mono: false, accent: false },
+            { label: 'Ngày thanh toán', value: payment.paymentDate ? new Date(payment.paymentDate).toLocaleString('vi-VN') : '---', mono: false, accent: false },
+            { label: 'Ngày tạo', value: new Date(payment.createdAt).toLocaleString('vi-VN'), mono: false, accent: false },
+            { label: 'Cập nhật lần cuối', value: new Date(payment.updatedAt).toLocaleString('vi-VN'), mono: false, accent: false },
+          ].map(({ label, value, mono, accent }) => (
+            <div key={label} className="flex justify-between items-start">
+              <span className="text-xs text-slate-500 pt-0.5">{label}</span>
+              <span className={`text-sm font-semibold text-right max-w-[60%] break-all ${mono ? 'font-mono' : ''} ${accent ? 'text-blue-600' : 'text-slate-800'}`}>
+                {value}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-6 border-t border-slate-100">
+          <button onClick={onClose} className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors">
+            Đóng
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
 
 export default function AdminPaymentsPage() {
   const [currentPage, setCurrentPage] = useState(0)
@@ -18,6 +102,7 @@ export default function AdminPaymentsPage() {
 
   const { data: pageData, isLoading } = usePayments(currentPage, pageSize)
   const payments = pageData?.content || []
+  const [selectedPayment, setSelectedPayment] = useState<PaymentResponse | null>(null)
 
   // ── 1. Thống kê nhanh ──
   const stats = useMemo(() => {
@@ -25,7 +110,7 @@ export default function AdminPaymentsPage() {
     return {
       total: pageData.totalElements,
       // Sửa SUCCESS thành PAID theo type của bạn
-      paid: payments.filter(p => p.status === 'PAID').length, 
+      paid: payments.filter(p => p.status === 'PAID').length,
       revenue: payments
         .filter(p => p.status === 'PAID')
         .reduce((sum, p) => sum + p.amount, 0)
@@ -34,10 +119,10 @@ export default function AdminPaymentsPage() {
 
   // ── 2. Filter ──
   const filteredPayments = payments.filter(p => {
-    const matchSearch = 
-      (p.bookingCode?.toLowerCase().includes(search.toLowerCase())) || 
+    const matchSearch =
+      (p.bookingCode?.toLowerCase().includes(search.toLowerCase())) ||
       (p.transactionId?.toLowerCase().includes(search.toLowerCase()))
-    
+
     const matchStatus = statusFilter === '' ? true : p.status === statusFilter
     return matchSearch && matchStatus
   })
@@ -45,12 +130,12 @@ export default function AdminPaymentsPage() {
   // Helper render Badge (Sửa lại các key cho khớp với type mới)
   const getStatusStyle = (status: PaymentStatus) => {
     const styles: Record<PaymentStatus, string> = {
-      PAID:      'bg-green-50 text-green-700 border-green-100',
-      PENDING:   'bg-amber-50 text-amber-700 border-amber-100',
-      UNPAID:    'bg-blue-50 text-blue-700 border-blue-100',
-      FAILED:    'bg-red-50 text-red-700 border-red-100',
+      PAID: 'bg-green-50 text-green-700 border-green-100',
+      PENDING: 'bg-amber-50 text-amber-700 border-amber-100',
+      UNPAID: 'bg-blue-50 text-blue-700 border-blue-100',
+      FAILED: 'bg-red-50 text-red-700 border-red-100',
       CANCELLED: 'bg-gray-50 text-gray-700 border-gray-100',
-      REFUNDED:  'bg-purple-50 text-purple-700 border-purple-100',
+      REFUNDED: 'bg-purple-50 text-purple-700 border-purple-100',
     }
     return styles[status] || 'bg-gray-50 text-gray-600'
   }
@@ -96,15 +181,15 @@ export default function AdminPaymentsPage() {
       <div className="flex flex-wrap gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="relative flex-1 min-w-[280px]">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Tìm theo mã đặt phòng hoặc mã giao dịch..."
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <select 
+        <select
           className="px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as PaymentStatus | '')}
@@ -143,19 +228,29 @@ export default function AdminPaymentsPage() {
                   <td className="px-6 py-4 font-bold text-blue-600">{p.bookingCode}</td>
                   <td className="px-6 py-4 font-bold text-gray-900">{p.amount.toLocaleString('vi-VN')} ₫</td>
                   <td className="px-6 py-4">
-                    <span className={`inline-block w-2 h-2 rounded-full mr-2 ${p.paymentMethod === 'VNPAY' ? 'bg-blue-500' : 'bg-pink-500'}`} />
-                    {p.paymentMethod}
+                    <span className={`inline-block w-2 h-2 rounded-full mr-2 ${METHOD_CONFIG[p.paymentMethod]?.dot ?? 'bg-gray-400'}`} />
+                    {METHOD_CONFIG[p.paymentMethod]?.label ?? p.paymentMethod}
                   </td>
                   <td className="px-6 py-4 text-gray-500">
                     {p.paymentDate ? new Date(p.paymentDate).toLocaleString('vi-VN') : '---'}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(p.status)}`}>
-                      {p.status}
-                    </span>
+                    {/* Lấy config dựa trên key p.status */}
+                    {STATUS_CONFIG[p.status] ? (
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${STATUS_CONFIG[p.status].badge}`}>
+                        {STATUS_CONFIG[p.status].label}
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-gray-50 text-gray-600">
+                        {p.status}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                    <button
+                      onClick={() => setSelectedPayment(p)}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                    >
                       <Eye size={16} />
                     </button>
                   </td>
@@ -164,7 +259,7 @@ export default function AdminPaymentsPage() {
             </tbody>
           </table>
         </div>
-        
+
         {pageData && (
           <div className="p-4 border-t border-gray-100">
             <Pagination
@@ -178,6 +273,7 @@ export default function AdminPaymentsPage() {
           </div>
         )}
       </div>
+      <PaymentDetailDrawer payment={selectedPayment} onClose={() => setSelectedPayment(null)} />
     </div>
   )
 }
