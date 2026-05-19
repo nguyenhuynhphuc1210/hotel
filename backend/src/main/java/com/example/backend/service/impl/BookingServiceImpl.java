@@ -372,22 +372,43 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<BookingResponse> getBookingsForOwner(int page, int size) {
-        if (!SecurityUtils.isHotelOwner() && !SecurityUtils.isAdmin()) {
-            throw new AccessDeniedException("Chỉ chủ khách sạn hoặc Admin mới được xem danh sách này");
+    public Page<BookingResponse> getBookingsForOwner(
+            int page,
+            int size,
+            String keyword,
+            BookingStatus status,
+            Long hotelId,
+            Long ownerId) {
+
+        if (!SecurityUtils.isHotelOwner()
+                && !SecurityUtils.isAdmin()) {
+
+            throw new AccessDeniedException(
+                    "Chỉ chủ khách sạn hoặc Admin mới được xem danh sách này");
         }
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Booking> bookingPage;
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        if (SecurityUtils.isAdmin()) {
-            bookingPage = bookingRepository.findAll(pageable);
-        } else {
-            String ownerEmail = SecurityUtils.getCurrentUserEmail();
-            bookingPage = bookingRepository.findByHotel_Owner_Email(ownerEmail, pageable);
+        String currentOwnerEmail = null;
+
+        if (SecurityUtils.isHotelOwner()
+                && !SecurityUtils.isAdmin()) {
+
+            currentOwnerEmail = SecurityUtils.getCurrentUserEmail();
         }
 
-        return bookingPage.map(bookingMapper::toBookingResponse);
+        return bookingRepository
+                .searchBookings(
+                        keyword,
+                        status,
+                        hotelId,
+                        ownerId,
+                        currentOwnerEmail,
+                        pageable)
+                .map(bookingMapper::toBookingResponse);
     }
 
     @Override
@@ -428,9 +449,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public BookingResponse lookupGuestBooking(String bookingCode, String email) {
-        Booking booking = bookingRepository.findByBookingCodeAndGuestEmail(bookingCode, email)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn đặt phòng với mã và email này"));
+    public BookingResponse lookupBooking(String bookingCode) {
+        Booking booking = bookingRepository.findByBookingCode(bookingCode)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn"));
         return bookingMapper.toBookingResponse(booking);
     }
 

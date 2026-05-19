@@ -14,8 +14,7 @@ public class HotelSummaryResponse {
     private BigDecimal starRating;
     private String district;
     private String city;
-
+    private BigDecimal minPrice;
     private HotelStatus status;
-
     private String thumbnailUrl; 
 }

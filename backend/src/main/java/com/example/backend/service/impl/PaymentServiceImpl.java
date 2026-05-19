@@ -52,21 +52,43 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PaymentResponse> getAllPayments(int page, int size) {
+    public Page<PaymentResponse> getAllPayments(
+            int page,
+            int size,
+            String search,
+            PaymentStatus status) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Page<Payment> payments;
 
+        search = (search == null || search.isBlank())
+                ? null
+                : search.trim();
+
         if (SecurityUtils.isAdmin()) {
-            payments = paymentRepository.findAll(pageable);
+
+            payments = paymentRepository.findAllWithFilter(
+                    search,
+                    status,
+                    pageable);
 
         } else if (SecurityUtils.isHotelOwner()) {
+
             String ownerEmail = SecurityUtils.getCurrentUserEmail();
-            payments = paymentRepository.findByBooking_Hotel_Owner_Email(ownerEmail, pageable);
+
+            payments = paymentRepository.findByOwnerWithFilter(
+                    ownerEmail,
+                    search,
+                    status,
+                    pageable);
 
         } else {
-            throw new AccessDeniedException("Bạn không có quyền truy cập danh sách thanh toán");
+            throw new AccessDeniedException(
+                    "Bạn không có quyền truy cập danh sách thanh toán");
         }
 
         return payments.map(paymentMapper::toPaymentResponse);
@@ -133,9 +155,11 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (isSuccess) {
-            return "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode()+ "&id=" + booking.getId();
+            return "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode() + "&id="
+                    + booking.getId();
         } else {
-            return "http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode()+ "&id=" + booking.getId();
+            return "http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode() + "&id="
+                    + booking.getId();
         }
     }
 
@@ -162,9 +186,11 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (isSuccess) {
-            return "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode()+ "&id=" + booking.getId();
+            return "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode() + "&id="
+                    + booking.getId();
         } else {
-            return "http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode()+ "&id=" + booking.getId();
+            return "http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode() + "&id="
+                    + booking.getId();
         }
     }
 

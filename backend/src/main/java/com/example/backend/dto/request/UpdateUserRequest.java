@@ -18,7 +18,7 @@ public class UpdateUserRequest {
     @NotBlank(message = "Họ tên không được để trống")
     private String fullName;
 
-    @Pattern(regexp = "^\\d{10}$", message = "Số điện thoại phải có 10 chữ số")
+    @Pattern(regexp = "^$|^\\d{10}$", message = "Số điện thoại phải có 10 chữ số")
     private String phone;
 
     @Past(message = "Ngày sinh phải là ngày trong quá khứ")

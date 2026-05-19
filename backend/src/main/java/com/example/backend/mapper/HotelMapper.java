@@ -90,7 +90,6 @@ public class HotelMapper {
                 .starRating(hotel.getStarRating())
                 .district(hotel.getDistrict())
                 .city(hotel.getCity())
-
                 .status(hotel.getStatus())
                 
                 .thumbnailUrl(thumbnail)

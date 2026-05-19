@@ -46,6 +46,7 @@ public class RoomCalendar {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

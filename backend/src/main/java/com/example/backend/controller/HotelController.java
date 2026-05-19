@@ -5,6 +5,7 @@ import com.example.backend.dto.request.StatusRequest;
 import com.example.backend.dto.response.HotelAdminResponse;
 import com.example.backend.dto.response.HotelResponse;
 import com.example.backend.dto.response.HotelSummaryResponse;
+import com.example.backend.enums.HotelStatus;
 import com.example.backend.service.HotelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -17,6 +18,7 @@ import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.springframework.data.domain.Page;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/hotels")
@@ -35,8 +37,16 @@ public class HotelController {
     @GetMapping
     public ResponseEntity<Page<HotelAdminResponse>> getAllHotels(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(hotelService.getAllHotels(page, size));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) HotelStatus status) {
+
+        return ResponseEntity.ok(
+                hotelService.getAllHotels(
+                        page,
+                        size,
+                        keyword,
+                        status));
     }
 
     @GetMapping("/deleted")
@@ -111,18 +121,23 @@ public class HotelController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<Page<HotelSummaryResponse>> searchHotels(
+    public ResponseEntity<Page<HotelSummaryResponse>> search(
             @RequestParam(required = false) String district,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
-            @RequestParam(required = false) Integer guests,
+            @RequestParam(required = false) LocalDate checkIn,
+            @RequestParam(required = false) LocalDate checkOut,
+            @RequestParam(defaultValue = "1") Integer adults,
+            @RequestParam(defaultValue = "0") Integer children,
+            @RequestParam(required = false) List<Integer> stars,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "recommended") String sortBy,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        Page<HotelSummaryResponse> results = hotelService.searchHotels(district, keyword, checkIn, checkOut, guests,
-                page, size);
-        return ResponseEntity.ok(results);
+        return ResponseEntity.ok(hotelService.searchHotels(
+                district, keyword, checkIn, checkOut, adults, children,
+                stars, minPrice, maxPrice, sortBy, page, size));
     }
 
     @GetMapping("/{id}/min-price")

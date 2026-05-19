@@ -4,6 +4,7 @@ import com.example.backend.dto.request.BookingRequest;
 import com.example.backend.dto.request.CancelBookingRequest;
 import com.example.backend.dto.request.UpdateBookingStatusRequest;
 import com.example.backend.dto.response.BookingResponse;
+import com.example.backend.enums.BookingStatus;
 import com.example.backend.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +30,20 @@ public class BookingController {
     @GetMapping("/admin")
     public ResponseEntity<Page<BookingResponse>> getBookingsForOwner(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(bookingService.getBookingsForOwner(page, size));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(required = false) Long hotelId,
+            @RequestParam(required = false) Long ownerId) {
+
+        return ResponseEntity.ok(
+                bookingService.getBookingsForOwner(
+                        page,
+                        size,
+                        keyword,
+                        status,
+                        hotelId,
+                        ownerId));
     }
 
     @GetMapping("/me")
@@ -41,10 +54,8 @@ public class BookingController {
     }
 
     @GetMapping("/lookup")
-    public ResponseEntity<BookingResponse> lookupGuestBooking(
-            @RequestParam String bookingCode,
-            @RequestParam String email) {
-        return ResponseEntity.ok(bookingService.lookupGuestBooking(bookingCode, email));
+    public ResponseEntity<BookingResponse> lookup(@RequestParam String code) {
+        return ResponseEntity.ok(bookingService.lookupBooking(code));
     }
 
     @PatchMapping("/{bookingId}/cancel")

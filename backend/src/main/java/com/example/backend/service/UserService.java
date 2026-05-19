@@ -11,7 +11,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
 
 public interface UserService {
-    Page<UserResponse> getAllUsers(int page, int size);
+    Page<UserResponse> getAllUsers(
+            int page,
+            int size,
+            String keyword,
+            String role);
 
     UserResponse getUserById(Long id);
 

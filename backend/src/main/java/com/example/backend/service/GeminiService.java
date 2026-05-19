@@ -1,8 +1,8 @@
 package com.example.backend.service;
 
+import com.example.backend.dto.response.HotelSummaryResponse;
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.HotelPolicy;
-import com.example.backend.entity.RoomType;
 import com.example.backend.repository.HotelRepository;
 import com.example.backend.repository.HotelPolicyRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,14 +15,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -42,146 +43,106 @@ public class GeminiService {
 
     public String askGemini(Long hotelId, String userPrompt) {
         try {
-            StringBuilder contextBuilder = new StringBuilder();
-            
-            if (hotelId != null) {
+            String context = (hotelId != null) ? buildHotelContext(hotelId) : buildGeneralContext(userPrompt);
+            String finalPrompt = context + "\nCÂU HỎI CỦA KHÁCH: " + userPrompt;
 
-                Hotel hotel = hotelRepository.findByIdWithRoomTypes(hotelId)
-                        .orElseThrow(() -> new RuntimeException("Khách sạn không tồn tại"));
-
-                HotelPolicy policy = hotelPolicyRepository.findByHotel_Id(hotelId).orElse(null);
-
-                contextBuilder.append("BẠN LÀ: Nhân viên lễ tân ảo chuyên nghiệp của khách sạn ").append(hotel.getHotelName()).append(".\n");
-                contextBuilder.append("NHIỆM VỤ: Trả lời câu hỏi của khách hàng dựa trên dữ liệu thực tế dưới đây một cách lịch sự, ngắn gọn.\n\n");
-
-                contextBuilder.append("--- DỮ LIỆU KHÁCH SẠN ---\n");
-                contextBuilder.append("- Tên: ").append(hotel.getHotelName()).append("\n");
-                contextBuilder.append("- Địa chỉ: ").append(hotel.getAddressLine()).append(", ").append(hotel.getDistrict()).append(", ").append(hotel.getCity()).append("\n");
-                contextBuilder.append("- Hotline: ").append(hotel.getPhone()).append("\n");
-                contextBuilder.append("- Mô tả: ").append(hotel.getDescription() != null ? hotel.getDescription() : "Khách sạn tiện nghi, phục vụ tận tâm.").append("\n\n");
-
-                contextBuilder.append("--- THÔNG TIN PHÒNG & GIÁ ---\n");
-                if (hotel.getRoomTypes() != null && !hotel.getRoomTypes().isEmpty()) {
-                    for (RoomType rt : hotel.getRoomTypes()) {
-                        contextBuilder.append(" + Loại phòng: ").append(rt.getTypeName())
-                                .append(" | Sức chứa: ").append(rt.getMaxAdults()).append(" người lớn");
-                        if (rt.getMaxChildren() != null && rt.getMaxChildren() > 0) {
-                            contextBuilder.append(", ").append(rt.getMaxChildren()).append(" trẻ em");
-                        }
-                        contextBuilder.append(" | Giá từ: ").append(rt.getBasePrice()).append(" VNĐ.\n");
-                    }
-                }
-
-                contextBuilder.append("\n--- CHÍNH SÁCH & QUY ĐỊNH ---\n");
-                if (policy != null) {
-                    contextBuilder.append(" + Giờ nhận phòng: ").append(policy.getCheckInTime()).append("\n"); // [cite: 194-195]
-                    contextBuilder.append(" + Giờ trả phòng: ").append(policy.getCheckOutTime()).append("\n"); // [cite: 197-198]
-                    contextBuilder.append(" + Quy định trẻ em: ").append(policy.getChildrenPolicy()).append("\n"); // [cite: 202]
-                    contextBuilder.append(" + Quy định thú cưng: ").append(policy.getPetPolicy() != null ? policy.getPetPolicy() : "Vui lòng liên hệ trực tiếp").append("\n"); // [cite: 203-204]
-                    contextBuilder.append(" + Chính sách hủy: ").append(policy.getCancellationPolicy()).append("\n"); // [cite: 199-200]
-                }
-
-                contextBuilder.append("\n--- QUY TẮC TRẢ LỜI ---\n");
-                contextBuilder.append("1. Chỉ trả lời dựa trên dữ liệu trên. Không tự bịa thông tin.\n");
-                contextBuilder.append("2. Nếu khách hỏi về dịch vụ không có trong dữ liệu (ví dụ: bãi xe, hồ bơi), hãy trả lời: 'Dạ hiện tại em chưa có thông tin cụ thể về dịch vụ này, anh/chị vui lòng nhấn vào tab \"Chủ khách sạn\" để trao đổi trực tiếp ạ.'\n");
-                contextBuilder.append("3. Luôn xưng hô lễ phép (Dạ, thưa anh/chị).\n");
-
-            } else {
-                contextBuilder.append("Bạn là trợ lý ảo của hệ thống đặt phòng Vago tại TP. Hồ Chí Minh. Hãy tư vấn dựa trên danh sách sau:\n");
-
-                String districtKeyword = extractHCMCDistrict(userPrompt);
-                
-                Page<Hotel> hotelPage;
-                if (!districtKeyword.isEmpty()) {
-                    hotelPage = hotelRepository.searchHotels(
-                            districtKeyword,
-                            null,
-                            null, null, null, null, 
-                            PageRequest.of(0, 10)
-                    );
-                    contextBuilder.append("Kết quả tìm kiếm cho khu vực '").append(districtKeyword).append("':\n");
-                } else {
-                    hotelPage = hotelRepository.searchHotels(
-                            null, null, null, null, null, null, 
-                            PageRequest.of(0, 5)
-                    );
-                    contextBuilder.append("Các khách sạn nổi bật:\n");
-                }
-
-                List<Hotel> hotels = hotelPage.getContent();
-
-                if (hotels.isEmpty()) {
-                    contextBuilder.append("- Hiện tại chưa có khách sạn nào trống phòng ở khu vực này.\n");
-                } else {
-                    for (Hotel h : hotels) {
-                        contextBuilder.append("- ").append(h.getHotelName())
-                                .append(" | Địa chỉ: ").append(h.getAddressLine()).append(", ")
-                                .append(h.getWard()).append(", ").append(h.getDistrict()).append("\n"); // Không cần getCity() nữa vì chỉ ở TP.HCM
-                    }
-                }
-                
-                contextBuilder.append("\nDựa vào danh sách trên, hãy trả lời khách hàng. Nếu danh sách trống, hãy xin lỗi và mời khách tìm quận khác.\n");
-            }
-
-            contextBuilder.append("\nCÂU HỎI CỦA KHÁCH: ").append(userPrompt);
-
-            return callGeminiApi(contextBuilder.toString());
+            return callGeminiWithRetry(finalPrompt);
 
         } catch (Exception e) {
             log.error("Lỗi GeminiService: {}", e.getMessage());
-            return "Xin lỗi, em đang gặp chút trục trặc kỹ thuật. Anh/chị vui lòng thử lại sau hoặc chat trực tiếp với Chủ khách sạn nhé!";
+            return "Dạ, hệ thống hỗ trợ AI đang bận một chút. Anh/chị vui lòng thử lại sau hoặc nhấn tab 'Chủ khách sạn' để được tư vấn trực tiếp ạ!";
         }
     }
 
-    private String callGeminiApi(String prompt) throws Exception {
-        Map<String, Object> bodyMap = Map.of(
-                "contents", List.of(
-                        Map.of("parts", List.of(
-                                Map.of("text", prompt)))));
+    private String buildHotelContext(Long hotelId) {
+        Hotel hotel = hotelRepository.findByIdWithRoomTypes(hotelId)
+                .orElseThrow(() -> new RuntimeException("Khách sạn không tồn tại"));
+        HotelPolicy policy = hotelPolicyRepository.findByHotel_Id(hotelId).orElse(null);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("BẠN LÀ: Nhân viên lễ tân ảo của ").append(hotel.getHotelName()).append(".\n");
+        sb.append("NHIỆM VỤ: Trả lời lịch sự (Dạ, thưa), ngắn gọn, chỉ dựa trên dữ liệu sau:\n\n");
         
+        sb.append("--- THÔNG TIN KHÁCH SẠN ---\n");
+        sb.append("- Địa chỉ: ").append(hotel.getAddressLine()).append(", ").append(hotel.getDistrict()).append("\n");
+        sb.append("- Mô tả: ").append(hotel.getDescription()).append("\n");
+
+        if (hotel.getRoomTypes() != null) {
+            sb.append("- Loại phòng: ");
+            hotel.getRoomTypes().forEach(rt -> sb.append(rt.getTypeName()).append(" (Giá từ: ").append(rt.getBasePrice()).append(" VNĐ), "));
+        }
+
+        if (policy != null) {
+            sb.append("\n--- CHÍNH SÁCH ---\n");
+            sb.append("- Nhận phòng: ").append(policy.getCheckInTime()).append(" | Trả phòng: ").append(policy.getCheckOutTime()).append("\n");
+            sb.append("- Trẻ em: ").append(policy.getChildrenPolicy()).append("\n");
+            sb.append("- Thú cưng: ").append(policy.getPetPolicy() != null ? policy.getPetPolicy() : "Không cho phép").append("\n");
+        }
+
+        sb.append("\nLƯU Ý: Nếu thông khách hỏi không có trong dữ liệu (ví dụ: hồ bơi, bãi xe), hãy xin lỗi và hướng dẫn khách chat với Chủ khách sạn.\n");
+        return sb.toString();
+    }
+
+    private String buildGeneralContext(String userPrompt) {
+        String district = extractHCMCDistrict(userPrompt);
+        
+        // Gọi Repository với đầy đủ 11 tham số để tránh lỗi biên dịch
+        Page<HotelSummaryResponse> hotelPage = hotelRepository.searchHotelsWithFilters(
+                district.isEmpty() ? null : district,
+                null, null, null, null, // district, keyword, checkIn, checkOut, nights
+                1, 0,                   // adults, children
+                null, null, null, null, // stars, minPrice, maxPrice, sortBy
+                PageRequest.of(0, 5)    // pageable
+        );
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Bạn là trợ lý ảo Vago. Hãy tư vấn khách sạn tại TP.HCM dựa trên danh sách này:\n");
+        
+        for (HotelSummaryResponse h : hotelPage.getContent()) {
+            sb.append("- ").append(h.getHotelName()).append(" tại ").append(h.getDistrict());
+            if (h.getMinPrice() != null) sb.append(" | Giá từ: ").append(h.getMinPrice()).append(" VNĐ");
+            sb.append("\n");
+        }
+        
+        if (hotelPage.isEmpty()) sb.append("(Hiện chưa tìm thấy khách sạn phù hợp tại quận này)\n");
+        
+        sb.append("\nNếu không có khách sạn phù hợp, hãy xin lỗi và gợi ý khách tìm ở quận khác hoặc dùng thanh tìm kiếm.");
+        return sb.toString();
+    }
+
+    private String callGeminiWithRetry(String prompt) throws Exception {
+        Map<String, Object> bodyMap = Map.of("contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))));
         String requestBody = objectMapper.writeValueAsString(bodyMap);
+        
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        
         HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
         String fullUrl = geminiApiUrl + apiKey;
-        
-        ResponseEntity<String> response = restTemplate.postForEntity(fullUrl, request, String.class);
-        JsonNode root = objectMapper.readTree(response.getBody());
-        return root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+
+        // Cơ chế Retry 3 lần cho lỗi 503
+        for (int i = 0; i < 3; i++) {
+            try {
+                ResponseEntity<String> response = restTemplate.postForEntity(fullUrl, request, String.class);
+                JsonNode root = objectMapper.readTree(response.getBody());
+                return root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+            } catch (HttpServerErrorException.ServiceUnavailable e) {
+                if (i == 2) throw e;
+                log.warn("Gemini bận, đang thử lại lần {}...", i + 1);
+                Thread.sleep(2000);
+            }
+        }
+        return "Xin lỗi, AI đang bận.";
     }
 
     private String extractHCMCDistrict(String prompt) {
-        if (prompt == null || prompt.trim().isEmpty()) return "";
-        String lowerPrompt = prompt.toLowerCase();
-
-        Pattern numberPattern = Pattern.compile("(quận|q\\.?)\\s*([1-9]|1[0-2])\\b");
-        Matcher matcher = numberPattern.matcher(lowerPrompt);
-        if (matcher.find()) {
-            return "Quận " + matcher.group(2);
+        if (prompt == null) return "";
+        String lower = prompt.toLowerCase();
+        Pattern p = Pattern.compile("(quận|q\\.?)\\s*([1-9]|1[0-2]|bình thạnh|gò vấp|tân bình|tân phú|phú nhuận|thủ đức|bình tân)");
+        Matcher m = p.matcher(lower);
+        if (m.find()) {
+            String q = m.group(2);
+            return q.matches("\\d+") ? "Quận " + q : "Quận " + q.substring(0, 1).toUpperCase() + q.substring(1);
         }
-
-        String[][] stringDistricts = {
-            {"bình thạnh", "Quận Bình Thạnh"},
-            {"gò vấp", "Quận Gò Vấp"},
-            {"phú nhuận", "Quận Phú Nhuận"},
-            {"tân bình", "Quận Tân Bình"},
-            {"tân phú", "Quận Tân Phú"},
-            {"bình tân", "Quận Bình Tân"},
-            {"thủ đức", "TP Thủ Đức"},
-            {"bình chánh", "Huyện Bình Chánh"},
-            {"củ chi", "Huyện Củ Chi"},
-            {"hóc môn", "Huyện Hóc Môn"},
-            {"nhà bè", "Huyện Nhà Bè"},
-            {"cần giờ", "Huyện Cần Giờ"}
-        };
-
-        for (String[] districtInfo : stringDistricts) {
-            if (lowerPrompt.contains(districtInfo[0])) {
-                return districtInfo[1];
-            }
-        }
-
         return "";
     }
 }

@@ -20,7 +20,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     Page<Booking> findByUser_Id(Long userId, Pageable pageable);
 
-    Optional<Booking> findByBookingCodeAndGuestEmail(String bookingCode, String guestEmail);
+    Optional<Booking> findByBookingCode(String bookingCode);
 
     List<Booking> findByStatusAndCreatedAtBefore(BookingStatus status, LocalDateTime dateTime);
 
@@ -32,4 +32,47 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT SUM(b.totalAmount) FROM Booking b WHERE b.hotel.id = :hotelId AND b.status = 'COMPLETED' AND DATE(b.updatedAt) = :date")
     BigDecimal sumRevenueByDateAndHotel(@Param("hotelId") Long hotelId, @Param("date") LocalDate date);
+
+    @Query("""
+            SELECT b
+            FROM Booking b
+            JOIN b.hotel h
+            JOIN h.owner o
+
+            WHERE
+
+            (:keyword IS NULL
+            OR LOWER(b.bookingCode)
+            LIKE LOWER(CONCAT('%',:keyword,'%'))
+
+            OR LOWER(b.guestName)
+            LIKE LOWER(CONCAT('%',:keyword,'%'))
+
+            OR LOWER(b.guestEmail)
+            LIKE LOWER(CONCAT('%',:keyword,'%'))
+
+            OR LOWER(h.hotelName)
+            LIKE LOWER(CONCAT('%',:keyword,'%'))
+            )
+
+            AND (:status IS NULL
+            OR b.status=:status)
+
+            AND (:hotelId IS NULL
+            OR h.id=:hotelId)
+
+            AND (:ownerId IS NULL
+            OR o.id=:ownerId)
+
+            AND (:currentOwnerEmail IS NULL
+            OR o.email=:currentOwnerEmail)
+
+            """)
+    Page<Booking> searchBookings(
+            @Param("keyword") String keyword,
+            @Param("status") BookingStatus status,
+            @Param("hotelId") Long hotelId,
+            @Param("ownerId") Long ownerId,
+            @Param("currentOwnerEmail") String currentOwnerEmail,
+            Pageable pageable);
 }

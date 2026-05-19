@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -54,19 +55,46 @@ public class HotelServiceImpl implements HotelService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<HotelAdminResponse> getAllHotels(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+    public Page<HotelAdminResponse> getAllHotels(
+            int page,
+            int size,
+            String keyword,
+            HotelStatus status) {
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        keyword = (keyword == null || keyword.isBlank())
+                ? null
+                : keyword.trim();
+
         Page<Hotel> hotelPage;
 
         if (isAdmin()) {
-            hotelPage = hotelRepository.findByDeletedAtIsNull(pageable);
+
+            hotelPage = hotelRepository.findAdminWithFilter(
+                    keyword,
+                    status,
+                    pageable);
+
         } else if (isHotelOwner()) {
-            hotelPage = hotelRepository.findByOwner_EmailAndDeletedAtIsNull(getCurrentUserEmail(), pageable);
+
+            hotelPage = hotelRepository.findOwnerWithFilter(
+                    getCurrentUserEmail(),
+                    keyword,
+                    status,
+                    pageable);
+
         } else {
-            throw new AccessDeniedException("Bạn không có quyền truy cập trang quản trị");
+
+            throw new AccessDeniedException(
+                    "Bạn không có quyền truy cập trang quản trị");
         }
 
-        return hotelPage.map(hotelMapper::toHotelAdminResponse);
+        return hotelPage.map(
+                hotelMapper::toHotelAdminResponse);
     }
 
     @Override
@@ -215,8 +243,6 @@ public class HotelServiceImpl implements HotelService {
         return hotelMapper.toHotelResponse(hotel);
     }
 
-
-
     @Override
     @Transactional
     public HotelResponse disableHotel(Long id, String reason) {
@@ -320,35 +346,58 @@ public class HotelServiceImpl implements HotelService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<HotelSummaryResponse> searchHotels(String district, String keyword,
-            LocalDate checkIn, LocalDate checkOut, Integer guests, int page, int size) {
+    public Page<HotelSummaryResponse> searchHotels(
+            String district, String keyword,
+            LocalDate checkIn, LocalDate checkOut,
+            Integer adults, Integer children,
+            List<Integer> stars, BigDecimal minPrice, BigDecimal maxPrice,
+            String sortBy, int page, int size) {
 
         String searchDistrict = (district != null && !district.trim().isEmpty()) ? district.trim() : null;
         String searchKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
 
-        Integer searchGuests = (guests != null && guests > 0) ? guests : 1;
+        Integer searchAdults = (adults != null && adults > 0) ? adults : 1;
+        Integer searchChildren = (children != null && children > 0) ? children : 0;
 
-        Long nights = 0L;
+        List<BigDecimal> searchStars = null;
+        if (stars != null && !stars.isEmpty()) {
+            searchStars = stars.stream()
+                    .map(BigDecimal::valueOf)
+                    .toList();
+        }
+
         if (checkIn != null && checkOut != null) {
             if (!checkIn.isBefore(checkOut)) {
                 throw new IllegalArgumentException("Ngày nhận phòng phải diễn ra trước ngày trả phòng.");
             }
+        } else {
 
+            checkIn = LocalDate.now();
+            checkOut = LocalDate.now().plusDays(1);
+        }
+
+        long nights = 1;
+        if (checkIn != null && checkOut != null) {
             nights = java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
+            if (nights <= 0)
+                nights = 1;
         }
 
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Hotel> hotelPage = hotelRepository.searchHotels(
+        return hotelRepository.searchHotelsWithFilters(
                 searchDistrict,
                 searchKeyword,
                 checkIn,
                 checkOut,
                 nights,
-                searchGuests, 
+                searchAdults,
+                searchChildren,
+                searchStars,
+                minPrice,
+                maxPrice,
+                sortBy,
                 pageable);
-
-        return hotelPage.map(hotelMapper::toHotelSummaryResponse);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.response.PaymentResponse;
+import com.example.backend.enums.PaymentStatus;
 import com.example.backend.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +23,15 @@ public class PaymentController {
     @GetMapping
     public ResponseEntity<Page<PaymentResponse>> getAllPayments(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(paymentService.getAllPayments(page, size));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) PaymentStatus status) {
+        return ResponseEntity.ok(
+                paymentService.getAllPayments(
+                        page,
+                        size,
+                        search,
+                        status));
     }
 
     @GetMapping("/{id}")

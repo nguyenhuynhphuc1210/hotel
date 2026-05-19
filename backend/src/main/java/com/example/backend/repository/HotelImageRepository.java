@@ -14,4 +14,9 @@ public interface HotelImageRepository extends JpaRepository<HotelImage, Long> {
     @Modifying
     @Query("UPDATE HotelImage hi SET hi.isPrimary = false WHERE hi.hotel.id = :hotelId")
     void resetPrimaryImageForHotel(@Param("hotelId") Long hotelId);
+
+    boolean existsByHotel_IdAndIsPrimaryTrue(Long hotelId);
+
+    Optional<HotelImage> findFirstByHotel_IdOrderByIdAsc(
+            Long hotelId);
 }

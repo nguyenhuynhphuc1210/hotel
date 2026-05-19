@@ -43,11 +43,23 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<UserResponse> getAllUsers(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        
-        return userRepository.findAll(pageable)
-                .map(userMapper::toUserResponse);
+    public Page<UserResponse> getAllUsers(
+            int page,
+            int size,
+            String keyword,
+            String role) {
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<User> userPage = userRepository.searchUsers(
+                keyword,
+                role,
+                pageable);
+
+        return userPage.map(userMapper::toUserResponse);
     }
 
     @Override
@@ -264,7 +276,7 @@ public class UserServiceImpl implements UserService {
 
         user.setRole(ownerRole);
         user.setPhone(request.getPhone());
-        
+
         User savedUser = userRepository.save(user);
 
         String newToken = jwtTokenProvider.generateTokenFromEmail(savedUser.getEmail());
