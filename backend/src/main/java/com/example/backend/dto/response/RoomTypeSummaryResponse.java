@@ -2,6 +2,7 @@ package com.example.backend.dto.response;
 
 import lombok.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -22,4 +23,5 @@ public class RoomTypeSummaryResponse {
     private Boolean isActive;
     private Boolean isNonSmoking;
     private String thumbnailUrl;
+    private LocalDateTime deletedAt;
 }

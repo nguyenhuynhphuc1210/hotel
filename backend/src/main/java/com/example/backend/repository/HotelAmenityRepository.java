@@ -3,6 +3,8 @@ package com.example.backend.repository;
 import com.example.backend.entity.HotelAmenity;
 import com.example.backend.entity.HotelAmenityId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -10,7 +12,8 @@ public interface HotelAmenityRepository extends JpaRepository<HotelAmenity, Hote
 
     List<HotelAmenity> findByHotel_Owner_Email(String email);
 
-    List<HotelAmenity> findByHotel_Id(Long hotelId);
+    @Query("SELECT ha FROM HotelAmenity ha JOIN FETCH ha.amenity WHERE ha.hotel.id = :hotelId")
+    List<HotelAmenity> findByHotel_Id(@Param("hotelId") Long hotelId);
 
     List<HotelAmenity> findByAmenity_Id(Long amenityId);
 
