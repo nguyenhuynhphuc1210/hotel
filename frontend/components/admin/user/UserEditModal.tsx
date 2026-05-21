@@ -146,18 +146,6 @@ export default function UserEditModal({ user, onClose }: Props) {
             {errors.roleId && <p className="text-xs text-red-500 mt-1">{errors.roleId.message}</p>}
           </div>
 
-          {/* Mật khẩu mới (tuỳ chọn) */}
-          <div>
-            <label className={labelClass}>Mật khẩu mới</label>
-            <input
-              {...register('password')}
-              type="password"
-              className={inputClass}
-              placeholder="Để trống nếu không đổi"
-            />
-            {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>}
-          </div>
-
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
             <button

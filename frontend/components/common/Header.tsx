@@ -18,16 +18,16 @@ function Header() {
 
         {/* Logo */}
         <Link href="/home" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center text-white">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
             🏨
           </div>
-          <span className="text-lg font-bold text-green-700">Vago</span>
+          <span className="text-lg font-bold text-blue-700">Vago</span>
         </Link>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
-          <Link href="/home" className="hover:text-green-600 transition-colors">Trang chủ</Link>
-          <Link href="/hotels" className="hover:text-green-600 transition-colors">Khách sạn</Link>
+          <Link href="/home" className="hover:text-blue-600 transition-colors">Trang chủ</Link>
+          <Link href="/hotels" className="hover:text-blue-600 transition-colors">Khách sạn</Link>
         </nav>
 
         {/* Auth buttons */}
@@ -46,9 +46,9 @@ function Header() {
               )}
               <Link
                 href="/profile"
-                className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full hover:bg-green-50 hover:ring-1 hover:ring-green-300 transition-all"
+                className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full hover:bg-blue-50 hover:ring-1 hover:ring-blue-300 transition-all"
               >
-                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-xs font-semibold">
+                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-semibold">
                   {user.avatarUrl
                     ? <img src={user.avatarUrl} className="w-full h-full rounded-full object-cover" />
                     : user.fullName.charAt(0).toUpperCase()
@@ -66,10 +66,10 @@ function Header() {
             </div>
           ) : (
             <>
-              <Link href="/login" className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">
+              <Link href="/login" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
                 Đăng nhập
               </Link>
-              <Link href="/register" className="text-sm font-medium bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+              <Link href="/register" className="text-sm font-medium bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                 Đăng ký
               </Link>
             </>
@@ -85,10 +85,10 @@ function Header() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-2">
-          <Link href="/home" className="block py-2 text-sm text-gray-700 hover:text-green-600">Trang chủ</Link>
-          <Link href="/hotels" className="block py-2 text-sm text-gray-700 hover:text-green-600">Khách sạn</Link>
+          <Link href="/home" className="block py-2 text-sm text-gray-700 hover:text-blue-600">Trang chủ</Link>
+          <Link href="/hotels" className="block py-2 text-sm text-gray-700 hover:text-blue-600">Khách sạn</Link>
           {isAuthenticated && (
-            <Link href="/profile" className="block py-2 text-sm text-gray-700 hover:text-green-600">
+            <Link href="/profile" className="block py-2 text-sm text-gray-700 hover:text-blue-600">
               Tài khoản của tôi
             </Link>
           )}
@@ -99,7 +99,7 @@ function Header() {
           ) : (
             <div className="flex gap-3 pt-2">
               <Link href="/login" className="flex-1 text-center py-2 border border-gray-200 rounded-lg text-sm">Đăng nhập</Link>
-              <Link href="/register" className="flex-1 text-center py-2 bg-green-600 text-white rounded-lg text-sm">Đăng ký</Link>
+              <Link href="/register" className="flex-1 text-center py-2 bg-blue-600 text-white rounded-lg text-sm">Đăng ký</Link>
             </div>
           )}
         </div>

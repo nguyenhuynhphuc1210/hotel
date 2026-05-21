@@ -1,13 +1,17 @@
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
 import { BookingRequest, BookingResponse, BookingStatus } from '@/types/booking.types'
-import { PageResponse } from './hotel.api' 
+import { PageResponse } from './hotel.api'
 
 const bookingApi = {
-  
-  getAll: (page = 0, size = 10000) =>
+
+  getAll: (page = 0, size = 10, params?: {
+    keyword?: string
+    status?: string
+    hotelId?: number
+  }) =>
     axiosInstance.get<PageResponse<BookingResponse>>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/admin`, {
-      params: { page, size }
+      params: { page, size, ...params }
     }),
 
   getById: (id: number | string) =>
@@ -16,19 +20,21 @@ const bookingApi = {
   delete: (id: number | string) =>
     axiosInstance.delete(API_CONFIG.ENDPOINTS.BOOKING_BY_ID(id)),
 
-  create: (data: BookingRequest) => 
+  create: (data: BookingRequest) =>
     axiosInstance.post<BookingResponse>(API_CONFIG.ENDPOINTS.BOOKINGS, data),
 
   updateStatus: (id: number | string, status: BookingStatus) =>
     axiosInstance.patch<BookingResponse>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/${id}/status`, { status }),
 
-  getMyBookings: (page = 0, size = 10) => 
+  getMyBookings: (page = 0, size = 10) =>
     axiosInstance.get<PageResponse<BookingResponse>>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/me`, {
       params: { page, size }
     }),
 
-  cancelBooking: (id: number | string) =>
-    axiosInstance.post<BookingResponse>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/${id}/cancel`),
+  cancelBooking: (id: number | string, reason?: string) =>
+    axiosInstance.patch<BookingResponse>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/${id}/cancel`, {
+      cancelReason: reason ?? ''
+    }),
 }
 
 export default bookingApi

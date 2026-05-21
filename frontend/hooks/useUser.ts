@@ -6,10 +6,19 @@ import toast from 'react-hot-toast'
 const KEY = 'users'
 
 // Lấy tất cả users
-export const useUsers = (page = 0, size = 10) =>
+export const useUsers = (
+  page = 0,
+  size = 10,
+  keyword = '',
+  role = ''
+) =>
   useQuery({
-    queryKey: [KEY, page, size],
-    queryFn: () => userApi.getAll(page, size).then(r => r.data),
+    queryKey: [KEY, page, size, keyword, role],
+
+    queryFn: () =>
+      userApi
+        .getAll(page, size, keyword, role)
+        .then(r => r.data),
   })
 
 // Lấy 1 user

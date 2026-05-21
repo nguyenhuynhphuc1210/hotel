@@ -94,6 +94,7 @@ export default function BookingPage() {
     const checkIn = searchParams.get('checkIn') || ''
     const checkOut = searchParams.get('checkOut') || ''
     const adults = searchParams.get('adults') || '2'
+    const quantity = Number(searchParams.get('quantity') || 1)
 
     const nights = Math.round(
         (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000
@@ -139,13 +140,21 @@ export default function BookingPage() {
     const { avgPricePerNight, totalPrice, allAvailable } = useMemo(() => {
         const fallback = Number(roomType?.basePrice ?? 0)
         if (!calendarData || calendarData.length === 0) {
-            return { avgPricePerNight: fallback, totalPrice: fallback * nights, allAvailable: true }
+            return {
+                avgPricePerNight: fallback,
+                totalPrice: fallback * nights * quantity,
+                allAvailable: true
+            }
         }
         const sum = calendarData.reduce((acc, c) => acc + Number(c.price), 0)
         const avg = Math.round(sum / calendarData.length)
         const available = calendarData.every(c => c.isAvailable && (c.totalRooms - c.bookedRooms) > 0)
-        return { avgPricePerNight: avg, totalPrice: avg * nights, allAvailable: available }
-    }, [calendarData, roomType, nights])
+        return {
+            avgPricePerNight: avg,
+            totalPrice: avg * nights * quantity,
+            allAvailable: available
+        }
+    }, [calendarData, roomType, nights, quantity])
 
     // ── Tính discount và finalPrice từ appliedPromo ──
     const { discountAmount, finalPrice } = useMemo(() => {
@@ -221,8 +230,7 @@ export default function BookingPage() {
                 guestEmail: data.guestEmail,
                 guestPhone: data.guestPhone,
                 paymentMethod: data.paymentMethod,
-                bookingRooms: [{ roomTypeId, quantity: 1 }],
-                // Truyền promotionId nếu đã áp dụng
+                bookingRooms: [{ roomTypeId, quantity }],
                 ...(appliedPromo ? { promotionId: appliedPromo.id } : {}),
             })
 
@@ -563,7 +571,9 @@ export default function BookingPage() {
 
                                     <div className="flex items-center gap-2 text-xs text-gray-500 bg-blue-50 px-3 py-2 rounded-xl">
                                         <Calendar size={13} className="text-blue-500" />
-                                        <span><strong className="text-blue-700">{nights} đêm</strong> · 1 phòng · {adults} khách</span>
+                                        <span>
+                                            <strong className="text-blue-700">{nights} đêm</strong> · {quantity} phòng · {adults} khách
+                                        </span>
                                     </div>
 
                                     <hr className="divider" />
@@ -578,7 +588,7 @@ export default function BookingPage() {
                                         <div className="space-y-2.5">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-gray-500">
-                                                    {avgPricePerNight.toLocaleString('vi-VN')}₫ × {nights} đêm
+                                                     {avgPricePerNight.toLocaleString('vi-VN')}₫ × {nights} đêm × {quantity} phòng
                                                 </span>
                                                 <span className="font-semibold text-gray-800">
                                                     {totalPrice.toLocaleString('vi-VN')}₫

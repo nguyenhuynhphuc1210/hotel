@@ -1,5 +1,15 @@
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'CHECKED_IN' | 'NO_SHOW'
 
+export interface BookingReview {
+  id: number
+  rating: number
+  comment: string | null
+  createdAt: string
+  ownerReply: string | null
+  replyDate: string | null
+  images?: { imageUrl: string }[]
+}
+
 export interface BookingResponse {
   id: number
   bookingCode: string
@@ -27,6 +37,10 @@ export interface BookingResponse {
   updatedAt: string
   bookingRooms: BookingRoomResponse[]
   reviewed?: boolean
+  review?: BookingReview
+   cancelReason: string | null   
+  cancelledBy: string | null    
+  cancelledAt: string | null  
 }
 
 export interface BookingRoomRateResponse {

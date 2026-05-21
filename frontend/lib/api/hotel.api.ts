@@ -120,10 +120,23 @@ export interface HotelAdminResponse {
 }
 
 const hotelApi = {
-  getAll: (page = 0, size = 100) =>
-    axiosInstance.get<PageResponse<HotelResponse>>(API_CONFIG.ENDPOINTS.HOTELS, {
-      params: { page, size }
-    }),
+  getAll: (
+    page = 0,
+    size = 10,
+    keyword?: string,
+    status?: HotelStatus,
+  ) =>
+    axiosInstance.get<PageResponse<HotelAdminResponse>>(
+      API_CONFIG.ENDPOINTS.HOTELS,
+      {
+        params: {
+          page,
+          size,
+          ...(keyword ? { keyword } : {}),
+          ...(status ? { status } : {}),
+        },
+      }
+    ),
 
   getById: (id: number | string) =>
     axiosInstance.get<HotelResponse>(API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)),
@@ -148,7 +161,7 @@ const hotelApi = {
 
   suspend: (id: number | string, reason?: string) =>
     axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/suspend`, { reason }),
- 
+
   reactivate: (id: number | string) =>
     axiosInstance.patch<HotelResponse>(`${API_CONFIG.ENDPOINTS.HOTEL_BY_ID(id)}/reactivate`),
 

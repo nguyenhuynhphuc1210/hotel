@@ -14,11 +14,11 @@ interface RoomGalleryModalProps {
     nights: number
 }
 
-type TabKey = 'all' 
+type TabKey = 'all'
 
 const TABS: { key: TabKey; label: string }[] = [
     { key: 'all', label: 'Tất cả' },
-    
+
 ]
 
 export default function RoomGalleryModal({
@@ -37,10 +37,26 @@ export default function RoomGalleryModal({
 
     // 2. Ưu tiên lấy dữ liệu từ fullRoom, nếu chưa tải xong thì dùng basicRoom
     const room = fullRoom || basicRoom
-    
+
     // 3. Lấy mảng ảnh từ room
     const images = useMemo(() => room.images ?? [], [room.images])
-    const allUrls = useMemo(() => images.map(i => i.imageUrl), [images])
+    const allUrls = useMemo(() => {
+    // 1. Lấy tất cả url từ mảng images của API chi tiết (fullRoom)
+    // Nếu fullRoom chưa load xong thì dùng basicRoom
+    const currentRoom = fullRoom || basicRoom;
+    const imagesArr = currentRoom.images?.map(i => i.imageUrl) || [];
+    
+    // 2. Lấy thumbnailUrl
+    const thumb = currentRoom.thumbnailUrl;
+
+    // 3. Gộp lại và loại bỏ trùng lặp
+    let finalUrls = [...imagesArr];
+    if (thumb && !finalUrls.includes(thumb)) {
+        finalUrls = [thumb, ...finalUrls];
+    }
+
+    return finalUrls;
+}, [fullRoom, basicRoom]);
 
     const [tab, setTab] = useState<TabKey>('all')
     const [mainIdx, setMainIdx] = useState(0)
@@ -176,14 +192,14 @@ export default function RoomGalleryModal({
                                             alt=""
                                             className="w-full h-full object-cover"
                                         />
-                                        
+
                                         {/* Nav */}
-                                        <button onClick={prev} className="absolute left-4 w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60"><ChevronLeft size={20}/></button>
-                                        <button onClick={next} className="absolute right-4 w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60"><ChevronRight size={20}/></button>
-                                        
+                                        <button onClick={prev} className="absolute left-4 w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60"><ChevronLeft size={20} /></button>
+                                        <button onClick={next} className="absolute right-4 w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60"><ChevronRight size={20} /></button>
+
                                         <div className="absolute bottom-4 right-4 flex gap-2">
                                             <button onClick={() => openLightbox(mainIdx)} className="bg-black/50 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-black/70 transition-colors">
-                                                <ZoomIn size={14}/> Phóng to
+                                                <ZoomIn size={14} /> Phóng to
                                             </button>
                                             <div className="bg-black/50 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
                                                 {mainIdx + 1} / {filtered.length}
@@ -238,7 +254,7 @@ export default function RoomGalleryModal({
                                     <div className="pt-4 border-t border-gray-100">
                                         <p className="text-xs text-gray-500 leading-relaxed italic">{room.description}</p>
                                     </div>
-                                )}                                
+                                )}
                             </div>
 
                             <div className="mt-6 space-y-2">

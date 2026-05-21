@@ -624,6 +624,7 @@ function RoomFormModal({ room, hotelId, qc, onClose }: {
       roomSize: room?.roomSize ?? undefined,
       basePrice: room?.basePrice ?? 500000,
       totalRooms: room?.totalRooms ?? 1,
+      isNonSmoking: room?.isNonSmoking ?? true,
     },
   })
 

@@ -4,9 +4,9 @@ import React, { useState, useRef, ChangeEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import dynamic from 'next/dynamic'
-import { 
-    ChevronLeft, MapPin, Calendar, User, 
-    Phone, Mail, CreditCard, Receipt, 
+import {
+    ChevronLeft, MapPin, Calendar, User,
+    Phone, Mail, CreditCard, Receipt,
     Hotel, Clock, CheckCircle2, AlertCircle, Printer,
     Star, ImagePlus, X, Send, MessageSquare, ChevronDown, ChevronUp
 } from 'lucide-react'
@@ -14,6 +14,7 @@ import bookingApi from '@/lib/api/booking.api'
 import { Loader2 } from 'lucide-react'
 import axiosInstance from '@/lib/api/axios'
 import toast from 'react-hot-toast'
+import hotelApi from '@/lib/api/hotel.api'
 
 interface ApiError {
     response?: {
@@ -61,6 +62,44 @@ function BookingDetailPage() {
         queryKey: ['booking-detail', bookingId],
         queryFn: () => bookingApi.getById(bookingId).then(res => res.data),
         enabled: !!bookingId
+    })
+
+    const { data: hotel } = useQuery({
+        queryKey: ['hotel-detail', booking?.hotelId],
+        queryFn: async () => {
+            if (!booking?.hotelId) return null
+            const res = await hotelApi.getById(booking.hotelId)
+            return res.data
+        },
+        enabled: !!booking?.hotelId,
+    })
+
+    const hotelFullAddress = hotel
+        ? `${hotel.addressLine}, ${hotel.ward}, ${hotel.district}, ${hotel.city}`
+        : booking?.hotelAddress ?? ''
+
+
+    const { data: existingReview } = useQuery({
+        queryKey: ['booking-review-fallback', bookingId, booking?.hotelId],
+        queryFn: async () => {
+            if (!booking?.hotelId) return null
+            try {
+                // Dùng endpoint đã có sẵn
+                const res = await axiosInstance.get(
+                    `/api/reviews/hotel/${booking.hotelId}/public`,
+                    { params: { page: 0, size: 1000 } }
+                )
+                const reviews = res.data?.content ?? []
+                // Filter theo bookingId
+                return reviews.find((r: { bookingId: number }) =>
+                    r.bookingId === Number(bookingId)
+                ) ?? null
+            } catch {
+                return null
+            }
+        },
+        enabled: !!bookingId && !!booking?.hotelId && booking?.status === 'COMPLETED',
+        retry: false,
     })
 
     const reviewMutation = useMutation({
@@ -129,10 +168,10 @@ function BookingDetailPage() {
     const getStatusInfo = (status: string) => {
         switch (status) {
             case 'CONFIRMED': return { label: 'Đã xác nhận', color: 'bg-emerald-500', icon: <CheckCircle2 size={18} /> }
-            case 'PENDING':   return { label: 'Chờ xử lý',   color: 'bg-amber-500',   icon: <Clock size={18} /> }
-            case 'CANCELLED': return { label: 'Đã hủy',      color: 'bg-red-500',     icon: <AlertCircle size={18} /> }
-            case 'COMPLETED': return { label: 'Đã hoàn thành', color: 'bg-blue-500',  icon: <CheckCircle2 size={18} /> }
-            default:          return { label: status,         color: 'bg-gray-500',    icon: <Clock size={18} /> }
+            case 'PENDING': return { label: 'Chờ xử lý', color: 'bg-amber-500', icon: <Clock size={18} /> }
+            case 'CANCELLED': return { label: 'Đã hủy', color: 'bg-red-500', icon: <AlertCircle size={18} /> }
+            case 'COMPLETED': return { label: 'Đã hoàn thành', color: 'bg-blue-500', icon: <CheckCircle2 size={18} /> }
+            default: return { label: status, color: 'bg-gray-500', icon: <Clock size={18} /> }
         }
     }
 
@@ -158,7 +197,7 @@ function BookingDetailPage() {
                 {/* Header Actions */}
                 <div className="flex items-center justify-between mb-8">
                     <button
-                        onClick={() => router.push('/profile')}
+                        onClick={() => router.push('/profile/booking')}
                         className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
                     >
                         <ChevronLeft size={20} /> Quay lại
@@ -202,12 +241,40 @@ function BookingDetailPage() {
                                     <h2 className="text-2xl font-black text-gray-900 mb-2">{booking.hotelName}</h2>
                                     <div className="flex items-start gap-2 text-gray-500 text-sm">
                                         <MapPin size={16} className="shrink-0 mt-0.5" />
-                                        <span>{booking.hotelAddress}</span>
+                                        <span>{hotelFullAddress}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-gray-500 text-sm mt-2">
                                         <Phone size={16} />
                                         <span>{booking.hotelPhone}</span>
                                     </div>
+                                    {/* Google Map */}
+                                    <div className="mt-5 rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+                                        <iframe
+                                            title="hotel-map"
+                                            width="100%"
+                                            height="260"
+                                            loading="lazy"
+                                            allowFullScreen
+                                            referrerPolicy="no-referrer-when-downgrade"
+                                            src={`https://www.google.com/maps?q=${encodeURIComponent(
+                                                hotelFullAddress
+                                            )}&output=embed`}
+                                            className="w-full"
+                                        />
+                                    </div>
+
+                                    {/* Open Google Maps */}
+                                    <a
+                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                            hotelFullAddress
+                                        )}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                                    >
+                                        <MapPin size={16} />
+                                        Xem bản đồ
+                                    </a>
                                 </div>
                             </div>
 
@@ -372,11 +439,21 @@ function BookingDetailPage() {
                                         <span className="opacity-70">Giảm giá</span>
                                         <span className="font-bold text-emerald-300">-{(booking.discountAmount ?? 0).toLocaleString('vi-VN')}₫</span>
                                     </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="opacity-70">Phương thức thanh toán</span>
+                                        <span className="font-bold">
+                                            {booking.paymentMethod === 'VNPAY' ? 'VNPay'
+                                                : booking.paymentMethod === 'MOMO' ? 'MoMo'
+                                                    : booking.paymentMethod === 'CASH' ? 'Tiền mặt'
+                                                        : booking.paymentMethod}
+                                        </span>
+                                    </div>
                                     <div className="h-px bg-white/20 my-4" />
                                     <div className="flex justify-between items-center">
                                         <span className="text-lg font-bold">Tổng cộng</span>
                                         <span className="text-3xl font-black">{booking.totalAmount.toLocaleString('vi-VN')}₫</span>
                                     </div>
+
                                 </div>
                             </div>
                         </div>
@@ -389,38 +466,96 @@ function BookingDetailPage() {
                                     <h3 className="font-bold uppercase text-xs tracking-widest">Đánh giá kỳ nghỉ của bạn</h3>
                                 </div>
 
-                                <div className="bg-blue-50/50 border border-blue-100 rounded-[32px] p-8 space-y-8">
-                                    <div className="flex flex-col items-center gap-3">
-                                        <p className="text-sm font-bold text-blue-900">Trải nghiệm của bạn như thế nào?</p>
-                                        <div className="flex gap-2">
-                                            {[1, 2, 3, 4, 5].map(s => (
-                                                <button key={s} type="button"
-                                                    onMouseEnter={() => setHoverRating(s)}
-                                                    onMouseLeave={() => setHoverRating(0)}
-                                                    onClick={() => setRating(s)}
-                                                    className="transition-transform hover:scale-125 focus:outline-none"
-                                                >
-                                                    <Star size={36}
-                                                        fill={(hoverRating || rating) >= s ? '#f59e0b' : 'none'}
-                                                        className={(hoverRating || rating) >= s ? 'text-amber-400' : 'text-blue-200'}
+                                {existingReview ? (
+                                    /* ── Đã đánh giá ── */
+                                    <div className="bg-emerald-50 border border-emerald-100 rounded-[32px] p-8 space-y-5">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                                                    <CheckCircle2 size={20} className="text-emerald-600" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-emerald-800 text-sm">Bạn đã đánh giá đơn này</p>
+                                                    <p className="text-xs text-emerald-500">
+                                                        {new Date(existingReview.createdAt).toLocaleDateString('vi-VN', {
+                                                            day: '2-digit', month: '2-digit', year: 'numeric'
+                                                        })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-xl shadow-sm">
+                                                {[1, 2, 3, 4, 5].map(s => (
+                                                    <Star
+                                                        key={s}
+                                                        size={16}
+                                                        fill={s <= existingReview.rating ? '#f59e0b' : 'none'}
+                                                        className={s <= existingReview.rating ? 'text-amber-400' : 'text-gray-200'}
                                                     />
-                                                </button>
-                                            ))}
+                                                ))}
+                                                <span className="text-sm font-black text-amber-600 ml-1">
+                                                    {Number(existingReview.rating).toFixed(1)}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span className="text-xs font-bold text-blue-400 uppercase tracking-tighter">
-                                            {['', 'Rất tệ', 'Không hài lòng', 'Bình thường', 'Hài lòng', 'Tuyệt vời'][hoverRating || rating]}
-                                        </span>
+
+                                        {existingReview.comment && (
+                                            <p className="text-sm text-gray-700 leading-relaxed bg-white p-4 rounded-2xl italic shadow-sm">
+                                                &quot;{existingReview.comment}&quot;
+                                            </p>
+                                        )}
+
+                                        {existingReview.images?.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {existingReview.images.map((img: { imageUrl: string }, i: number) => (
+                                                    <div key={i} className="w-20 h-20 rounded-xl overflow-hidden border-2 border-white shadow-sm">
+                                                        <img src={img.imageUrl} alt={`review-${i}`} className="w-full h-full object-cover" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {existingReview.ownerReply && (
+                                            <div className="bg-white border-l-4 border-blue-400 rounded-r-2xl p-4 shadow-sm">
+                                                <p className="text-xs font-bold text-blue-700 flex items-center gap-1 mb-1">
+                                                    <CheckCircle2 size={12} /> Phản hồi từ chủ khách sạn
+                                                </p>
+                                                <p className="text-sm text-gray-600 leading-relaxed">{existingReview.ownerReply}</p>
+                                            </div>
+                                        )}
                                     </div>
+                                ) : (
+                                    /* ── Chưa đánh giá: hiện form ── */
+                                    <div className="bg-blue-50/50 border border-blue-100 rounded-[32px] p-8 space-y-8">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <p className="text-sm font-bold text-blue-900">Trải nghiệm của bạn như thế nào?</p>
+                                            <div className="flex gap-2">
+                                                {[1, 2, 3, 4, 5].map(s => (
+                                                    <button key={s} type="button"
+                                                        onMouseEnter={() => setHoverRating(s)}
+                                                        onMouseLeave={() => setHoverRating(0)}
+                                                        onClick={() => setRating(s)}
+                                                        className="transition-transform hover:scale-125 focus:outline-none"
+                                                    >
+                                                        <Star size={36}
+                                                            fill={(hoverRating || rating) >= s ? '#f59e0b' : 'none'}
+                                                            className={(hoverRating || rating) >= s ? 'text-amber-400' : 'text-blue-200'}
+                                                        />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <span className="text-xs font-bold text-blue-400 uppercase tracking-tighter">
+                                                {['', 'Rất tệ', 'Không hài lòng', 'Bình thường', 'Hài lòng', 'Tuyệt vời'][hoverRating || rating]}
+                                            </span>
+                                        </div>
 
-                                    <div className="space-y-4">
-                                        <textarea
-                                            value={comment}
-                                            onChange={e => setComment(e.target.value)}
-                                            placeholder="Chia sẻ cảm nhận của bạn về phòng ốc, dịch vụ..."
-                                            className="w-full p-5 bg-white border-none rounded-2xl text-sm shadow-sm min-h-[120px] outline-none focus:ring-2 ring-blue-200 transition-all resize-none"
-                                        />
+                                        <div className="space-y-4">
+                                            <textarea
+                                                value={comment}
+                                                onChange={e => setComment(e.target.value)}
+                                                placeholder="Chia sẻ cảm nhận của bạn về phòng ốc, dịch vụ..."
+                                                className="w-full p-5 bg-white border-none rounded-2xl text-sm shadow-sm min-h-[120px] outline-none focus:ring-2 ring-blue-200 transition-all resize-none"
+                                            />
 
-                                        <div className="space-y-3">
                                             <div className="flex flex-wrap gap-3">
                                                 {previewUrls.map((url, i) => (
                                                     <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-white shadow-sm group">
@@ -442,18 +577,18 @@ function BookingDetailPage() {
                                                 )}
                                             </div>
                                             <input type="file" ref={fileInputRef} hidden multiple accept="image/*" onChange={handleFileChange} />
-                                        </div>
 
-                                        <button type="button"
-                                            onClick={() => reviewMutation.mutate()}
-                                            disabled={reviewMutation.isPending || !comment.trim()}
-                                            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all disabled:opacity-50"
-                                        >
-                                            {reviewMutation.isPending ? <Loader2 size={20} className="animate-spin" /> : <Send size={18} />}
-                                            Gửi đánh giá ngay
-                                        </button>
+                                            <button type="button"
+                                                onClick={() => reviewMutation.mutate()}
+                                                disabled={reviewMutation.isPending || !comment.trim()}
+                                                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all disabled:opacity-50"
+                                            >
+                                                {reviewMutation.isPending ? <Loader2 size={20} className="animate-spin" /> : <Send size={18} />}
+                                                Gửi đánh giá ngay
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         )}
 

@@ -24,6 +24,7 @@ const WEEKDAY_NAMES = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Th
 // ── Types ──────────────────────────────────────────────────
 interface SearchBarProps {
     variant?: 'hero' | 'compact'
+    onSearch?: (params: URLSearchParams) => void
     defaultValues?: {
         keyword?: string
         district?: string
@@ -322,13 +323,50 @@ interface GuestPickerProps {
 }
 
 function GuestPicker({ adults, children, rooms, setAdults, setChildren, setRooms, onClose }: GuestPickerProps) {
-    const rows = [
-        { label: 'Người lớn', sub: null, val: adults, min: 1, set: setAdults },
-        { label: 'Trẻ em', sub: '0 – 17 tuổi', val: children, min: 0, set: setChildren },
-        { label: 'Phòng', sub: null, val: rooms, min: 1, set: setRooms },
-    ]
-
     const stop = (e: React.MouseEvent) => e.stopPropagation()
+
+    const handleRoomsChange = (delta: number) => {
+        const newRooms = Math.max(1, rooms + delta)
+        setRooms(newRooms)
+        // Tăng phòng: adults phải >= số phòng
+        // Giảm phòng: adults không được < số phòng mới
+        setAdults(prev => Math.max(prev, newRooms))
+    }
+
+    const handleAdultsChange = (delta: number) => {
+        // Adults không được giảm dưới số phòng (tối thiểu 1 ng/phòng)
+        setAdults(prev => Math.max(rooms, prev + delta))
+    }
+
+    const rows = [
+        {
+            label: 'Phòng',
+            sub: null,
+            val: rooms,
+            min: 1,
+            onInc: () => handleRoomsChange(1),
+            onDec: () => handleRoomsChange(-1),
+            canDec: rooms > 1,
+        },
+        {
+            label: 'Người lớn',
+            sub: '18 tuổi trở lên',
+            val: adults,
+            min: rooms,
+            onInc: () => handleAdultsChange(1),
+            onDec: () => handleAdultsChange(-1),
+            canDec: adults > rooms,
+        },
+        {
+            label: 'Trẻ em',
+            sub: '0 – 17 tuổi',
+            val: children,
+            min: 0,
+            onInc: () => setChildren(v => v + 1),
+            onDec: () => setChildren(v => Math.max(0, v - 1)),
+            canDec: children > 0,
+        },
+    ]
 
     return (
         <div
@@ -341,7 +379,7 @@ function GuestPicker({ adults, children, rooms, setAdults, setChildren, setRooms
             </div>
 
             <div className="px-5 divide-y divide-gray-100">
-                {rows.map(({ label, sub, val, min, set }) => (
+                {rows.map(({ label, sub, val, onInc, onDec, canDec }) => (
                     <div key={label} className="flex items-center justify-between py-4">
                         <div>
                             <div className="text-sm font-semibold text-gray-800">{label}</div>
@@ -349,15 +387,15 @@ function GuestPicker({ adults, children, rooms, setAdults, setChildren, setRooms
                         </div>
                         <div className="flex items-center gap-3">
                             <button
-                                disabled={val <= min}
-                                onClick={() => set(v => Math.max(min, v - 1))}
+                                disabled={!canDec}
+                                onClick={onDec}
                                 className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-25 transition-all"
                             >
                                 <Minus size={14} />
                             </button>
                             <span className="w-5 text-center text-sm font-bold text-gray-900">{val}</span>
                             <button
-                                onClick={() => set(v => v + 1)}
+                                onClick={onInc}
                                 className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
                             >
                                 <Plus size={14} />
@@ -379,9 +417,6 @@ function GuestPicker({ adults, children, rooms, setAdults, setChildren, setRooms
     )
 }
 
-// ═══════════════════════════════════════════════════════════
-// SuggestDropdown component
-// ═══════════════════════════════════════════════════════════
 function SuggestDropdown({
     hotelSuggestions, districtSuggestions, onSelectHotel, onSelectDistrict
 }: {
@@ -439,7 +474,7 @@ function SuggestDropdown({
 // ═══════════════════════════════════════════════════════════
 // Main SearchBar
 // ═══════════════════════════════════════════════════════════
-export default function SearchBar({ variant = 'hero', defaultValues }: SearchBarProps) {
+export default function SearchBar({ variant = 'hero', defaultValues, onSearch }: SearchBarProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
     const today = getToday()
@@ -499,25 +534,25 @@ export default function SearchBar({ variant = 'hero', defaultValues }: SearchBar
     // ── Date selection ──
     const handleDaySelect = useCallback((d: Date) => {
         const now = new Date();
-    now.setHours(0, 0, 0, 0);
+        now.setHours(0, 0, 0, 0);
 
-    if (d < now || d > LAST_DAY) return;
+        if (d < now || d > LAST_DAY) return;
 
-    if (!checkIn || (checkIn && checkOut)) {
-        setCheckIn(d);
-        setCheckOut(null);
-        setPickingEnd(true);
-    } else {
-        if (d <= checkIn) {
+        if (!checkIn || (checkIn && checkOut)) {
             setCheckIn(d);
             setCheckOut(null);
             setPickingEnd(true);
         } else {
-            setCheckOut(d);
-            setPickingEnd(false);
+            if (d <= checkIn) {
+                setCheckIn(d);
+                setCheckOut(null);
+                setPickingEnd(true);
+            } else {
+                setCheckOut(d);
+                setPickingEnd(false);
+            }
         }
-    }    
-}, [checkIn, checkOut, setCheckIn, setCheckOut, setPickingEnd]);
+    }, [checkIn, checkOut, setCheckIn, setCheckOut, setPickingEnd]);
 
     const nights = checkIn && checkOut
         ? Math.round((checkOut.getTime() - checkIn.getTime()) / 86400000)
@@ -542,7 +577,12 @@ export default function SearchBar({ variant = 'hero', defaultValues }: SearchBar
         p.set('adults', String(adults))
         p.set('children', String(children))
         p.set('rooms', String(rooms))
-        router.push(`/hotels?${p.toString()}`)
+
+        if (onSearch) {
+            onSearch(p)  
+        } else {
+            router.push(`/hotels?${p.toString()}`)
+        }
     }
 
     const isHero = variant === 'hero'

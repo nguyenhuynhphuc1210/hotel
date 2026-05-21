@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { 
-    Send, Loader2, X, RotateCcw, Bot, User, 
-    ChevronDown, Sparkles, Trash2, MessageSquare,
-    RefreshCw, AlertCircle
+    Send, Loader2, X, Bot, 
+    ChevronDown, Sparkles, Trash2, 
+    AlertCircle
 } from 'lucide-react'
 import axiosInstance from '@/lib/api/axios'
 import { cn } from '@/lib/utils'
@@ -19,7 +19,7 @@ interface Message {
     status?: 'sending' | 'sent' | 'error'
 }
 
-// ── Markdown Parser Cải Tiến ─────────────────────────────────────────────────
+// ── Markdown Parser ──────────────────────────────────────────────────────────
 function renderMarkdown(text: string) {
     if (!text) return ''
     return text
@@ -31,7 +31,7 @@ function renderMarkdown(text: string) {
         .replace(/\n/g, '<br/>')
 }
 
-// ── Components nhỏ ───────────────────────────────────────────────────────────
+// ── Components ───────────────────────────────────────────────────────────────
 const TypingIndicator = () => (
     <div className="flex items-center gap-1.5 py-2 px-3 bg-white border border-gray-100 rounded-2xl w-fit shadow-sm">
         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
@@ -56,9 +56,12 @@ export default function AIChatWidget() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
 
-    // 1. Khởi tạo & Load lịch sử từ LocalStorage
+    // Tạo key lưu trữ riêng biệt theo từng khách sạn
+    const storageKey = hotelId ? `vago_ai_chat_hotel_${hotelId}` : 'vago_ai_chat_general'
+
+    // 1. Khởi tạo & Load lịch sử (Chạy lại khi đổi khách sạn)
     useEffect(() => {
-        const saved = localStorage.getItem('vago_ai_chat')
+        const saved = localStorage.getItem(storageKey)
         if (saved) {
             try {
                 const parsed = JSON.parse(saved)
@@ -70,17 +73,19 @@ export default function AIChatWidget() {
             setMessages([{ id: 'init', role: 'assistant', content: WELCOME_TEXT, timestamp: Date.now() }])
         }
         
+        // Hiển thị lại bong bóng gợi ý khi chuyển trang
+        setShowBubble(true)
         const t = setTimeout(() => setShowBubble(false), 8000)
         return () => clearTimeout(t)
-    }, [])
+    }, [hotelId, storageKey])
 
     // 2. Lưu lịch sử khi có tin nhắn mới
     useEffect(() => {
         if (messages.length > 0) {
-            localStorage.setItem('vago_ai_chat', JSON.stringify(messages))
+            localStorage.setItem(storageKey, JSON.stringify(messages))
         }
         scrollToBottom()
-    }, [messages])
+    }, [messages, storageKey])
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -113,8 +118,8 @@ export default function AIChatWidget() {
         try {
             const res = await axiosInstance.post<{ reply: string }>('/api/chat/ai', {
                 prompt: content,
-                hotelId: hotelId, // Tự động gửi context hotel nếu đang ở trang chi tiết
-                history: messages.slice(-5).map(m => ({ role: m.role, content: m.content })) // Gửi kèm lịch sử ngắn
+                hotelId: hotelId,
+                history: messages.slice(-5).map(m => ({ role: m.role, content: m.content }))
             })
 
             const aiMsg: Message = {
@@ -142,11 +147,10 @@ export default function AIChatWidget() {
         if (confirm('Bạn có muốn xóa toàn bộ lịch sử trò chuyện?')) {
             const initMsg: Message = { id: 'init', role: 'assistant', content: WELCOME_TEXT, timestamp: Date.now() }
             setMessages([initMsg])
-            localStorage.removeItem('vago_ai_chat')
+            localStorage.removeItem(storageKey)
         }
     }
 
-    // Gợi ý câu hỏi dựa trên việc có đang ở trang khách sạn hay không
     const suggestions = hotelId 
         ? ['Giá phòng đêm nay?', 'Khách sạn có cho nuôi thú cưng không?', 'Giờ nhận/trả phòng?']
         : ['Tìm khách sạn ở TP. Hồ Chí Minh', 'Chính sách hoàn tiền?', 'Ưu đãi hôm nay']
@@ -195,7 +199,7 @@ export default function AIChatWidget() {
                     {/* Messages Area */}
                     <div className="flex-1 overflow-y-auto bg-[#F8FAFC] p-4 space-y-4 scroll-smooth custom-scrollbar">
                         {messages.map((msg, idx) => (
-                            <div key={msg.id} className={cn("flex flex-col animate-in fade-in slide-in-from-top-1", msg.role === 'user' ? "items-start" : "items-start")}>
+                            <div key={msg.id} className={cn("flex flex-col animate-in fade-in slide-in-from-top-1", msg.role === 'user' ? "items-end" : "items-start")}>
                                 <div className={cn(
                                     "max-w-[85%] px-4 py-3 rounded-2xl text-sm shadow-sm",
                                     msg.role === 'user' 
@@ -219,7 +223,7 @@ export default function AIChatWidget() {
                                     </span>
                                 </div>
 
-                                {/* Suggestions (Chỉ hiện sau tin nhắn cuối cùng của AI) */}
+                                {/* Suggestions */}
                                 {idx === messages.length - 1 && msg.role === 'assistant' && !isTyping && (
                                     <div className="flex flex-wrap gap-2 mt-3">
                                         {suggestions.map((s, i) => (
@@ -258,7 +262,7 @@ export default function AIChatWidget() {
                                     }
                                 }}
                                 placeholder="Hỏi Vago AI về phòng, giá, ưu đãi..."
-                                className="flex-1 bg-transparent border-none focus:ring-0 text-sm resize-none py-1 max-h-[100px] custom-scrollbar"
+                                className="flex-1 bg-transparent border-none focus:ring-0 text-sm resize-none py-1 max-h-[100px] custom-scrollbar focus:outline-none"
                             />
                             <button
                                 onClick={() => sendMessage()}
@@ -272,7 +276,7 @@ export default function AIChatWidget() {
                             </button>
                         </div>
                         <p className="text-[10px] text-gray-400 text-center mt-2 flex items-center justify-center gap-1">
-                            <Bot size={10} /> AI có thể nhầm lẫn, hãy kiểm tra lại thông tin quan trọng.
+                            <Bot size={10} /> AI có thể nhầm lẫn, hãy kiểm tra lại thông tin.
                         </p>
                     </div>
                 </div>
@@ -317,7 +321,6 @@ export default function AIChatWidget() {
                 )}
             </button>
             
-            {/* Label dưới nút */}
             <span className={cn(
                 "text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm transition-all",
                 isOpen ? "bg-gray-100 text-gray-500" : "bg-blue-50 text-blue-600 border border-blue-100"

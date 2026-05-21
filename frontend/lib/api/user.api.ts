@@ -1,14 +1,28 @@
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
 import { UserResponse, UserRequest, UpdateUserRequest, ChangePasswordRequest } from '@/types/user.types'
-import { PageResponse } from './hotel.api' 
+import { PageResponse } from './hotel.api'
 
 const userApi = {
   // GET /api/users
-  getAll: (page = 0, size = 10) =>
-    axiosInstance.get<PageResponse<UserResponse>>(API_CONFIG.ENDPOINTS.USERS, {
-      params: { page, size }
-    }),
+  // GET /api/users
+  getAll: (
+    page = 0,
+    size = 10,
+    keyword?: string,
+    role?: string
+  ) =>
+    axiosInstance.get<PageResponse<UserResponse>>(
+      API_CONFIG.ENDPOINTS.USERS,
+      {
+        params: {
+          page,
+          size,
+          keyword: keyword || undefined,
+          role: role || undefined,
+        },
+      }
+    ),
 
   // GET /api/users/:id
   getById: (id: number | string) =>
@@ -35,7 +49,7 @@ const userApi = {
     axiosInstance.patch<UserResponse>(`${API_CONFIG.ENDPOINTS.USER_BY_ID(id)}/enable`),
 
   // Lấy profile của tôi
-  getMyProfile: () => 
+  getMyProfile: () =>
     axiosInstance.get<UserResponse>(`${API_CONFIG.ENDPOINTS.USERS}/me`),
 
   // Cập nhật profile của tôi
@@ -50,7 +64,7 @@ const userApi = {
   uploadAvatar: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return axiosInstance.post<{avatarUrl: string}>(`${API_CONFIG.ENDPOINTS.USERS}/avatar`, formData, {
+    return axiosInstance.post<{ avatarUrl: string }>(`${API_CONFIG.ENDPOINTS.USERS}/avatar`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   }

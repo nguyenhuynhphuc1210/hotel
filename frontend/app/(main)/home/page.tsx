@@ -96,7 +96,7 @@ export default function HomePage() {
                 <SearchBar variant="compact" />
             </div>
 
-           <section className="relative bg-gradient-to-br from-green-700 via-green-600 to-emerald-500 text-white">
+           <section className="relative bg-gradient-to-br from-blue-700 via-blue-600 to-emerald-500 text-white">
             <div className="max-w-7xl mx-auto px-4 pt-16 pb-32">
                 <div className="text-center mb-10">
                     <h1 className="text-4xl md:text-5xl font-bold mb-4">
@@ -123,7 +123,7 @@ export default function HomePage() {
                     <h2 className="text-xl font-bold text-gray-900">Khách sạn dành cho bạn</h2>
                     <button
                         onClick={() => router.push('/hotels')}
-                        className="flex items-center gap-1 text-sm text-green-600 font-medium hover:underline"
+                        className="flex items-center gap-1 text-sm text-blue-600 font-medium hover:underline"
                     >
                         Xem tất cả <ChevronRight size={16} />
                     </button>
@@ -159,8 +159,8 @@ export default function HomePage() {
                                             key={i}
                                             onClick={() => setCurrentPage(i)}
                                             className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${currentPage === i
-                                                ? 'bg-green-600 text-white'
-                                                : 'hover:bg-green-50 text-gray-600'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'hover:bg-blue-50 text-gray-600'
                                                 }`}
                                         >
                                             {i + 1}
@@ -196,14 +196,14 @@ export default function HomePage() {
             )}
 
             <section className="max-w-7xl mx-auto px-4 mt-14 mb-6">
-                <div className="bg-gradient-to-r from-green-600 to-emerald-500 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="bg-gradient-to-r from-blue-600 to-emerald-500 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="text-white">
                         <h3 className="text-2xl font-bold mb-2">Bạn là chủ khách sạn?</h3>
-                        <p className="text-green-100">Đăng ký ngay để tiếp cận hàng nghìn khách hàng tiềm năng tại TP.HCM</p>
+                        <p className="text-blue-100">Đăng ký ngay để tiếp cận hàng nghìn khách hàng tiềm năng tại TP.HCM</p>
                     </div>
                     <button
                         onClick={() => router.push('/register')}
-                        className="flex items-center gap-2 bg-white text-green-700 font-semibold px-6 py-3 rounded-xl hover:bg-green-50 transition-colors shrink-0"
+                        className="flex items-center gap-2 bg-white text-blue-700 font-semibold px-6 py-3 rounded-xl hover:bg-blue-50 transition-colors shrink-0"
                     >
                         Đăng ký ngay <ArrowRight size={18} />
                     </button>
@@ -259,7 +259,7 @@ function DistrictCarousel({
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     />
                                 </div>
-                                <div className="font-semibold text-sm text-gray-900 group-hover:text-green-700 transition-colors truncate">
+                                <div className="font-semibold text-sm text-gray-900 group-hover:text-blue-700 transition-colors truncate">
                                     {d}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-0.5">{count > 0 ? `${count} khách sạn` : 'Khám phá ngay'}</div>
@@ -294,7 +294,7 @@ function HotelCard({ hotel }: { hotel: HotelSummaryResponse }) {
             onClick={handleCardClick}
             className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group"
         >
-            <div className="h-44 bg-gradient-to-br from-green-100 to-emerald-50 relative overflow-hidden">
+            <div className="h-44 bg-gradient-to-br from-blue-100 to-emerald-50 relative overflow-hidden">
                 {displayImage ? (
                     <img
                         src={displayImage}
@@ -310,7 +310,7 @@ function HotelCard({ hotel }: { hotel: HotelSummaryResponse }) {
                 </div>
             </div>
             <div className="p-3">
-                <h3 className="font-semibold text-gray-900 text-sm truncate group-hover:text-green-700 transition-colors">
+                <h3 className="font-semibold text-gray-900 text-sm truncate group-hover:text-blue-700 transition-colors">
                     {hotel.hotelName}
                 </h3>
                 <div className="flex items-center gap-1 mt-1 text-gray-400">
@@ -320,11 +320,11 @@ function HotelCard({ hotel }: { hotel: HotelSummaryResponse }) {
                 <div className="mt-3 flex items-center justify-between">
                     <div>
                         <span className="text-xs text-gray-400">Từ</span>
-                        <div className="text-green-600 font-bold text-sm">
+                        <div className="text-blue-600 font-bold text-sm">
                             {hotel.minPrice ? `${hotel.minPrice.toLocaleString()}₫` : 'Liên hệ'}
                         </div>
                     </div>
-                    <button className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition-colors">
+                    <button className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors">
                         Xem chi tiết
                     </button>
                 </div>
@@ -349,7 +349,7 @@ function PromotionCard({ promotion }: {
                     <Tag size={18} className="text-red-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className="font-mono font-bold text-green-700 text-sm">{promotion.promoCode}</div>
+                    <div className="font-mono font-bold text-blue-700 text-sm">{promotion.promoCode}</div>
                     <div className="text-xs text-gray-500 truncate">{promotion.hotelName || 'Tất cả khách sạn'}</div>
                 </div>
                 <div className="text-right shrink-0">
@@ -370,10 +370,10 @@ function PromotionCard({ promotion }: {
                 )}
             </div>
             <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${daysLeft <= 3 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${daysLeft <= 3 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
                     {daysLeft <= 0 ? 'Hết hạn' : `Còn ${daysLeft} ngày`}
                 </span>
-                <button className="text-xs text-green-600 font-medium hover:underline">Dùng ngay →</button>
+                <button className="text-xs text-blue-600 font-medium hover:underline">Dùng ngay →</button>
             </div>
         </div>
     )

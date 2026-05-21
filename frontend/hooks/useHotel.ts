@@ -1,15 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import hotelApi, { HotelRequest } from '@/lib/api/hotel.api'
+import hotelApi, { HotelRequest, HotelStatus } from '@/lib/api/hotel.api'
 import toast from 'react-hot-toast'
 
 const KEY = 'hotels'
 
 // Lấy tất cả khách sạn
-export const useHotels = (page = 0, size = 10) =>
-  useQuery({
-    queryKey: [KEY, page, size],
-    queryFn: () => hotelApi.getAll(page, size).then(r => r.data),
+export const useHotels = (
+  page: number,
+  size: number,
+  keyword?: string,
+  status?: HotelStatus
+) => {
+  return useQuery({
+    queryKey: ['hotels', page, size, keyword, status],
+    queryFn: async () => {
+      const res = await hotelApi.getAll(page, size, keyword, status)
+      return res.data
+    },
+    placeholderData: previousData => previousData,
   })
+}
 
 // Lấy 1 khách sạn
 export const useHotel = (id: number | string) =>
@@ -83,7 +93,7 @@ export const useApproveHotel = () => {
 export const useDisableHotel = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, reason }: { id: number | string; reason: string }) => 
+    mutationFn: ({ id, reason }: { id: number | string; reason: string }) =>
       hotelApi.disable(id, reason),
     onSuccess: () => {
       toast.success('Đã vô hiệu hóa khách sạn!')
@@ -95,7 +105,7 @@ export const useDisableHotel = () => {
 export const useRejectHotel = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, reason }: { id: number | string; reason: string }) => 
+    mutationFn: ({ id, reason }: { id: number | string; reason: string }) =>
       hotelApi.reject(id, reason),
     onSuccess: () => {
       toast.success('Đã từ chối khách sạn!')

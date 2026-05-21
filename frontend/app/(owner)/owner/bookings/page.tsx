@@ -30,14 +30,21 @@ export default function OwnerBookingsPage() {
   const [detailBooking, setDetailBooking] = useState<BookingResponse | null>(null)
   const [currentPage, setCurrentPage] = useState(0)
   const pageSize = 10
-  
+
   const queryClient = useQueryClient()
   const { activeHotel, activeHotelId, isLoading: isHotelLoading } = useOwnerHotel()
 
-  // 1. Fetch Bookings (Có phân trang)
+  // Reset page khi filter thay đổi
+  const handleKeywordChange = (val: string) => { setKeyword(val); setCurrentPage(0) }
+  const handleStatusChange = (val: BookingStatus | '') => { setStatusFilter(val); setCurrentPage(0) }
+
   const { data: bookingsPage, isLoading: isBookingsLoading } = useQuery({
-    queryKey: ['owner-bookings', activeHotelId, currentPage],
-    queryFn: () => bookingApi.getAll(currentPage, pageSize).then((r) => r.data),
+    queryKey: ['owner-bookings', activeHotelId, currentPage, keyword, statusFilter],
+    queryFn: () => bookingApi.getAll(currentPage, pageSize, {
+      keyword: keyword || undefined,
+      status: statusFilter || undefined,
+      hotelId: activeHotelId ?? undefined,
+    }).then(r => r.data),
     enabled: !!activeHotelId,
   })
 
@@ -53,27 +60,22 @@ export default function OwnerBookingsPage() {
     onError: () => toast.error('Không thể cập nhật trạng thái'),
   })
 
-  // Trích xuất mảng content từ đối tượng Page
-  const allBookings = bookingsPage?.content || []
-  
-  // Lọc dữ liệu hiển thị (Keyword & Status)
-  const filtered = allBookings.filter((b: BookingResponse) => {
-    if (b.hotelId !== activeHotelId) return false
+  const bookings = bookingsPage?.content || []
 
-    const matchKeyword =
-      !keyword ||
-      b.guestName.toLowerCase().includes(keyword.toLowerCase()) ||
-      b.guestEmail.toLowerCase().includes(keyword.toLowerCase()) ||
-      b.bookingCode.toLowerCase().includes(keyword.toLowerCase())
-    const matchStatus = !statusFilter || b.status === statusFilter
-    return matchKeyword && matchStatus
+  // Stats: fetch riêng không filter để đếm đúng
+  const { data: statsPage } = useQuery({
+    queryKey: ['owner-bookings-stats', activeHotelId],
+    queryFn: () => bookingApi.getAll(0, 10000, {
+      hotelId: activeHotelId ?? undefined,
+    }).then(r => r.data),
+    enabled: !!activeHotelId,
   })
 
-  // Thống kê (Dựa trên dữ liệu trang hiện tại)
+  const statsBookings = statsPage?.content || []
   const stats = Object.fromEntries(
-    BOOKING_STAT_STATUSES.map((s) => [
+    BOOKING_STAT_STATUSES.map(s => [
       s,
-      allBookings.filter((b: BookingResponse) => b.status === s && b.hotelId === activeHotelId).length,
+      statsBookings.filter((b: BookingResponse) => b.status === s).length,
     ])
   ) as Record<BookingStatus, number>
 
@@ -89,11 +91,11 @@ export default function OwnerBookingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Quản lý đặt phòng</h1>
         <p className="text-sm text-gray-500 mt-1">
-          {activeHotel?.hotelName} · Trang {currentPage + 1} / {bookingsPage?.totalPages || 1}
+          {activeHotel?.hotelName} · Tổng {bookingsPage?.totalElements ?? 0} đơn
         </p>
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — click để filter */}
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         {BOOKING_STAT_STATUSES.map((s) => {
           const config = BOOKING_STATUS_CONFIG[s]
@@ -102,7 +104,7 @@ export default function OwnerBookingsPage() {
           return (
             <button
               key={s}
-              onClick={() => setStatusFilter(active ? '' : s)}
+              onClick={() => handleStatusChange(active ? '' : s)}
               className={`rounded-xl border-2 p-3 text-left transition-all ${
                 active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
@@ -118,20 +120,38 @@ export default function OwnerBookingsPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative max-w-sm flex-1">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[240px]">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Tìm tên, email, mã booking..."
             value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+            onChange={(e) => handleKeywordChange(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+        <select
+          value={statusFilter}
+          onChange={e => handleStatusChange(e.target.value as BookingStatus | '')}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+        >
+          <option value="">Tất cả trạng thái</option>
+          {BOOKING_STAT_STATUSES.map(s => (
+            <option key={s} value={s}>{BOOKING_STATUS_CONFIG[s].label}</option>
+          ))}
+        </select>
+        {(keyword || statusFilter) && (
+          <button
+            onClick={() => { handleKeywordChange(''); handleStatusChange('') }}
+            className="text-xs text-red-500 hover:text-red-700 font-medium px-3 py-2 rounded-lg hover:bg-red-50 transition-colors"
+          >
+            Xóa bộ lọc
+          </button>
+        )}
       </div>
 
-      {/* Table */}
+      {/* Table — giữ nguyên, chỉ đổi `filtered` thành `bookings` */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -153,14 +173,14 @@ export default function OwnerBookingsPage() {
                     <Loader2 size={24} className="animate-spin text-blue-500 mx-auto" />
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : bookings.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-gray-400 font-medium">
                     Không có đơn đặt phòng nào
                   </td>
                 </tr>
               ) : (
-                filtered.map((b: BookingResponse) => {
+                bookings.map((b: BookingResponse) => {
                   const s = BOOKING_STATUS_CONFIG[b.status]
                   const nextStatuses = BOOKING_STATUS_TRANSITIONS[b.status]
                   const isUpdating = updateStatusMutation.isPending && updateStatusMutation.variables?.id === b.id
@@ -190,25 +210,23 @@ export default function OwnerBookingsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {nextStatuses ? (
-                            <select
-                              disabled={isUpdating}
-                              value={b.status}
-                              onChange={(e) => updateStatusMutation.mutate({ id: b.id, status: e.target.value as BookingStatus })}
-                              className={`text-xs font-bold px-2.5 py-1.5 rounded-lg border-none focus:ring-2 focus:ring-blue-500 ${s.class}`}
-                            >
-                              <option value={b.status}>{s.label}</option>
-                              {nextStatuses.map(ns => (
-                                <option key={ns} value={ns}>{BOOKING_TRANSITION_LABELS[ns] || ns}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${s.class}`}>
-                              {s.label}
-                            </span>
-                          )}
-                        </div>
+                        {nextStatuses ? (
+                          <select
+                            disabled={isUpdating}
+                            value={b.status}
+                            onChange={(e) => updateStatusMutation.mutate({ id: b.id, status: e.target.value as BookingStatus })}
+                            className={`text-xs font-bold px-2.5 py-1.5 rounded-lg border-none focus:ring-2 focus:ring-blue-500 ${s.class}`}
+                          >
+                            <option value={b.status}>{s.label}</option>
+                            {nextStatuses.map(ns => (
+                              <option key={ns} value={ns}>{BOOKING_TRANSITION_LABELS[ns] || ns}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${s.class}`}>
+                            {s.label}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button onClick={() => setDetailBooking(b)} className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
@@ -223,11 +241,11 @@ export default function OwnerBookingsPage() {
           </table>
         </div>
 
-        {/* ── Pagination Footer ── */}
+        {/* Pagination */}
         {bookingsPage && bookingsPage.totalPages > 1 && (
           <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
             <p className="text-xs text-gray-500">
-              Hiển thị đơn thứ {currentPage * pageSize + 1} đến {Math.min((currentPage + 1) * pageSize, bookingsPage.totalElements)} trong tổng số {bookingsPage.totalElements} đơn
+              {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, bookingsPage.totalElements)} / {bookingsPage.totalElements} đơn
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -237,7 +255,7 @@ export default function OwnerBookingsPage() {
               >
                 <ChevronLeft size={16} />
               </button>
-              <span className="text-sm font-medium text-gray-700">Trang {currentPage + 1}</span>
+              <span className="text-sm font-medium text-gray-700">Trang {currentPage + 1} / {bookingsPage.totalPages}</span>
               <button
                 disabled={currentPage >= bookingsPage.totalPages - 1}
                 onClick={() => setCurrentPage(p => p + 1)}
@@ -250,12 +268,11 @@ export default function OwnerBookingsPage() {
         )}
       </div>
 
-      {/* Modal chi tiết */}
       {detailBooking && (
         <BookingDetailModal
           booking={detailBooking}
           onClose={() => setDetailBooking(null)}
-          onUpdateStatus={(id: number, status: BookingStatus) => updateStatusMutation.mutate({ id, status })}
+          onUpdateStatus={(id, status) => updateStatusMutation.mutate({ id, status })}
           isUpdating={updateStatusMutation.isPending}
         />
       )}

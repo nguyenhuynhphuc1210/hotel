@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Vago Hotel',
+  title: 'Vago',
   description: 'Đặt phòng khách sạn tại TP.HCM',
+  icons: {
+    icon: '/icons/logo-vago.svg', 
+  },
 }
 
 export default function RootLayout({
