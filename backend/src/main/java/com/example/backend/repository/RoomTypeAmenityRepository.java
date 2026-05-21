@@ -15,7 +15,8 @@ public interface RoomTypeAmenityRepository extends JpaRepository<RoomTypeAmenity
     @Query("SELECT r FROM RoomTypeAmenity r WHERE r.roomType.hotel.owner.email = :email")
     List<RoomTypeAmenity> findByOwnerEmail(@Param("email") String email);
 
-    List<RoomTypeAmenity> findByRoomType_Id(Long roomTypeId);
+    @Query("SELECT rta FROM RoomTypeAmenity rta JOIN FETCH rta.amenity WHERE rta.roomType.id = :roomTypeId")
+    List<RoomTypeAmenity> findByRoomType_Id(@Param("roomTypeId") Long roomTypeId);
 
     @Query("SELECT COUNT(rta) > 0 FROM RoomTypeAmenity rta WHERE rta.roomType.id = :roomTypeId AND rta.amenity.id = :amenityId")
     boolean existsByRoomTypeAndAmenity(@Param("roomTypeId") Long roomTypeId, @Param("amenityId") Long amenityId);

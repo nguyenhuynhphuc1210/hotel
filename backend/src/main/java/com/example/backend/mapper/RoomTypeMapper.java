@@ -92,6 +92,7 @@ public class RoomTypeMapper {
                 .isNonSmoking(rt.getIsNonSmoking())                
                 .isActive(rt.getIsActive())
                 .thumbnailUrl(thumbnail)
+                .deletedAt(rt.getDeletedAt())
                 .build();
     }
 }
