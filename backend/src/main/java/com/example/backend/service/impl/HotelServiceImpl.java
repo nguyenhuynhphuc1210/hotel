@@ -347,13 +347,24 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional(readOnly = true)
     public Page<HotelSummaryResponse> searchHotels(
-            String district, String keyword,
+            List<String> districts, String keyword,
             LocalDate checkIn, LocalDate checkOut,
             Integer adults, Integer children,
             List<Integer> stars, BigDecimal minPrice, BigDecimal maxPrice,
             String sortBy, int page, int size) {
 
-        String searchDistrict = (district != null && !district.trim().isEmpty()) ? district.trim() : null;
+        List<String> searchDistricts = null;
+        if (districts != null && !districts.isEmpty()) {
+            searchDistricts = districts.stream()
+                    .filter(d -> d != null && !d.trim().isEmpty())
+                    .map(String::trim)
+                    .toList();
+
+            if (searchDistricts.isEmpty()) {
+                searchDistricts = null;
+            }
+        }
+
         String searchKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
 
         Integer searchAdults = (adults != null && adults > 0) ? adults : 1;
@@ -371,7 +382,6 @@ public class HotelServiceImpl implements HotelService {
                 throw new IllegalArgumentException("Ngày nhận phòng phải diễn ra trước ngày trả phòng.");
             }
         } else {
-
             checkIn = LocalDate.now();
             checkOut = LocalDate.now().plusDays(1);
         }
@@ -386,7 +396,7 @@ public class HotelServiceImpl implements HotelService {
         Pageable pageable = PageRequest.of(page, size);
 
         return hotelRepository.searchHotelsWithFilters(
-                searchDistrict,
+                searchDistricts,
                 searchKeyword,
                 checkIn,
                 checkOut,

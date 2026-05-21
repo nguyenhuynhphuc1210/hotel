@@ -122,7 +122,7 @@ public class HotelController {
 
     @GetMapping("/search")
     public ResponseEntity<Page<HotelSummaryResponse>> search(
-            @RequestParam(required = false) String district,
+            @RequestParam(required = false) List<String> districts,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) LocalDate checkIn,
             @RequestParam(required = false) LocalDate checkOut,
@@ -136,7 +136,7 @@ public class HotelController {
             @RequestParam(defaultValue = "10") int size) {
 
         return ResponseEntity.ok(hotelService.searchHotels(
-                district, keyword, checkIn, checkOut, adults, children,
+                districts, keyword, checkIn, checkOut, adults, children,
                 stars, minPrice, maxPrice, sortBy, page, size));
     }
 

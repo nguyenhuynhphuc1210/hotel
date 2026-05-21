@@ -54,9 +54,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
               AND (rt.maxAdults + COALESCE(rt.maxChildren,0))
                   >= (:adults + :children)
 
-              AND (:district IS NULL
-                   OR LOWER(h.district)
-                   LIKE LOWER(CONCAT('%', :district, '%')))
+              AND (COALESCE(:districts, NULL) IS NULL OR h.district IN :districts)
 
               AND (:keyword IS NULL
                    OR LOWER(h.hotelName)
@@ -64,8 +62,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                    OR LOWER(h.addressLine)
                    LIKE LOWER(CONCAT('%', :keyword, '%')))
 
-              AND (:stars IS NULL
-                   OR h.starRating IN :stars)
+              AND (COALESCE(:stars, NULL) IS NULL OR h.starRating IN :stars)
 
             GROUP BY
                 h.id,
@@ -85,7 +82,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                 CASE WHEN :sortBy='star_desc' THEN h.starRating END DESC
             """)
     Page<HotelSummaryResponse> searchHotelsWithFilters(
-            @Param("district") String district,
+            @Param("districts") List<String> districts,
             @Param("keyword") String keyword,
             @Param("checkIn") LocalDate checkIn,
             @Param("checkOut") LocalDate checkOut,

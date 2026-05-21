@@ -19,8 +19,10 @@ import com.example.backend.repository.ReviewRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.CloudinaryService;
+import com.example.backend.service.NotificationService;
 import com.example.backend.service.ReviewService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Sort;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReviewServiceImpl implements ReviewService {
@@ -47,6 +50,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final UserRepository userRepository;
     private final ReviewMapper reviewMapper;
     private final HotelRepository hotelRepository;
+    private final NotificationService notificationService;
 
     private final CloudinaryService cloudinaryService;
 
@@ -106,6 +110,22 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         Review savedReview = reviewRepository.save(review);
+
+        String notificationTitle = "Khách hàng vừa gửi đánh giá mới";
+        String notificationMessage = String.format(
+                "%s đã đánh giá khách sạn %s với %s sao.",
+                currentUser.getFullName(),
+                booking.getHotel().getHotelName(),
+                request.getRating().toPlainString());
+
+        try {
+            notificationService.createNotification(
+                    booking.getHotel().getOwner().getEmail(),
+                    notificationTitle,
+                    notificationMessage);
+        } catch (Exception ex) {
+            log.error("Không thể tạo notification review mới: {}", ex.getMessage());
+        }
 
         updateHotelStarRating(booking.getHotel().getId());
 

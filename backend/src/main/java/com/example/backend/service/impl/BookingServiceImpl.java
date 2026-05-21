@@ -16,6 +16,7 @@ import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.BookingService;
 import com.example.backend.service.HotelStatisticService;
 import com.example.backend.service.MomoService;
+import com.example.backend.service.NotificationService;
 import com.example.backend.service.VNPayService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -58,6 +59,7 @@ public class BookingServiceImpl implements BookingService {
     private final VNPayService vnPayService;
     private final MomoService momoService;
     private final HttpServletRequest requestServlet;
+    private final NotificationService notificationService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -201,6 +203,24 @@ public class BookingServiceImpl implements BookingService {
             response.setPaymentUrl(paymentUrl);
         }
 
+        String customerName = user != null ? user.getFullName() : request.getGuestName();
+        String notificationTitle = "Bạn có đơn đặt phòng mới";
+        String notificationMessage = String.format(
+                "%s đã đặt phòng tại %s từ %s đến %s.",
+                customerName,
+                hotel.getHotelName(),
+                request.getCheckInDate(),
+                request.getCheckOutDate());
+
+        try {
+            notificationService.createNotification(
+                    hotel.getOwner().getEmail(),
+                    notificationTitle,
+                    notificationMessage);
+        } catch (Exception ex) {
+            log.error("Không thể tạo notification booking mới: {}", ex.getMessage());
+        }
+
         return response;
     }
 
@@ -210,28 +230,29 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn đặt phòng"));
 
-        String cancelledBy = "GUEST";
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isAuthenticated = auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser");
 
-        boolean isAdminOrOwner = false;
 
-        if (isAuthenticated) {
-            cancelledBy = auth.getName();
-            if (!SecurityUtils.isAdmin()) {
-                boolean isOwnerOfThisHotel = booking.getHotel().getOwner().getEmail().equals(cancelledBy);
-                boolean isGuestOfThisBooking = booking.getUser() != null
-                        && booking.getUser().getEmail().equals(cancelledBy);
+        if (!isAuthenticated) {
+            throw new AccessDeniedException("Vui lòng đăng nhập để thực hiện thao tác này.");
+        }
 
-                if (isOwnerOfThisHotel) {
-                    isAdminOrOwner = true;
-                }
+        String cancelledBy = auth.getName();
+        boolean isAdminOrOwner = SecurityUtils.isAdmin();
 
-                if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
-                    throw new AccessDeniedException("Bạn không có quyền hủy đơn đặt phòng này.");
-                }
-            } else {
+
+        if (!isAdminOrOwner) {
+            boolean isOwnerOfThisHotel = booking.getHotel().getOwner().getEmail().equals(cancelledBy);
+            boolean isGuestOfThisBooking = booking.getUser() != null
+                    && booking.getUser().getEmail().equals(cancelledBy);
+
+            if (isOwnerOfThisHotel) {
                 isAdminOrOwner = true;
+            }
+
+            if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
+                throw new AccessDeniedException("Bạn không có quyền hủy đơn đặt phòng này.");
             }
         }
 
@@ -242,7 +263,7 @@ public class BookingServiceImpl implements BookingService {
         restoreRoomInventory(booking);
 
         String finalReason;
-        if (request.getCancelReason() != null && !request.getCancelReason().isBlank()) {
+        if (request != null && request.getCancelReason() != null && !request.getCancelReason().isBlank()) {
             finalReason = request.getCancelReason().trim();
         } else {
             if (isAdminOrOwner) {
@@ -279,6 +300,20 @@ public class BookingServiceImpl implements BookingService {
                     new BookingEmailEvent(savedBooking.getId(), "CANCEL", finalReason));
         } catch (Exception e) {
             log.error("Lỗi khi gửi email hủy phòng cho booking ID {}: {}", booking.getId(), e.getMessage());
+        }
+
+        // Gửi thông báo In-app (WebSocket)
+        String cancellationMessage = String.format(
+                "%s đã hủy đơn đặt phòng %s.",
+                savedBooking.getCancelledBy(),
+                savedBooking.getBookingCode());
+        try {
+            notificationService.createNotification(
+                    savedBooking.getHotel().getOwner().getEmail(),
+                    "Đơn đặt phòng đã bị hủy",
+                    cancellationMessage);
+        } catch (Exception ex) {
+            log.error("Không thể tạo notification hủy booking: {}", ex.getMessage());
         }
 
         return bookingMapper.toBookingResponse(savedBooking);

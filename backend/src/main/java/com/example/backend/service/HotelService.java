@@ -45,7 +45,7 @@ public interface HotelService {
     BigDecimal getMinPriceForHotel(Long hotelId, LocalDate checkIn, LocalDate checkOut);
 
     Page<HotelSummaryResponse> searchHotels(
-            String district,
+            List<String> districts,
             String keyword,
             LocalDate checkIn,
             LocalDate checkOut,
