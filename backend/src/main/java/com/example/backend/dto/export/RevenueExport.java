@@ -1,6 +1,9 @@
-package com.example.backend.dto.response;
+package com.example.backend.dto.export;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -9,9 +12,9 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class HotelStatisticResponse {
-    private Long id;
-    private Long hotelId;
+public class RevenueExport {
+
+    private String hotelName;
     private LocalDate statDate;
     private Integer completedBookings;
     private Integer totalCancelled;

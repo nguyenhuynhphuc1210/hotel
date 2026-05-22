@@ -30,14 +30,16 @@ public class UserController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String role) {
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Boolean isActive) {
 
         return ResponseEntity.ok(
                 userService.getAllUsers(
                         page,
                         size,
                         keyword,
-                        role));
+                        role,
+                        isActive));
     }
 
     @GetMapping("/{id}")

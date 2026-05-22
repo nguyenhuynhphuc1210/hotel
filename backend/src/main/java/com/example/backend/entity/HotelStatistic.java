@@ -26,8 +26,8 @@ public class HotelStatistic {
     private LocalDate statDate;
 
     @Builder.Default
-    @Column(name = "total_bookings")
-    private Integer totalBookings = 0;
+    @Column(name = "completed_bookings")
+    private Integer completedBookings = 0;
 
     @Builder.Default
     @Column(name = "total_cancelled")

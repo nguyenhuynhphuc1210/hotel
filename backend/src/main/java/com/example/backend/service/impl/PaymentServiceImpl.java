@@ -1,11 +1,13 @@
 package com.example.backend.service.impl;
 
+import com.example.backend.dto.export.PaymentExport;
 import com.example.backend.dto.response.PaymentResponse;
 import com.example.backend.entity.Booking;
 import com.example.backend.entity.BookingRoom;
 import com.example.backend.entity.Payment;
 import com.example.backend.entity.RoomCalendar;
 import com.example.backend.enums.BookingStatus;
+import com.example.backend.enums.PaymentMethod;
 import com.example.backend.enums.PaymentStatus;
 import com.example.backend.event.BookingEmailEvent;
 import com.example.backend.mapper.PaymentMapper;
@@ -28,6 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.math.BigDecimal;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +41,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import java.util.Map;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.util.List;
 
@@ -55,43 +63,223 @@ public class PaymentServiceImpl implements PaymentService {
     public Page<PaymentResponse> getAllPayments(
             int page,
             int size,
-            String search,
-            PaymentStatus status) {
+            String keyword,
+            PaymentStatus status,
+            PaymentMethod method,
+            Long hotelId,
+            Long ownerId) {
 
         Pageable pageable = PageRequest.of(
                 page,
                 size,
                 Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        Page<Payment> payments;
-
-        search = (search == null || search.isBlank())
+        keyword = (keyword == null || keyword.isBlank())
                 ? null
-                : search.trim();
+                : keyword.trim();
 
-        if (SecurityUtils.isAdmin()) {
+        String currentOwnerEmail = null;
 
-            payments = paymentRepository.findAllWithFilter(
-                    search,
-                    status,
-                    pageable);
+        if (SecurityUtils.isHotelOwner()
+                && !SecurityUtils.isAdmin()) {
 
-        } else if (SecurityUtils.isHotelOwner()) {
+            currentOwnerEmail = SecurityUtils.getCurrentUserEmail();
 
-            String ownerEmail = SecurityUtils.getCurrentUserEmail();
+        } else if (!SecurityUtils.isAdmin()) {
 
-            payments = paymentRepository.findByOwnerWithFilter(
-                    ownerEmail,
-                    search,
-                    status,
-                    pageable);
-
-        } else {
             throw new AccessDeniedException(
-                    "Bạn không có quyền truy cập danh sách thanh toán");
+                    "Bạn không có quyền truy cập");
         }
 
-        return payments.map(paymentMapper::toPaymentResponse);
+        return paymentRepository.searchPayments(
+                keyword,
+                status,
+                method,
+                hotelId,
+                ownerId,
+                currentOwnerEmail,
+                pageable)
+                .map(paymentMapper::toPaymentResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] exportPaymentsToExcel(
+            String keyword,
+            PaymentStatus status,
+            PaymentMethod method,
+            Long hotelId,
+            Long ownerId) throws IOException {
+
+        keyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        String currentOwnerEmail = null;
+
+        if (SecurityUtils.isHotelOwner() && !SecurityUtils.isAdmin()) {
+            currentOwnerEmail = SecurityUtils.getCurrentUserEmail();
+        } else if (!SecurityUtils.isAdmin()) {
+            throw new AccessDeniedException("Bạn không có quyền export dữ liệu");
+        }
+
+        List<PaymentExport> payments = paymentRepository.exportPayments(
+                keyword, status, method, hotelId, ownerId, currentOwnerEmail);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Payments Report");
+
+
+        Font boldFont = workbook.createFont();
+        boldFont.setBold(true);
+
+        DataFormat format = workbook.createDataFormat();
+        short moneyFormat = format.getFormat("#,##0");
+        short dateFormat = format.getFormat("yyyy-mm-dd hh:mm:ss");
+
+        CellStyle headerStyle = workbook.createCellStyle();
+        headerStyle.setFont(boldFont);
+        headerStyle.setFillForegroundColor(IndexedColors.PALE_BLUE.getIndex());
+        headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        headerStyle.setAlignment(HorizontalAlignment.CENTER);
+        headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        setBorders(headerStyle);
+
+        CellStyle textStyle = workbook.createCellStyle();
+        textStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        setBorders(textStyle);
+
+        CellStyle centerStyle = workbook.createCellStyle();
+        centerStyle.setAlignment(HorizontalAlignment.CENTER);
+        centerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        setBorders(centerStyle);
+
+        CellStyle moneyStyle = workbook.createCellStyle();
+        moneyStyle.setDataFormat(moneyFormat);
+        moneyStyle.setAlignment(HorizontalAlignment.RIGHT);
+        moneyStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        setBorders(moneyStyle);
+
+        CellStyle dateStyle = workbook.createCellStyle();
+        dateStyle.setDataFormat(dateFormat);
+        dateStyle.setAlignment(HorizontalAlignment.CENTER);
+        dateStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        setBorders(dateStyle);
+
+        CellStyle totalLabelStyle = workbook.createCellStyle();
+        totalLabelStyle.cloneStyleFrom(centerStyle);
+        totalLabelStyle.setFont(boldFont);
+        totalLabelStyle.setAlignment(HorizontalAlignment.RIGHT);
+        totalLabelStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+        totalLabelStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        CellStyle totalMoneyStyle = workbook.createCellStyle();
+        totalMoneyStyle.cloneStyleFrom(moneyStyle);
+        totalMoneyStyle.setFont(boldFont);
+        totalMoneyStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+        totalMoneyStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+
+        String[] columns = {
+                "Booking Code", "Hotel", "Guest Name", "Payment Method",
+                "Transaction ID", "Amount (VND)", "Status", "Payment Date", "Created At"
+        };
+
+        Row headerRow = sheet.createRow(0);
+        headerRow.setHeightInPoints(20);
+
+        for (int i = 0; i < columns.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(columns[i]);
+            cell.setCellStyle(headerStyle);
+        }
+
+        int rowNum = 1;
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        for (PaymentExport payment : payments) {
+            Row row = sheet.createRow(rowNum++);
+
+            Cell cell0 = row.createCell(0);
+            cell0.setCellValue(payment.getBookingCode());
+            cell0.setCellStyle(textStyle);
+
+            Cell cell1 = row.createCell(1);
+            cell1.setCellValue(payment.getHotelName());
+            cell1.setCellStyle(textStyle);
+
+            Cell cell2 = row.createCell(2);
+            cell2.setCellValue(payment.getGuestName());
+            cell2.setCellStyle(textStyle);
+
+            Cell cell3 = row.createCell(3);
+            cell3.setCellValue(payment.getPaymentMethod().name());
+            cell3.setCellStyle(centerStyle);
+
+            Cell cell4 = row.createCell(4);
+            cell4.setCellValue(payment.getTransactionId() != null ? payment.getTransactionId() : "");
+            cell4.setCellStyle(textStyle);
+
+            Cell cell5 = row.createCell(5);
+            cell5.setCellValue(payment.getAmount().doubleValue());
+            cell5.setCellStyle(moneyStyle);
+
+            totalAmount = totalAmount.add(payment.getAmount());
+
+            Cell cell6 = row.createCell(6);
+            cell6.setCellValue(payment.getStatus().name());
+            cell6.setCellStyle(centerStyle);
+
+            Cell cell7 = row.createCell(7);
+            if (payment.getPaymentDate() != null) {
+                cell7.setCellValue(java.sql.Timestamp.valueOf(payment.getPaymentDate()));
+            } else {
+                cell7.setCellValue("");
+            }
+            cell7.setCellStyle(dateStyle);
+
+            Cell cell8 = row.createCell(8);
+            if (payment.getCreatedAt() != null) {
+                cell8.setCellValue(java.sql.Timestamp.valueOf(payment.getCreatedAt()));
+            }
+            cell8.setCellStyle(dateStyle);
+        }
+
+        Row totalRow = sheet.createRow(rowNum);
+        totalRow.setHeightInPoints(20);
+
+        for (int i = 0; i <= 4; i++) {
+            Cell cell = totalRow.createCell(i);
+            cell.setCellStyle(totalLabelStyle);
+            if (i == 0)
+                cell.setCellValue("TOTAL AMOUNT:");
+        }
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowNum, rowNum, 0, 4));
+
+        Cell totalValueCell = totalRow.createCell(5);
+        totalValueCell.setCellValue(totalAmount.doubleValue());
+        totalValueCell.setCellStyle(totalMoneyStyle);
+
+        for (int i = 6; i <= 8; i++) {
+            Cell cell = totalRow.createCell(i);
+            cell.setCellStyle(totalLabelStyle);
+        }
+
+        for (int i = 0; i < columns.length; i++) {
+            sheet.autoSizeColumn(i);
+            int currentWidth = sheet.getColumnWidth(i);
+            sheet.setColumnWidth(i, currentWidth + 1000);
+        }
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        workbook.write(outputStream);
+        workbook.close();
+
+        return outputStream.toByteArray();
+    }
+
+    private void setBorders(CellStyle style) {
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
     }
 
     @Override

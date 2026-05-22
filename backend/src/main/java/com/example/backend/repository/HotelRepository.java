@@ -153,4 +153,5 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
             @Param("keyword") String keyword,
             @Param("status") HotelStatus status,
             Pageable pageable);
+
 }

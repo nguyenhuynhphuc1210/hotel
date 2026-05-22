@@ -7,6 +7,7 @@ import com.example.backend.enums.BookingStatus;
 import com.example.backend.dto.request.UpdateBookingStatusRequest;
 
 import org.springframework.data.domain.Page;
+import java.io.IOException;
 
 public interface BookingService {
 
@@ -28,4 +29,6 @@ public interface BookingService {
     BookingResponse getBookingById(Long bookingId);
 
     BookingResponse lookupBooking(String bookingCode);
+
+    byte[] exportBookingsToExcel(String keyword, BookingStatus status, Long hotelId, Long ownerId) throws IOException;
 }

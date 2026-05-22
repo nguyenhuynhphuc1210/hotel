@@ -15,7 +15,8 @@ public interface UserService {
             int page,
             int size,
             String keyword,
-            String role);
+            String role,
+            Boolean isActive);
 
     UserResponse getUserById(Long id);
 

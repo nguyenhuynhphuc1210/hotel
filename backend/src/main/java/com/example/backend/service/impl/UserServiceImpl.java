@@ -47,7 +47,8 @@ public class UserServiceImpl implements UserService {
             int page,
             int size,
             String keyword,
-            String role) {
+            String role,
+            Boolean isActive) {
 
         Pageable pageable = PageRequest.of(
                 page,
@@ -57,6 +58,7 @@ public class UserServiceImpl implements UserService {
         Page<User> userPage = userRepository.searchUsers(
                 keyword,
                 role,
+                isActive,
                 pageable);
 
         return userPage.map(userMapper::toUserResponse);

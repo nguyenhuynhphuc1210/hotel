@@ -33,9 +33,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
                         :role IS NULL
                         OR u.role.roleName = :role
                     )
+                AND
+                    (
+                        :isActive IS NULL
+                        OR u.isActive = :isActive
+                    )
             """)
     Page<User> searchUsers(
             @Param("keyword") String keyword,
             @Param("role") String role,
+            @Param("isActive") Boolean isActive,
             Pageable pageable);
 }

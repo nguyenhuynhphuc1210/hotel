@@ -10,7 +10,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+
+import java.io.IOException;
 
 import org.springframework.data.domain.Page;
 
@@ -76,5 +81,26 @@ public class BookingController {
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getBookingById(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.getBookingById(id));
+    }
+
+    @GetMapping("/export")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('HOTEL_OWNER')")
+    public ResponseEntity<byte[]> exportBookings(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(required = false) Long hotelId,
+            @RequestParam(required = false) Long ownerId)
+            throws IOException {
+
+        byte[] excelData = bookingService.exportBookingsToExcel(keyword, status, hotelId, ownerId);
+
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=bookings.xlsx")
+                .contentType(
+                        MediaType.parseMediaType(
+                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelData);
     }
 }

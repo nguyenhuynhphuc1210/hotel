@@ -1,0 +1,14 @@
+package com.example.backend.dto.response;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import java.math.BigDecimal;
+
+@Data
+@AllArgsConstructor
+public class SystemStatisticSummary {
+    private Long completedBookings;
+    private Long totalCancelled;
+    private Long totalNoShow;
+    private BigDecimal totalRevenue;
+
+}

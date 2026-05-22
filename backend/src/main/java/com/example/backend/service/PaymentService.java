@@ -7,13 +7,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import java.util.Map;
+import com.example.backend.enums.PaymentMethod;
+import java.io.IOException;
 
 public interface PaymentService {
-    Page<PaymentResponse> getAllPayments(
-            int page,
-            int size,
-            String search,
-            PaymentStatus status);
+    Page<PaymentResponse> getAllPayments(int page, int size,String keyword, PaymentStatus status, PaymentMethod method,
+            Long hotelId, Long ownerId);
+
+    byte[] exportPaymentsToExcel(String keyword, PaymentStatus status, PaymentMethod method, Long hotelId,
+            Long ownerId) throws IOException;
 
     PaymentResponse getPaymentById(Long id);
 
