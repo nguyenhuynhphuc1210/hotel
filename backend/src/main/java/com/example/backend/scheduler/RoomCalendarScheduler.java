@@ -22,40 +22,46 @@ public class RoomCalendarScheduler {
     private final RoomTypeRepository roomTypeRepository;
     private final RoomCalendarRepository roomCalendarRepository;
 
-    @Scheduled(cron = "0 0 2 * * *")
+    @Scheduled(cron = "0 0 2 * * *", zone = "Asia/Ho_Chi_Minh")
     @Transactional
     public void extendRoomCalendarsDaily() {
-        log.info("Bắt đầu chạy tác vụ: Tự động mở rộng lịch phòng...");
-        
+
         LocalDate targetDate = LocalDate.now().plusYears(1);
 
-        List<RoomType> allRoomTypes = roomTypeRepository.findAll();
-        List<RoomCalendar> newCalendarsToSave = new ArrayList<>();
+        List<RoomType> roomTypes = roomTypeRepository.findAll();
 
-        for (RoomType roomType : allRoomTypes) {
-            boolean isCalendarExists = roomCalendarRepository
-                    .findByRoomType_IdAndDate(roomType.getId(), targetDate)
-                    .isPresent();
+        List<RoomCalendar> calendarsToCreate = new ArrayList<>();
 
-            if (!isCalendarExists) {
-                RoomCalendar newCalendar = RoomCalendar.builder()
+        for (RoomType roomType : roomTypes) {
+
+            LocalDate maxDate = roomCalendarRepository.findMaxDateByRoomType(roomType.getId());
+
+            if (maxDate == null) {
+                maxDate = LocalDate.now().minusDays(1);
+            }
+
+            while (maxDate.isBefore(targetDate)) {
+
+                maxDate = maxDate.plusDays(1);
+
+                RoomCalendar calendar = RoomCalendar.builder()
                         .roomType(roomType)
-                        .date(targetDate)
+                        .date(maxDate)
                         .price(roomType.getBasePrice())
                         .totalRooms(roomType.getTotalRooms())
                         .bookedRooms(0)
                         .isAvailable(true)
                         .build();
-                        
-                newCalendarsToSave.add(newCalendar);
+
+                calendarsToCreate.add(calendar);
             }
         }
 
-        if (!newCalendarsToSave.isEmpty()) {
-            roomCalendarRepository.saveAll(newCalendarsToSave);
-            log.info("Hoàn tất! Đã tạo thêm {} bản ghi lịch phòng cho ngày {}", newCalendarsToSave.size(), targetDate);
-        } else {
-            log.info("Hoàn tất! Tất cả các loại phòng đều đã có sẵn lịch cho ngày {}. Không cần tạo thêm.", targetDate);
+        if (!calendarsToCreate.isEmpty()) {
+            roomCalendarRepository.saveAll(calendarsToCreate);
+
+            log.info("Đã tạo {} RoomCalendar",
+                    calendarsToCreate.size());
         }
     }
 }

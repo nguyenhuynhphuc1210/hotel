@@ -54,20 +54,33 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {
                     List<String> authorization = accessor.getNativeHeader("Authorization");
-                    
-                    if (authorization != null && !authorization.isEmpty()) {
-                        String token = authorization.get(0).substring(7);
-                        
-                        if (jwtTokenProvider.validateToken(token)) {
-                            String email = jwtTokenProvider.getEmailFromJWT(token);
-                            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities());
-                            accessor.setUser(auth);
+                    if (authorization != null && !authorization.isEmpty()) {
+                        String bearerToken = authorization.get(0);
+
+                        if (bearerToken != null && bearerToken.startsWith("Bearer ") && bearerToken.length() > 7) {
+                            String token = bearerToken.substring(7).trim();
+
+                            if (!token.isEmpty() && !"null".equals(token) && !"undefined".equals(token)) {
+
+                                if (jwtTokenProvider.validateToken(token)) {
+                                    String email = jwtTokenProvider.getEmailFromJWT(token);
+                                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+
+                                    UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                                            userDetails, null, userDetails.getAuthorities());
+                                    accessor.setUser(auth);
+                                } else {
+                                    log.error("Token WebSocket không hợp lệ hoặc đã hết hạn!");
+                                }
+                            } else {
+                                log.error("Token bị rỗng hoặc mang giá trị null/undefined từ frontend!");
+                            }
                         } else {
-                            log.error("Token WebSocket không hợp lệ!");
+                            log.error("Header Authorization không đúng định dạng (thiếu Bearer hoặc không có token)!");
                         }
+                    } else {
+                        log.error("Không tìm thấy header Authorization trong yêu cầu CONNECT!");
                     }
                 }
                 return message;

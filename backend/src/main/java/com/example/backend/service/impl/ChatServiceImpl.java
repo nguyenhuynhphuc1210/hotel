@@ -15,6 +15,7 @@ import com.example.backend.repository.HotelRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.ChatService;
+import com.example.backend.service.NotificationService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 
@@ -36,6 +37,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMapper chatMapper;
     private final SimpMessagingTemplate messagingTemplate;
     private final BookingRepository bookingRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -89,6 +91,18 @@ public class ChatServiceImpl implements ChatService {
                 .build();
 
         ChatMessage savedMessage = chatMessageRepository.save(message);
+
+        String ownerEmail = hotelRepository.findOwnerEmailByHotelId(hotelId);
+        if (ownerEmail != null && !ownerEmail.equalsIgnoreCase(senderEmail)) {
+            String hotelName = hotelRepository.findById(hotelId)
+                    .map(Hotel::getHotelName)
+                    .orElse("khách sạn");
+
+            notificationService.createNotification(
+                    ownerEmail,
+                    "Bạn có tin nhắn mới",
+                    senderEmail + " đã gửi tin nhắn từ khách sạn " + hotelName + ".");
+        }
 
         return chatMapper.toResponse(savedMessage);
     }

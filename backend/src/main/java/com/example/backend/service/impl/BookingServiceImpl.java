@@ -305,7 +305,6 @@ public class BookingServiceImpl implements BookingService {
             log.error("Lỗi khi gửi email hủy phòng cho booking ID {}: {}", booking.getId(), e.getMessage());
         }
 
-        // Gửi thông báo In-app (WebSocket)
         String cancellationMessage = String.format(
                 "%s đã hủy đơn đặt phòng %s.",
                 savedBooking.getCancelledBy(),

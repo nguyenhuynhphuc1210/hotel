@@ -63,4 +63,11 @@ public interface RoomCalendarRepository extends JpaRepository<RoomCalendar, Long
         @Modifying
         @Query("UPDATE RoomCalendar rc SET rc.isAvailable = :isAvailable WHERE rc.roomType.hotel.id = :hotelId")
         void updateIsAvailableByHotelId(@Param("hotelId") Long hotelId, @Param("isAvailable") boolean isAvailable);
+
+        @Query("""
+                            SELECT MAX(rc.date)
+                            FROM RoomCalendar rc
+                            WHERE rc.roomType.id = :roomTypeId
+                        """)
+        LocalDate findMaxDateByRoomType(Long roomTypeId);
 }
