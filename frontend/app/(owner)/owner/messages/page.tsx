@@ -63,9 +63,9 @@ export default function OwnerMessagesPage() {
     const [isLoadingMsgs, setIsLoadingMsgs] = useState(false)
     const [isConnected, setIsConnected] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
-    // ✅ Set lưu conversationId có tin nhắn chưa đọc
+    
     const [unreadConvIds, setUnreadConvIds] = useState<Set<number>>(new Set())
-
+    const [totalUnread, setTotalUnread] = useState(0)
     const stompClientRef = useRef<Client | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
@@ -117,9 +117,16 @@ export default function OwnerMessagesPage() {
                         if (msg.senderEmail !== user.email)
                             sendReadReceipt(msg.conversationId, msg.senderEmail, client)
                     } else {
-                        // ✅ Tin đến từ conversation khác → đánh dấu unread
-                        setUnreadConvIds(prev => new Set(prev).add(msg.conversationId))
-                    }
+    
+    setUnreadConvIds(prev => {
+        const next = new Set(prev)
+        next.add(msg.conversationId)
+        return next
+    })
+
+    
+    setTotalUnread(prev => prev + 1)
+}
 
                     qc.invalidateQueries({ queryKey: ['owner-hotel-inbox', activeHotelId] })
                 })
@@ -145,6 +152,7 @@ export default function OwnerMessagesPage() {
         setMessages([])
         // ✅ Xóa unread khi mở conversation
         setUnreadConvIds(prev => { const next = new Set(prev); next.delete(conv.id); return next })
+        setTotalUnread(prev => Math.max(0, prev - 1))
         try {
             const res = await axiosInstance.get<ChatMsg[]>(`/api/chat/history/${conv.id}`)
             setMessages(res.data)

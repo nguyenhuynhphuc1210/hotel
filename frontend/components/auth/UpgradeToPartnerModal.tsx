@@ -80,7 +80,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                 {/* Header gradient banner */}
                 <div
                     className="relative px-8 pt-10 pb-8 text-white"
-                    style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 60%, #166534 100%)' }}
+                    style={{ background: 'linear-gradient(135deg, #6241f5 100%)' }}
                 >
                     <button
                         onClick={handleClose}
@@ -92,7 +92,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                         🏨
                     </div>
                     <h2 className="text-2xl font-bold mb-1">Trở thành Đối tác</h2>
-                    <p className="text-green-100 text-sm leading-relaxed">
+                    <p className="text-blue-100 text-sm leading-relaxed">
                         Đăng ký làm chủ khách sạn trên Vago và tiếp cận hàng ngàn khách hàng mỗi ngày.
                     </p>
                 </div>
@@ -103,7 +103,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                     {/* Success state */}
                     {success ? (
                         <div className="text-center py-6">
-                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
+                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
                                 ✅
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-2">Đăng ký thành công!</h3>
@@ -112,10 +112,11 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                             </p>
                             <button
                                 onClick={handleClose}
-                                className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors"
+                                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
                             >
                                 Bắt đầu quản lý khách sạn →
                             </button>
+
                         </div>
                     ) : isAlreadyOwner ? (
                         /* Already owner */
@@ -127,7 +128,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                             </p>
                             <button
                                 onClick={handleClose}
-                                className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors"
+                                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
                             >
                                 Đóng
                             </button>
@@ -143,7 +144,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                             <div className="flex gap-3">
                                 <a
                                     href="/login"
-                                    className="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-center transition-colors"
+                                    className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-center transition-colors"
                                 >
                                     Đăng nhập
                                 </a>
@@ -177,9 +178,9 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                                     { icon: '💰', label: 'Thu nhập ổn định' },
                                     { icon: '🌍', label: 'Tiếp cận rộng' },
                                 ].map((b) => (
-                                    <div key={b.label} className="bg-green-50 rounded-xl p-3 text-center">
+                                    <div key={b.label} className="bg-blue-50 rounded-xl p-3 text-center">
                                         <div className="text-2xl mb-1">{b.icon}</div>
-                                        <p className="text-xs text-green-800 font-medium leading-tight">{b.label}</p>
+                                        <p className="text-xs text-blue-800 font-medium leading-tight">{b.label}</p>
                                     </div>
                                 ))}
                             </div>
@@ -212,7 +213,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                                         className={`w-full px-4 py-3 rounded-xl border text-sm transition-all outline-none
       ${user?.phone
                                                 ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
-                                                : 'border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                                : 'border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
                                             }`}
                                     />
                                     {user?.phone
@@ -228,14 +229,14 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                                             type="checkbox"
                                             checked={agreed}
                                             onChange={(e) => setAgreed(e.target.checked)}
-                                            className="w-4 h-4 accent-green-600 cursor-pointer"
+                                            className="w-4 h-4 accent-blue-600 cursor-pointer"
                                         />
                                     </div>
                                     <span className="text-sm text-gray-600 leading-relaxed">
                                         Tôi đồng ý với{' '}
-                                        <a href="#" className="text-green-600 hover:underline font-medium">Điều khoản Đối tác</a>
+                                        <a href="#" className="text-blue-600 hover:underline font-medium">Điều khoản Đối tác</a>
                                         {' '}và{' '}
-                                        <a href="#" className="text-green-600 hover:underline font-medium">Chính sách sử dụng</a>
+                                        <a href="#" className="text-blue-600 hover:underline font-medium">Chính sách sử dụng</a>
                                         {' '}của Vago Hotel.
                                     </span>
                                 </label>
@@ -252,7 +253,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 mt-2"
+                                    className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 mt-2"
                                 >
                                     {loading ? (
                                         <>

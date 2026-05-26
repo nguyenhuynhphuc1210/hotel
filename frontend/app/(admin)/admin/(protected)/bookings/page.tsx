@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useDebounce } from 'use-debounce'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
-import { Search, Eye, X, Loader2 } from 'lucide-react'
+import { Search, Eye, X, Loader2, Download } from 'lucide-react'
 import bookingApi from '@/lib/api/booking.api'
 import { BookingResponse, BookingStatus } from '@/types/booking.types'
 import toast from 'react-hot-toast'
@@ -20,6 +20,7 @@ import {
   PAYMENT_METHOD_LABELS,
   PAYMENT_STATUS_CONFIG,
 } from '@/config/booking-status.config'
+import { exportBookings } from '@/lib/api/export.api'
 
 export default function AdminBookingsPage() {
   const [keyword, setKeyword] = useState('')
@@ -29,6 +30,7 @@ export default function AdminBookingsPage() {
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
   const [detailBooking, setDetailBooking] = useState<BookingResponse | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
 
   const [debouncedKeyword] = useDebounce(keyword, 400)
   const queryClient = useQueryClient()
@@ -78,6 +80,23 @@ export default function AdminBookingsPage() {
     onError: () => toast.error('Không thể cập nhật trạng thái'),
   })
 
+  const handleExport = async () => {
+    setIsExporting(true)
+    try {
+      await exportBookings({
+        keyword: debouncedKeyword || undefined,
+        status: statusFilter || undefined,
+        hotelId: hotelFilter || undefined,
+        ownerId: selectedOwnerId,
+      })
+      toast.success('Xuất file thành công!')
+    } catch {
+      toast.error('Xuất file thất bại, vui lòng thử lại.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const handleKeywordChange = (val: string) => { setKeyword(val); setCurrentPage(0) }
   const handleStatusChange = (val: BookingStatus | '') => { setStatusFilter(val); setCurrentPage(0) }
   const handleHotelChange = (val: number | '') => { setHotelFilter(val); setCurrentPage(0) }
@@ -86,11 +105,25 @@ export default function AdminBookingsPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Quản lý đặt phòng</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Hệ thống Admin · Tổng {pageData?.totalElements || 0} đơn đặt phòng
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Quản lý đặt phòng</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Hệ thống Admin · Tổng {pageData?.totalElements || 0} đơn đặt phòng
+          </p>
+        </div>
+
+        {/* Export button */}
+        <button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-medium rounded-lg transition-colors shadow-sm shrink-0"
+        >
+          {isExporting
+            ? <Loader2 size={15} className="animate-spin" />
+            : <Download size={15} />}
+          {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
+        </button>
       </div>
 
       {/* Stat cards */}
@@ -171,6 +204,13 @@ export default function AdminBookingsPage() {
           </button>
         )}
       </div>
+
+      {/* Export note */}
+      {(statusFilter || hotelFilter || ownerFilter || debouncedKeyword) && (
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          📌 File Excel sẽ được xuất theo bộ lọc đang áp dụng.
+        </p>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -361,7 +401,6 @@ function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }:
             </div>
           ))}
 
-          {/* ── Lý do hủy — chỉ hiện khi status = CANCELLED và có dữ liệu ── */}
           {b.status === 'CANCELLED' && b.cancelReason && (
             <div className="py-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Lý do hủy</p>

@@ -23,8 +23,10 @@ import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
 import { HotelResponse } from '@/lib/api/hotel.api'
+import { exportPayments } from '@/lib/api/export.api'
+import toast from 'react-hot-toast'
 
-// --- CONFIGS (Giữ nguyên) ---
+// --- CONFIGS ---
 const STATUS_CONFIG: Record<PaymentStatus, { label: string; dot: string; badge: string }> = {
   PAID: { label: 'Đã thanh toán', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
   PENDING: { label: 'Chờ xử lý', dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' },
@@ -43,7 +45,7 @@ const METHOD_CONFIG: Record<string, { label: string; dot: string }> = {
   CASH: { label: 'Tiền mặt', dot: 'bg-orange-500' },
 }
 
-// --- Detail Drawer (Giữ nguyên) ---
+// --- Detail Drawer ---
 function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | null; onClose: () => void }) {
   if (!payment) return null
   const cfg = STATUS_CONFIG[payment.status]
@@ -109,40 +111,31 @@ export default function AdminPaymentsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | ''>('')
   const [selectedPayment, setSelectedPayment] = useState<PaymentResponse | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
 
-  // Filter theo khách sạn và ngày
   const [selectedHotelId, setSelectedHotelId] = useState<number | null>(null)
-  const [dateRange, setDateRange] = useState({
-    fromDate: '',
-    toDate: ''
-  })
+  const [dateRange, setDateRange] = useState({ fromDate: '', toDate: '' })
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput), 500)
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  // Lấy danh sách khách sạn cho dropdown
   const { data: hotels = [] } = useQuery<HotelResponse[]>({
     queryKey: ['admin-hotels-list'],
     queryFn: () => axiosInstance.get(API_CONFIG.ENDPOINTS.HOTELS, { params: { page: 0, size: 1000 } }).then(r => r.data.content),
   })
 
-  // 1. Lấy thống kê (Cho các thẻ Card)
   const { data: statsData, isLoading: isLoadingStats } = useHotelStatistics({
     hotelId: selectedHotelId as number,
     fromDate: dateRange.fromDate,
     toDate: dateRange.toDate
   }, !!selectedHotelId)
 
-  // 2. Lấy danh sách giao dịch (Table)
-  // Lưu ý: Nếu Backend hỗ trợ param hotelId, hãy bổ sung vào usePayments
   const { data: pageData, isLoading: isLoadingPayments } = usePayments(currentPage, pageSize, search, statusFilter)
   const payments = pageData?.content || []
 
-  // 3. Logic "Scale" Thống kê
   const displayStats = useMemo(() => {
-    // Nếu ĐÃ CHỌN khách sạn -> Lấy số liệu từ API Thống kê (Chính xác 100% cho khách sạn đó)
     if (selectedHotelId && statsData) {
       return {
         total: statsData.reduce((sum, item) => sum + (item.grossBookings || 0), 0),
@@ -151,8 +144,6 @@ export default function AdminPaymentsPage() {
         isScaled: true
       }
     }
-
-    // Nếu CHƯA CHỌN khách sạn -> Tính dựa trên dữ liệu thanh toán đang hiển thị
     const paidPayments = payments.filter(p => p.status === 'PAID')
     return {
       total: pageData?.totalElements || 0,
@@ -162,19 +153,31 @@ export default function AdminPaymentsPage() {
     }
   }, [pageData, payments, selectedHotelId, statsData])
 
-  // 4. Logic "Scale" Table (Lọc giao dịch của khách sạn đã chọn)
   const filteredPayments = useMemo(() => {
     if (!selectedHotelId) return payments
     return payments.filter(p => p.hotelId === selectedHotelId)
   }, [payments, selectedHotelId])
 
   const handleClearFilters = () => {
-    setSearchInput('')
-    setSearch('')
-    setStatusFilter('')
-    setSelectedHotelId(null)
-    setDateRange({ fromDate: '', toDate: '' })
+    setSearchInput(''); setSearch(''); setStatusFilter('')
+    setSelectedHotelId(null); setDateRange({ fromDate: '', toDate: '' })
     setCurrentPage(0)
+  }
+
+  const handleExport = async () => {
+    setIsExporting(true)
+    try {
+      await exportPayments({
+        keyword: search || undefined,
+        status: statusFilter || undefined,
+        hotelId: selectedHotelId,
+      })
+      toast.success('Xuất file thành công!')
+    } catch {
+      toast.error('Xuất file thất bại, vui lòng thử lại.')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   return (
@@ -189,12 +192,21 @@ export default function AdminPaymentsPage() {
               : 'Theo dõi dòng tiền và doanh thu hệ thống'}
           </p>
         </div>
-        <button className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
-          <Download size={16} /> Xuất CSV
+
+        {/* Export button — thay thế nút "Xuất CSV" cũ */}
+        <button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+        >
+          {isExporting
+            ? <Loader2 size={16} className="animate-spin" />
+            : <Download size={16} />}
+          {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
         </button>
       </div>
 
-      {/* Stats Cards (Scaled) */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
@@ -223,67 +235,52 @@ export default function AdminPaymentsPage() {
             <TrendingUp size={18} className="text-indigo-500" />
           </div>
           <div className="text-2xl font-bold text-indigo-700">
-            {isLoadingStats ? (
-              <Loader2 className="animate-spin h-6 w-6" />
-            ) : (
-              `${displayStats.revenue.toLocaleString('vi-VN')} ₫`
-            )}
+            {isLoadingStats
+              ? <Loader2 className="animate-spin h-6 w-6" />
+              : `${displayStats.revenue.toLocaleString('vi-VN')} ₫`}
           </div>
           {displayStats.isScaled && <div className="absolute bottom-0 left-0 h-1 w-full bg-indigo-500" />}
         </div>
       </div>
 
-      {/* Filters Area */}
+      {/* Filters */}
       <div className="flex flex-wrap gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="relative flex-1 min-w-[250px]">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Tìm mã booking..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             value={searchInput}
-            onChange={e => { setSearchInput(e.target.value); setCurrentPage(0); }}
+            onChange={e => { setSearchInput(e.target.value); setCurrentPage(0) }}
           />
         </div>
 
-        {/* Scaler: Hotel Selector */}
-        <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-2 bg-blue-50/50 border-blue-100">
+        <div className="flex items-center gap-2 border border-blue-100 rounded-lg px-2 bg-blue-50/50">
           <Building2 size={16} className="text-blue-500 ml-1" />
           <select
             className="py-2 bg-transparent text-sm outline-none min-w-[180px] font-medium text-blue-700"
             value={selectedHotelId || ''}
-            onChange={e => {
-              setSelectedHotelId(Number(e.target.value) || null);
-              setCurrentPage(0);
-            }}
+            onChange={e => { setSelectedHotelId(Number(e.target.value) || null); setCurrentPage(0) }}
           >
             <option value="">Tất cả khách sạn</option>
             {hotels.map(h => <option key={h.id} value={h.id}>{h.hotelName}</option>)}
           </select>
         </div>
 
-        {/* Scaler: Date Range */}
         <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 bg-gray-50/50">
           <Calendar size={16} className="text-gray-400" />
-          <input
-            type="date"
-            className="bg-transparent text-sm outline-none py-1"
-            value={dateRange.fromDate}
-            onChange={e => setDateRange(prev => ({ ...prev, fromDate: e.target.value }))}
-          />
+          <input type="date" className="bg-transparent text-sm outline-none py-1" value={dateRange.fromDate}
+            onChange={e => setDateRange(prev => ({ ...prev, fromDate: e.target.value }))} />
           <span className="text-gray-300">-</span>
-          <input
-            type="date"
-            className="bg-transparent text-sm outline-none py-1"
-            value={dateRange.toDate}
-            onChange={e => setDateRange(prev => ({ ...prev, toDate: e.target.value }))}
-          />
+          <input type="date" className="bg-transparent text-sm outline-none py-1" value={dateRange.toDate}
+            onChange={e => setDateRange(prev => ({ ...prev, toDate: e.target.value }))} />
         </div>
 
         <select
           className="px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value as PaymentStatus | ''); setCurrentPage(0); }}
+          onChange={e => { setStatusFilter(e.target.value as PaymentStatus | ''); setCurrentPage(0) }}
         >
           <option value="">Trạng thái</option>
           {Object.entries(STATUS_CONFIG).map(([key, value]) => (
@@ -291,16 +288,21 @@ export default function AdminPaymentsPage() {
           ))}
         </select>
 
-        <button
-          onClick={handleClearFilters}
+        <button onClick={handleClearFilters}
           className="p-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-red-500 transition-all"
-          title="Xóa lọc"
-        >
+          title="Xóa lọc">
           <RotateCcw size={18} />
         </button>
       </div>
 
-      {/* Table Section */}
+      {/* Export note */}
+      {(search || statusFilter || selectedHotelId) && (
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          📌 File Excel sẽ được xuất theo bộ lọc đang áp dụng.
+        </p>
+      )}
+
+      {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
@@ -320,7 +322,7 @@ export default function AdminPaymentsPage() {
               {isLoadingPayments ? (
                 <tr><td colSpan={8} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" /></td></tr>
               ) : filteredPayments.length === 0 ? (
-                <tr><td colSpan={8} className="py-20 text-center text-gray-400 font-medium">Không có dữ liệu giao dịch trong mục này</td></tr>
+                <tr><td colSpan={8} className="py-20 text-center text-gray-400 font-medium">Không có dữ liệu</td></tr>
               ) : (
                 filteredPayments.map(p => {
                   const hotel = hotels.find(h => h.id === p.hotelId)
@@ -358,7 +360,6 @@ export default function AdminPaymentsPage() {
           </table>
         </div>
 
-        {/* Pagination */}
         {pageData && pageData.totalPages > 1 && (
           <div className="p-4 border-t border-gray-100 bg-gray-50/30">
             <Pagination

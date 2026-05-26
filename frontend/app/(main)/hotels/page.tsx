@@ -27,9 +27,9 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 const ALL_DISTRICTS = [
     'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5',
     'Quận 6', 'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10',
-    'Quận 11', 'Quận 12', 'Bình Thạnh', 'Gò Vấp', 'Tân Bình',
-    'Tân Phú', 'Phú Nhuận', 'Thủ Đức', 'Bình Tân',
-    'H. Củ Chi', 'H. Hóc Môn', 'H. Nhà Bè', 'H. Bình Chánh', 'H. Cần Giờ',
+    'Quận 11', 'Quận 12', 'Quận Bình Thạnh', 'Quận Gò Vấp', 'Quận Tân Bình',
+    'Quận Tân Phú', 'Quận Phú Nhuận', 'Quận Thủ Đức', 'Quận Bình Tân',
+    'Huyện Củ Chi', 'Huyện Hóc Môn', 'Huyện Nhà Bè', 'Huyện Bình Chánh', 'Huyện Cần Giờ',
 ]
 
 // ── Page ──────────────────────────────────────────────────
@@ -233,12 +233,12 @@ export default function HotelsPage() {
                                             key={d}
                                             onClick={() => toggleDistrict(d)}
                                             className={`flex items-center gap-2.5 w-full text-left py-1.5 px-2 rounded-lg transition-all ${districts.includes(d)
-                                                ? 'bg-green-50 text-green-700'
-                                                : 'hover:bg-green-50 hover:text-green-700'
+                                                ? 'bg-blue-50 text-blue-700'
+                                                : 'hover:bg-blue-50 hover:text-blue-700'
                                                 }`}
                                         >
                                             <div className={`w-4 h-4 rounded border shrink-0 transition-colors ${districts.includes(d)
-                                                ? 'bg-green-500 border-green-500'
+                                                ? 'bg-blue-500 border-blue-500'
                                                 : 'border-gray-300'
                                                 }`} />
                                             <span className="text-sm">{d}</span>
@@ -263,7 +263,7 @@ export default function HotelsPage() {
                                                             : [...prev, s]
                                                     )
                                                 }
-                                                className="w-4 h-4 rounded accent-green-600"
+                                                className="w-4 h-4 rounded accent-blue-600"
                                             />
                                             <div className="flex items-center gap-0.5">
                                                 {Array.from({ length: s }).map((_, i) => (
@@ -290,7 +290,7 @@ export default function HotelsPage() {
                                             value={priceMin}
                                             onChange={e => setPriceMin(e.target.value)}
                                             placeholder="0"
-                                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                     <div>
@@ -300,7 +300,7 @@ export default function HotelsPage() {
                                             value={priceMax}
                                             onChange={e => setPriceMax(e.target.value)}
                                             placeholder="Không giới hạn"
-                                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
@@ -316,8 +316,8 @@ export default function HotelsPage() {
                                             key={p.label}
                                             onClick={() => { setPriceMin(p.min); setPriceMax(p.max) }}
                                             className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${priceMin === p.min && priceMax === p.max
-                                                ? 'border-green-500 bg-green-50 text-green-700'
-                                                : 'border-gray-200 text-gray-600 hover:border-green-300'
+                                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                                : 'border-gray-200 text-gray-600 hover:border-blue-300'
                                                 }`}
                                         >
                                             {p.label}
@@ -356,14 +356,14 @@ export default function HotelsPage() {
                                 <button
                                     onClick={() => setShowFilter(!showFilter)}
                                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-colors ${showFilter
-                                        ? 'border-green-500 bg-green-50 text-green-700'
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
                                         : 'border-gray-200 text-gray-600 hover:border-gray-300'
                                         }`}
                                 >
                                     <SlidersHorizontal size={15} />
                                     Bộ lọc
                                     {activeFilterCount > 0 && (
-                                        <span className="w-5 h-5 bg-green-600 text-white text-xs rounded-full flex items-center justify-center">
+                                        <span className="w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
                                             {activeFilterCount}
                                         </span>
                                     )}
@@ -373,7 +373,7 @@ export default function HotelsPage() {
                                     <select
                                         value={sortBy}
                                         onChange={e => setSortBy(e.target.value as SortOption)}
-                                        className="pl-8 pr-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none cursor-pointer"
+                                        className="pl-8 pr-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
                                     >
                                         {SORT_OPTIONS.map(o => (
                                             <option key={o.value} value={o.value}>{o.label}</option>
@@ -401,7 +401,7 @@ export default function HotelsPage() {
                             {starFilter.map(s => (
                                 <span
                                     key={s}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-medium"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-medium"
                                 >
                                     {s} sao
                                     <button onClick={() => setStarFilter(p => p.filter(x => x !== s))}>
@@ -410,7 +410,7 @@ export default function HotelsPage() {
                                 </span>
                             ))}
                             {(priceMin || priceMax) && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-medium">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-medium">
                                     {priceMin ? `${Number(priceMin).toLocaleString('vi-VN')}₫` : '0'} –{' '}
                                     {priceMax ? `${Number(priceMax).toLocaleString('vi-VN')}₫` : '∞'}
                                     <button onClick={() => { setPriceMin(''); setPriceMax('') }}>
@@ -439,7 +439,7 @@ export default function HotelsPage() {
                                         setPriceMax('')
                                         clearDistricts()
                                     }}
-                                    className="mt-4 px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                                    className="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                                 >
                                     Xoá tất cả bộ lọc
                                 </button>
@@ -524,7 +524,7 @@ function HotelCard({
 
             <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
                 <div>
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-green-700 transition-colors truncate mb-1">
+                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate mb-1">
                         {h.hotelName}
                     </h3>
                     <div className="flex items-center gap-0.5 mb-2">
@@ -537,7 +537,7 @@ function HotelCard({
                             />
                         ))}
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-green-600 mb-3">
+                    <div className="flex items-center gap-1 text-sm text-blue-600 mb-3">
                         <MapPin size={14} />
                         <span>{h.district}, {h.city}</span>
                     </div>
