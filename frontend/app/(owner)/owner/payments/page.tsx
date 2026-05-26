@@ -6,6 +6,7 @@ import { useOwnerHotel } from '../../owner-hotel-context'
 import paymentApi from '@/lib/api/payment.api'
 import { PaymentStatus, PaymentResponse } from '@/types/payment.types'
 import { useHotelStatistics } from '@/hooks/useStatistic'
+import { exportPayments } from '@/lib/api/export.api'
 
 import {
   Search,
@@ -23,6 +24,7 @@ import {
   Calendar,
   Clock
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 // ─────────────────────────────────────────────────────────
 // Pagination
@@ -306,6 +308,8 @@ export default function OwnerPaymentsPage() {
 
   const [methodFilter, setMethodFilter] = useState('')
 
+  const [isExporting, setIsExporting] = useState(false)
+
   type SortType =
     | 'newest'
     | 'oldest'
@@ -472,53 +476,20 @@ export default function OwnerPaymentsPage() {
     (currentPage + 1) * pageSize
   )
 
-  // export csv
-
-  const exportCSV = () => {
-
-    const headers = [
-      'Booking Code',
-      'Transaction ID',
-      'Amount',
-      'Method',
-      'Status',
-      'Payment Date'
-    ]
-
-    const rows = filtered.map(p => [
-      p.bookingCode,
-      p.transactionId,
-      p.amount,
-      p.paymentMethod,
-      p.status,
-      p.paymentDate
-    ])
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(r => r.join(','))
-    ].join('\n')
-
-    const blob = new Blob(
-      [csvContent],
-      {
-        type: 'text/csv;charset=utf-8;'
-      }
-    )
-
-    const url =
-      URL.createObjectURL(blob)
-
-    const link =
-      document.createElement('a')
-
-    link.href = url
-    link.download =
-      `payments-${Date.now()}.csv`
-
-    link.click()
-
-    URL.revokeObjectURL(url)
+  const handleExport = async () => {
+    setIsExporting(true)
+    try {
+      await exportPayments({
+        keyword: search || undefined,
+        status: statusFilter || undefined,
+        hotelId: activeHotelId,
+      })
+      toast.success('Xuất file thành công!')
+    } catch {
+      toast.error('Xuất file thất bại, vui lòng thử lại.')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   // switch hotel
@@ -550,23 +521,13 @@ export default function OwnerPaymentsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-
           <button
-            onClick={() => refetch()}
-            className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50"
+            onClick={handleExport}
+            disabled={isExporting || !activeHotelId}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-medium rounded-lg transition-colors shadow-sm shrink-0"
           >
-            <RefreshCw
-              size={15}
-              className={isLoading ? 'animate-spin' : ''}
-            />
-          </button>
-
-          <button
-            onClick={exportCSV}
-            className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-xl text-sm font-medium"
-          >
-            <Download size={15} />
-            Xuất CSV
+            {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+            {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
           </button>
         </div>
       </div>
@@ -765,10 +726,12 @@ export default function OwnerPaymentsPage() {
               setSearchInput('')
               setStatusFilter('')
               setMethodFilter('')
-              setDateFrom(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
-              setDateTo(new Date().toISOString().split('T')[0])
+              setDateFrom('')
+              setDateTo('')
               setMinAmount('')
               setMaxAmount('')
+              setSortBy('newest')
+              setCurrentPage(0)
             }}
             className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 text-sm font-medium transition-all"
           >
@@ -777,6 +740,12 @@ export default function OwnerPaymentsPage() {
 
         </div>
       </div>
+
+      {(search || statusFilter) && (
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          📌 File Excel sẽ được xuất theo bộ lọc đang áp dụng.
+        </p>
+      )}
 
       {/* TABLE */}
 

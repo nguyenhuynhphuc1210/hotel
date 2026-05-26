@@ -23,8 +23,13 @@ export function useNotificationSocket(
     if (!userEmail) return
 
     const token = typeof window !== 'undefined'
-      ? localStorage.getItem('token') ?? ''
-      : ''
+      ? localStorage.getItem('access_token')
+      : null
+
+    if (!token) {
+      console.warn('[NotificationSocket] Không tìm thấy token, tạm dừng kết nối WebSocket.')
+      return
+    }
 
     const client = new Client({
       webSocketFactory: () => new SockJS(WS_URL) as WebSocket,
@@ -34,20 +39,23 @@ export function useNotificationSocket(
       reconnectDelay: 5000,
       onConnect: () => {
         subscriptionRef.current = client.subscribe(
-          `/topic/notifications/${encodeURIComponent(userEmail)}`,
+          '/user/queue/notifications',
           (message: IMessage) => {
             try {
               const notif = JSON.parse(message.body) as NotificationResponse
               onNewRef.current(notif)
             } catch {
-              // malformed message — ignore
+              console.warn('[NotificationSocket] Lỗi parse dữ liệu tin nhắn từ Server')
             }
           }
         )
       },
       onStompError: (frame) => {
-        console.warn('[NotificationSocket] STOMP error:', frame.headers?.message)
+        console.error('[NotificationSocket] STOMP error:', frame.headers?.message)
       },
+      onWebSocketError: (event) => {
+        console.error('[NotificationSocket] WebSocket error:', event)
+      }
     })
 
     client.activate()
