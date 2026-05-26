@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useTransition } from 'react'
 import {
     MapPin, Star, Info,
     CheckCircle2,
@@ -76,6 +76,7 @@ function RoomCard({
     onBook,
     onOpenGallery,
     defaultRooms,
+    adults,
 }: {
     room: RoomTypeResponse
     hasFullDates: boolean
@@ -85,10 +86,9 @@ function RoomCard({
     onBook: (id: number, quantity: number) => void
     onOpenGallery: (room: RoomTypeResponse) => void
     defaultRooms: number
+    adults: number
 }) {
-    const [quantity, setQuantity] = useState(defaultRooms)
-    // Fetch calendar chỉ khi có đủ ngày
-    // checkOut trừ 1 ngày vì ngày trả phòng không tính giá
+
     const calCheckOut = useMemo(() => {
         if (!checkOut) return ''
         const d = new Date(checkOut)
@@ -119,12 +119,31 @@ function RoomCard({
     const imageCount = room.images?.length || 0
 
     const availableRooms = useMemo(() => {
-        if (!calendarData || calendarData.length === 0) return room.totalRooms ?? 1
+        if (!calendarData || calendarData.length === 0) {
+            return room.totalRooms ?? 1
+        }
 
-        return Math.min(...calendarData.map(c => c.totalRooms - c.bookedRooms))
+        return Math.min(
+            ...calendarData.map(c => c.totalRooms - c.bookedRooms)
+        )
     }, [calendarData, room.totalRooms])
 
-    const maxSelectable = Math.max(1, Math.min(availableRooms, 10))
+    // Agoda style:
+    // 8 khách => có thể chọn tối đa 8 phòng
+    const maxSelectable = Math.min(
+        availableRooms,
+        adults
+    )
+
+    const finalMaxSelectable = Math.max(1, maxSelectable)
+
+    const [quantity, setQuantity] = useState(() => {
+        return Math.max(
+            1,
+            Math.min(defaultRooms, finalMaxSelectable)
+        )
+    })
+
     const isLowStock = availableRooms > 0 && availableRooms <= 4
 
     return (
@@ -272,7 +291,7 @@ function RoomCard({
                                 onChange={e => setQuantity(Number(e.target.value))}
                                 className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white cursor-pointer"
                             >
-                                {Array.from({ length: maxSelectable }, (_, i) => i + 1).map(n => (
+                                {Array.from({ length: finalMaxSelectable }, (_, i) => i + 1).map(n => (
                                     <option key={n} value={n}>{n} phòng</option>
                                 ))}
                             </select>
@@ -329,6 +348,7 @@ export default function HotelDetailPage() {
     const [reviewPage, setReviewPage] = useState(0)
     const reviewSize = 10
     const reviewSectionRef = useRef<HTMLDivElement>(null);
+    const [isSearching, startSearchTransition] = useTransition()
 
     const handlePageChange = (page: number) => {
         setReviewPage(page);
@@ -364,7 +384,7 @@ export default function HotelDetailPage() {
     const { data: relatedHotelsPage } = useQuery({
         queryKey: ['related-hotels', hotel?.district],
         queryFn: () =>
-            hotelApi.search({ district: hotel!.district, size: 6 }).then(r => r.data),
+            hotelApi.search({ districts: [hotel!.district], size: 6 }).then(r => r.data),
         enabled: !!hotel?.district,
     })
 
@@ -506,6 +526,16 @@ export default function HotelDetailPage() {
 
     return (
         <div className="bg-gray-50 min-h-screen pb-20">
+            {isSearching && (
+                <div className="fixed inset-0 z-[999] bg-white/70 backdrop-blur-sm flex items-center justify-center">
+                    <div className="bg-white px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3 border">
+                        <Loader2 className="animate-spin text-blue-600" size={22} />
+                        <span className="font-semibold text-gray-700">
+                            Đang tìm phòng...
+                        </span>
+                    </div>
+                </div>
+            )}
             {/* Lightbox review ảnh */}
             {lightboxOpen && (
                 <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center" onClick={() => setLightboxOpen(false)}>
@@ -539,7 +569,10 @@ export default function HotelDetailPage() {
                             rooms,
                         }}
                         onSearch={(p) => {
-                            router.replace(`/hotels/${hotelId}?${p.toString()}`)
+                            startSearchTransition(() => {
+                                router.replace(`/hotels/${hotelId}?${p.toString()}`)
+                                router.refresh()
+                            })
                         }}
                     />
                 </div>
@@ -716,6 +749,7 @@ export default function HotelDetailPage() {
                     {roomTypes.map((room) => (
                         <RoomCard
                             key={room.id}
+                            adults={adults}
                             room={room}
                             hasFullDates={hasFullDates}
                             checkIn={checkIn}

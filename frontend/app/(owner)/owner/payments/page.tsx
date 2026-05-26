@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useOwnerHotel } from '../../owner-hotel-context'
 import paymentApi from '@/lib/api/payment.api'
 import { PaymentStatus, PaymentResponse } from '@/types/payment.types'
+import { useHotelStatistics } from '@/hooks/useStatistic'
 
 import {
   Search,
@@ -14,13 +15,13 @@ import {
   TrendingUp,
   ArrowUpRight,
   CircleDollarSign,
-  Clock,
   XCircle,
   ChevronLeft,
   ChevronRight,
-  Building2,
   RefreshCw,
-  ReceiptText
+  ReceiptText,
+  Calendar,
+  Clock
 } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────
@@ -333,45 +334,25 @@ export default function OwnerPaymentsPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  // query
+  const { data: statsData, isLoading: isLoadingStats } = useHotelStatistics({
+    hotelId: activeHotelId as number,
+    fromDate: dateFrom || '2000-01-01',
+    toDate: dateTo || '2099-12-31'
+  }, !!activeHotelId)
 
-  const {
-    data: paymentsPage,
-    isLoading: isPaymentsLoading,
-    refetch
-  } = useQuery({
-    queryKey: [
-      'owner-payments',
-      search,
-      statusFilter
-    ],
-
-    queryFn: () =>
-      paymentApi
-        .getAll(
-          0,
-          10000,
-          search || undefined,
-          statusFilter || undefined
-        )
-        .then(res => res.data),
-
+  const { data: paymentsPage, isLoading: isPaymentsLoading, refetch } = useQuery({
+    queryKey: ['owner-payments', search, statusFilter],
+    queryFn: () => paymentApi.getAll(0, 10000, search || undefined, statusFilter || undefined).then(res => res.data),
     enabled: !!activeHotelId,
-    staleTime: 1000 * 60 * 2
   })
 
-  const isLoading =
-    isHotelLoading || isPaymentsLoading
+  const isLoading = isHotelLoading || isPaymentsLoading
 
   // hotel payments
 
   const hotelPayments = useMemo(() => {
-    if (!paymentsPage?.content || !activeHotelId)
-      return []
-
-    return paymentsPage.content.filter(
-      p => p.hotelId === activeHotelId
-    )
+    if (!paymentsPage?.content || !activeHotelId) return []
+    return paymentsPage.content.filter(p => p.hotelId === activeHotelId)
   }, [paymentsPage, activeHotelId])
 
   // filtered
@@ -460,43 +441,25 @@ export default function OwnerPaymentsPage() {
 
     return data
 
-  }, [
-    hotelPayments,
-    search,
-    statusFilter,
-    methodFilter,
-    minAmount,
-    maxAmount,
-    dateFrom,
-    dateTo,
-    sortBy
-  ])
+  }, [hotelPayments, search, statusFilter, methodFilter, minAmount, maxAmount, dateFrom, dateTo, sortBy])
 
   // stats
 
   const stats = useMemo(() => {
+    // Doanh thu từ API Thống kê (Chỉ tính khi booking đã hoàn thành)
+    const revenueFromApi = statsData?.reduce((sum, item) => sum + (item.totalRevenue || 0), 0) || 0
 
-    const paid = filtered.filter(
-      p => p.status === 'PAID'
-    )
-
-    const pending = filtered.filter(
-      p => p.status === 'PENDING'
-    )
-
-    const revenue = paid.reduce(
-      (s, p) => s + p.amount,
-      0
-    )
+    // Các số liệu khác vẫn tính dựa trên list payment hiện tại
+    const paidInList = filtered.filter(p => p.status === 'PAID')
+    const pendingInList = filtered.filter(p => p.status === 'PENDING')
 
     return {
       total: filtered.length,
-      paid: paid.length,
-      pending: pending.length,
-      revenue
+      paidCount: paidInList.length,
+      pendingCount: pendingInList.length,
+      revenue: revenueFromApi
     }
-
-  }, [filtered])
+  }, [filtered, statsData])
 
   // paging
 
@@ -632,49 +595,51 @@ export default function OwnerPaymentsPage() {
       {/* STATS */}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-        <div className="col-span-2 bg-gradient-to-br from-teal-600 to-teal-700 rounded-2xl p-5 text-white">
-
+        <div className="col-span-2 bg-gradient-to-br from-teal-600 to-teal-700 rounded-2xl p-5 text-white shadow-lg shadow-teal-200/50 relative overflow-hidden">
           <div className="flex items-start justify-between mb-3">
-
             <div>
-              <p className="text-teal-200 text-xs font-semibold uppercase">
-                Doanh thu
+              <p className="text-teal-100 text-xs font-semibold uppercase tracking-wider">
+                Doanh thu thực tế (Đã hoàn tất)
               </p>
-
               <p className="text-3xl font-black mt-1">
-                {stats.revenue.toLocaleString('vi-VN')}
-                <span className="text-lg ml-1">₫</span>
+                {isLoadingStats ? (
+                  <Loader2 className="animate-spin h-8 w-8" />
+                ) : (
+                  <>
+                    {stats.revenue.toLocaleString('vi-VN')}
+                    <span className="text-lg ml-1">₫</span>
+                  </>
+                )}
               </p>
             </div>
-
-            <CircleDollarSign size={22} />
+            <div className="bg-white/20 p-2 rounded-xl">
+              <CircleDollarSign size={24} />
+            </div>
           </div>
-
-          <div className="flex items-center gap-1 text-xs text-teal-200">
-            <ArrowUpRight size={13} />
-            <span>{stats.paid} giao dịch thành công</span>
+          <div className="flex items-center gap-1 text-xs text-teal-100 bg-white/10 w-fit px-2 py-1 rounded-md">
+            <TrendingUp size={13} />
+            <span>Dựa trên các kỳ lưu trú đã kết thúc</span>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-100">
-          <p className="text-xs text-slate-400 font-semibold uppercase">
-            Tổng giao dịch
-          </p>
-
-          <p className="text-2xl font-black text-slate-800 mt-3">
-            {stats.total}
-          </p>
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm group hover:border-teal-200 transition-colors">
+          <p className="text-xs text-slate-400 font-semibold uppercase">Tổng lượt thanh toán</p>
+          <div className="flex items-end justify-between mt-3">
+            <p className="text-2xl font-black text-slate-800">{stats.total}</p>
+            <div className="text-teal-500 bg-teal-50 p-2 rounded-lg group-hover:scale-110 transition-transform">
+              <ReceiptText size={20} />
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-100">
-          <p className="text-xs text-slate-400 font-semibold uppercase">
-            Chờ xử lý
-          </p>
-
-          <p className="text-2xl font-black text-amber-500 mt-3">
-            {stats.pending}
-          </p>
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+          <p className="text-xs text-slate-400 font-semibold uppercase">Đang chờ xử lý</p>
+          <div className="flex items-end justify-between mt-3">
+            <p className="text-2xl font-black text-amber-500">{stats.pendingCount}</p>
+            <div className="text-amber-500 bg-amber-50 p-2 rounded-lg">
+              <Clock size={20} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -758,44 +723,40 @@ export default function OwnerPaymentsPage() {
           </select>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={e =>
-              setDateFrom(e.target.value)
-            }
-            className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm"
-          />
-
-          <input
-            type="date"
-            value={dateTo}
-            onChange={e =>
-              setDateTo(e.target.value)
-            }
-            className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm"
-          />
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1">
+            <Calendar size={14} className="text-slate-400" />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="bg-transparent py-1.5 text-sm outline-none"
+              title="Từ ngày"
+            />
+            <span className="text-slate-300">→</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="bg-transparent py-1.5 text-sm outline-none"
+              title="Đến ngày"
+            />
+          </div>
 
           <input
             type="number"
             placeholder="Min ₫"
             value={minAmount}
-            onChange={e =>
-              setMinAmount(e.target.value)
-            }
-            className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm w-[140px]"
+            onChange={e => setMinAmount(e.target.value)}
+            className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm w-[130px] outline-none focus:ring-2 focus:ring-teal-500"
           />
 
           <input
             type="number"
             placeholder="Max ₫"
             value={maxAmount}
-            onChange={e =>
-              setMaxAmount(e.target.value)
-            }
-            className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm w-[140px]"
+            onChange={e => setMaxAmount(e.target.value)}
+            className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm w-[130px] outline-none focus:ring-2 focus:ring-teal-500"
           />
 
           <button
@@ -804,15 +765,16 @@ export default function OwnerPaymentsPage() {
               setSearchInput('')
               setStatusFilter('')
               setMethodFilter('')
-              setDateFrom('')
-              setDateTo('')
+              setDateFrom(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
+              setDateTo(new Date().toISOString().split('T')[0])
               setMinAmount('')
               setMaxAmount('')
             }}
-            className="px-4 py-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 text-sm font-medium"
+            className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 text-sm font-medium transition-all"
           >
-            Reset
+            Làm mới bộ lọc
           </button>
+
         </div>
       </div>
 

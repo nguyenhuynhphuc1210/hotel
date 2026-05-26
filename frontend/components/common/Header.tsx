@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useLogout'
-import { LogOut, Menu, X } from 'lucide-react'
+import { LogOut, Menu, X, Bell } from 'lucide-react'
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
 

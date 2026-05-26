@@ -81,6 +81,8 @@ const API_CONFIG = {
     PAYMENT_BY_BOOKING: (bookingId: number | string) => `/api/payments/booking/${bookingId}`,
     VNPAY_RETURN: '/api/payments/vnpay-return',
     MOMO_RETURN: '/api/payments/momo-return',
+
+    NOTIFICATIONS: '/api/notifications',
   },
 }
 

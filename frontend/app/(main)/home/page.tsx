@@ -114,7 +114,7 @@ export default function HomePage() {
                 </h2>
                 <DistrictCarousel
                     hotels={hotels}
-                    onSelect={d => router.push(`/hotels?district=${encodeURIComponent(d)}`)}
+                    onSelect={d => router.push(`/hotels?districts=${encodeURIComponent(d)}`)}
                 />
             </section>
 

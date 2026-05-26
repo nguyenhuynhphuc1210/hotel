@@ -1,4 +1,3 @@
-// @/app/(owner)/layout.tsx
 'use client'
 
 import dynamic from 'next/dynamic'
@@ -12,6 +11,7 @@ import {
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
 import { OwnerHotelProvider, useOwnerHotel } from './owner-hotel-context'
+import NotificationBell from '@/components/layout/NotificationBell'  
 
 const navItems = [
   { href: '/owner', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -26,7 +26,6 @@ const navItems = [
   { href: '/owner/messages', label: 'Tin nhắn', icon: MessageSquare },
 ]
 
-// Component nội dung Layout để có thể dùng được Hook từ Context
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -37,7 +36,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     router.push('/admin/login')
   }
 
-  // Lấy dữ liệu khách sạn từ Context toàn cục
   const { hotels, activeHotelId, setActiveHotelId, isLoading } = useOwnerHotel()
 
   return (
@@ -80,7 +78,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               <div className="text-xs text-gray-400 truncate">{user?.email ?? ''}</div>
             </div>
           </div>
-          <button  onClick={handleLogout}
+          <button onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
             <LogOut size={17} />Đăng xuất
           </button>
@@ -99,7 +97,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          {/* GLOBAL HOTEL SELECTOR */}
+          {/* Right side: Hotel selector + Notification Bell */}
           <div className="flex items-center gap-3">
             <span className="hidden md:inline text-xs text-gray-400 font-medium uppercase tracking-wider">Khách sạn:</span>
             <div className="relative">
@@ -120,6 +118,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               </select>
               <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
             </div>
+
+            {/* ── Notification Bell ── */}
+            <div className="w-px h-5 bg-gray-200 mx-1" />
+            <NotificationBell />
           </div>
         </header>
 
@@ -132,7 +134,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   )
 }
 
-// Export mặc định bao bọc bởi Provider
 export default dynamic(() => Promise.resolve(function OwnerLayout({ children }: { children: React.ReactNode }) {
   return (
     <OwnerHotelProvider>

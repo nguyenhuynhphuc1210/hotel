@@ -61,6 +61,7 @@ export interface HotelSummaryResponse {
   images?: HotelImageResponse[]
   minPrice?: number
   isActive: boolean
+  roomTypes?: RoomTypeResponse[]
 }
 
 export interface PageResponse<T> {
@@ -86,11 +87,16 @@ export interface HotelRequest {
 }
 
 export interface HotelSearchParams {
-  district?: string
+  districts?: string[]
   keyword?: string
   checkIn?: string
   checkOut?: string
-  guests?: number
+  adults?: number
+  children?: number
+  stars?: number[]
+  minPrice?: number
+  maxPrice?: number
+  sortBy?: string
   page?: number
   size?: number
 }
@@ -171,10 +177,15 @@ const hotelApi = {
       { params: { page, size } }
     ),
 
-  search: (params: HotelSearchParams) =>
+   search: (params: HotelSearchParams) =>
     axiosInstance.get<PageResponse<HotelSummaryResponse>>(
       `${API_CONFIG.ENDPOINTS.HOTELS}/search`,
-      { params }
+      {
+        params,
+        paramsSerializer: {
+          indexes: null
+        }
+      }
     ),
 
   getMinPrice: (id: number | string, checkIn: string, checkOut: string) =>

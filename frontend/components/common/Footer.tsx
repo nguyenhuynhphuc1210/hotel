@@ -15,7 +15,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm">🏨</div>
-              <span className="text-white font-bold text-lg">Vago Hotel</span>
+              <span className="text-white font-bold text-lg">Vago</span>
             </div>
             <p className="text-sm leading-relaxed">
               Nền tảng đặt phòng khách sạn hàng đầu tại TP.HCM. Hàng trăm khách sạn chất lượng, giá tốt nhất.
