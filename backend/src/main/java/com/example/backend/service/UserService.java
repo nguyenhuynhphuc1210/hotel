@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.request.ChangePasswordRequest;
+import com.example.backend.dto.request.UpdateProfileRequest;
 import com.example.backend.dto.request.UpdateUserRequest;
 import com.example.backend.dto.request.UpgradeToPartnerRequest;
 import com.example.backend.dto.request.UserRequest;
@@ -22,7 +23,7 @@ public interface UserService {
 
     UserResponse createUser(UserRequest request);
 
-    UserResponse updateUser(Long id, UserRequest request);
+    UserResponse updateUser(Long id, UpdateUserRequest request);
 
     AuthResponse upgradeToPartner(UpgradeToPartnerRequest request);
 
@@ -34,7 +35,7 @@ public interface UserService {
 
     UserResponse getMyProfile();
 
-    UserResponse updateMyProfile(UpdateUserRequest request);
+    UserResponse updateMyProfile(UpdateProfileRequest request);
 
     void changePassword(ChangePasswordRequest request);
 

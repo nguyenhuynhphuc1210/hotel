@@ -1,45 +1,48 @@
 package com.example.backend.service.impl;
 
-import static com.example.backend.security.SecurityUtils.*;
-import com.example.backend.dto.request.ChangePasswordRequest;
-import com.example.backend.dto.request.UpdateUserRequest;
-import com.example.backend.dto.request.UpgradeToPartnerRequest;
-import com.example.backend.dto.request.UserRequest;
+import static com.example.backend.security.SecurityUtils.getCurrentUserEmail;
+
+import com.example.backend.dto.request.*;
 import com.example.backend.dto.response.AuthResponse;
 import com.example.backend.dto.response.UserResponse;
 import com.example.backend.entity.Role;
 import com.example.backend.entity.User;
-
 import com.example.backend.mapper.UserMapper;
 import com.example.backend.repository.RoleRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.security.JwtTokenProvider;
-import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.CloudinaryService;
 import com.example.backend.service.UserService;
+
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.persistence.EntityNotFoundException;
 import java.util.Map;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final CloudinaryService cloudinaryService;
     private final JwtTokenProvider jwtTokenProvider;
+
+    private User getCurrentUser() {
+        String email = getCurrentUserEmail();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy người dùng: " + email));
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -55,234 +58,254 @@ public class UserServiceImpl implements UserService {
                 size,
                 Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        Page<User> userPage = userRepository.searchUsers(
+        return userRepository.searchUsers(
                 keyword,
                 role,
                 isActive,
-                pageable);
-
-        return userPage.map(userMapper::toUserResponse);
+                pageable)
+                .map(userMapper::toUserResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
+
         return userRepository.findById(id)
                 .map(userMapper::toUserResponse)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với ID=" + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy người dùng ID = " + id));
     }
 
     @Override
     @Transactional
     public UserResponse createUser(UserRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email đã được sử dụng trong hệ thống!");
+            throw new IllegalArgumentException(
+                    "Email đã tồn tại");
         }
 
-        Role role = roleRepository.findById(request.getRoleId())
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Role với ID: " + request.getRoleId()));
+        Role role = roleRepository.findById(
+                request.getRoleId())
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy Role"));
 
-        User user = userMapper.toUser(request, role);
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        User user = userMapper.toUser(
+                request,
+                role);
 
-        return userMapper.toUserResponse(userRepository.save(user));
+        user.setPasswordHash(
+                passwordEncoder.encode(
+                        request.getPassword()));
+
+        return userMapper.toUserResponse(
+                userRepository.save(user));
     }
 
     @Override
     @Transactional
-    public UserResponse updateUser(Long id, UserRequest request) {
+    public UserResponse updateUser(
+            Long id,
+            UpdateUserRequest request) {
+
         User existing = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với ID=" + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy người dùng"));
 
-        if (request.getEmail() != null && !request.getEmail().equals(existing.getEmail())) {
-            if (userRepository.existsByEmail(request.getEmail())) {
-                throw new IllegalArgumentException("Email này đã thuộc về một tài khoản khác!");
+
+        Role role = existing.getRole();
+
+        if (!request.getRoleId()
+                .equals(existing.getRole().getId())) {
+
+            User currentUser = getCurrentUser();
+
+            if (existing.getId()
+                    .equals(currentUser.getId())) {
+
+                throw new IllegalArgumentException(
+                        "Không thể tự thay đổi quyền của chính mình");
             }
-            existing.setEmail(request.getEmail());
+
+            role = roleRepository.findById(
+                    request.getRoleId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Không tìm thấy Role"));
         }
 
-        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
-            existing.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        }
+        userMapper.updateUser(
+                existing,
+                request,
+                role);
 
-        if (request.getFullName() != null)
-            existing.setFullName(request.getFullName());
-        if (request.getPhone() != null)
-            existing.setPhone(request.getPhone());
-        if (request.getDateOfBirth() != null)
-            existing.setDateOfBirth(request.getDateOfBirth());
-        if (request.getGender() != null)
-            existing.setGender(request.getGender());
-
-        if (request.getRoleId() != null) {
-            Role newRole = roleRepository.findById(request.getRoleId())
-                    .orElseThrow(
-                            () -> new EntityNotFoundException("Không tìm thấy Role với ID: " + request.getRoleId()));
-            existing.setRole(newRole);
-        }
-
-        return userMapper.toUserResponse(userRepository.save(existing));
+        return userMapper.toUserResponse(
+                userRepository.save(existing));
     }
 
     @Override
     @Transactional
     public void deleteUser(Long id) {
-        User existing = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với ID=" + id));
 
-        userRepository.delete(existing);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy người dùng"));
+
+        userRepository.delete(user);
     }
 
     @Override
     @Transactional
     public UserResponse disableUser(Long id) {
+
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với ID=" + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy người dùng"));
 
-        if (user.getEmail().equals(getCurrentUserEmail())) {
-            throw new IllegalArgumentException("Không thể tự vô hiệu hóa chính mình");
-        }
+        User currentUser = getCurrentUser();
 
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
-            throw new IllegalArgumentException("Người dùng này đã bị vô hiệu hóa trước đó.");
+        if (user.getId().equals(currentUser.getId())) {
+            throw new IllegalArgumentException(
+                    "Không thể tự khóa tài khoản");
         }
 
         user.setIsActive(false);
 
-        return userMapper.toUserResponse(userRepository.save(user));
+        return userMapper.toUserResponse(
+                userRepository.save(user));
     }
 
     @Override
     @Transactional
     public UserResponse enableUser(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với ID=" + id));
 
-        if (Boolean.TRUE.equals(user.getIsActive())) {
-            throw new IllegalArgumentException("Người dùng này đang hoạt động bình thường.");
-        }
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy người dùng"));
 
         user.setIsActive(true);
 
-        return userMapper.toUserResponse(userRepository.save(user));
+        return userMapper.toUserResponse(
+                userRepository.save(user));
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserResponse getMyProfile() {
-        String email = getCurrentUserEmail();
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với email: " + email));
-
-        return userMapper.toUserResponse(user);
+        return userMapper.toUserResponse(
+                getCurrentUser());
     }
 
     @Override
     @Transactional
-    public UserResponse updateMyProfile(UpdateUserRequest req) {
+    public UserResponse updateMyProfile(
+            UpdateProfileRequest req) {
 
-        String email = getCurrentUserEmail();
+        User user = getCurrentUser();
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với email: " + email));
+        userMapper.updateProfile(
+                user,
+                req);
 
-        if (req.getFullName() != null)
-            user.setFullName(req.getFullName());
-        if (req.getPhone() != null)
-            user.setPhone(req.getPhone());
-        if (req.getDateOfBirth() != null)
-            user.setDateOfBirth(req.getDateOfBirth());
-        if (req.getGender() != null)
-            user.setGender(req.getGender());
-
-        return userMapper.toUserResponse(userRepository.save(user));
+        return userMapper.toUserResponse(
+                userRepository.save(user));
     }
 
     @Override
     @Transactional
-    public void changePassword(ChangePasswordRequest req) {
+    public void changePassword(
+            ChangePasswordRequest req) {
 
-        String email = getCurrentUserEmail();
+        User user = getCurrentUser();
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với email: " + email));
+        if (!passwordEncoder.matches(
+                req.getOldPassword(),
+                user.getPasswordHash())) {
 
-        if (!passwordEncoder.matches(req.getOldPassword(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("Mật khẩu hiện tại không chính xác.");
+            throw new IllegalArgumentException(
+                    "Mật khẩu hiện tại không đúng");
         }
 
-        if (!req.getNewPassword().equals(req.getConfirmPassword())) {
-            throw new IllegalArgumentException("Xác nhận mật khẩu mới không khớp.");
+        if (!req.getNewPassword()
+                .equals(req.getConfirmPassword())) {
+
+            throw new IllegalArgumentException(
+                    "Xác nhận mật khẩu không khớp");
         }
 
-        if (passwordEncoder.matches(req.getNewPassword(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("Mật khẩu mới không được giống với mật khẩu hiện tại.");
-        }
+        user.setPasswordHash(
+                passwordEncoder.encode(
+                        req.getNewPassword()));
 
-        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
         userRepository.save(user);
     }
 
     @Override
     @Transactional
-    public String uploadAvatar(MultipartFile file) {
+    public String uploadAvatar(
+            MultipartFile file) {
 
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File ảnh không được để trống.");
-        }
-
-        String email = getCurrentUserEmail();
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với email: " + email));
+        User user = getCurrentUser();
 
         try {
-            Map<String, Object> result = cloudinaryService.uploadImage(file, "users/" + user.getId());
 
-            String imageUrl = (String) result.get("secure_url");
-            String publicId = (String) result.get("public_id");
+            Map<String, Object> result = cloudinaryService.uploadImage(
+                    file,
+                    "users/" + user.getId());
 
             if (user.getAvatarPublicId() != null) {
-                try {
-                    cloudinaryService.deleteImage(user.getAvatarPublicId());
-                } catch (Exception ex) {
-                    System.err.println("Cảnh báo: Lỗi khi xóa ảnh cũ trên Cloudinary: " + ex.getMessage());
-                }
+                cloudinaryService.deleteImage(
+                        user.getAvatarPublicId());
             }
 
-            user.setAvatarUrl(imageUrl);
-            user.setAvatarPublicId(publicId);
+            user.setAvatarUrl(
+                    (String) result.get("secure_url"));
+
+            user.setAvatarPublicId(
+                    (String) result.get("public_id"));
+
             userRepository.save(user);
 
-            return imageUrl;
+            return user.getAvatarUrl();
 
         } catch (Exception e) {
-            throw new RuntimeException("Quá trình tải ảnh lên thất bại: " + e.getMessage());
+
+            throw new RuntimeException(
+                    "Upload ảnh thất bại: "
+                            + e.getMessage());
         }
     }
 
     @Override
     @Transactional
-    public AuthResponse upgradeToPartner(UpgradeToPartnerRequest request) {
-        String currentUserEmail = SecurityUtils.getCurrentUserEmail();
-        User user = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng"));
+    public AuthResponse upgradeToPartner(
+            UpgradeToPartnerRequest request) {
 
-        if ("ROLE_HOTEL_OWNER".equals(user.getRole().getRoleName())) {
-            throw new IllegalArgumentException("Tài khoản này đã là tài khoản Đối tác!");
+        User user = getCurrentUser();
+
+        if ("ROLE_HOTEL_OWNER"
+                .equals(user.getRole().getRoleName())) {
+
+            throw new IllegalArgumentException(
+                    "Tài khoản đã là đối tác");
         }
 
-        Role ownerRole = roleRepository.findByRoleName("ROLE_HOTEL_OWNER")
-                .orElseThrow(() -> new RuntimeException("Lỗi cấu hình: Không tìm thấy quyền Đối tác"));
+        Role role = roleRepository
+                .findByRoleName(
+                        "ROLE_HOTEL_OWNER")
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy Role"));
 
-        user.setRole(ownerRole);
+        user.setRole(role);
         user.setPhone(request.getPhone());
 
-        User savedUser = userRepository.save(user);
+        User saved = userRepository.save(user);
 
-        String newToken = jwtTokenProvider.generateTokenFromEmail(savedUser.getEmail());
+        String token = jwtTokenProvider.generateTokenFromEmail(
+                saved.getEmail());
 
-        return new AuthResponse(newToken, userMapper.toUserResponse(savedUser));
+        return new AuthResponse(
+                token,
+                userMapper.toUserResponse(saved));
     }
 }
