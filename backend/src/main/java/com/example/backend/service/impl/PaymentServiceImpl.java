@@ -126,7 +126,6 @@ public class PaymentServiceImpl implements PaymentService {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Payments Report");
 
-
         Font boldFont = workbook.createFont();
         boldFont.setBold(true);
 
@@ -175,7 +174,6 @@ public class PaymentServiceImpl implements PaymentService {
         totalMoneyStyle.setFont(boldFont);
         totalMoneyStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
         totalMoneyStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
 
         String[] columns = {
                 "Booking Code", "Hotel", "Guest Name", "Payment Method",
@@ -336,7 +334,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         if (payment.getStatus() == PaymentStatus.PENDING) {
             if (isSuccess) {
-                handleSuccessfulPayment(booking, payment);
+                String transactionNo = request.getParameter("vnp_TransactionNo");
+                handleSuccessfulPayment(booking, payment, transactionNo);
             } else {
                 handleFailedPayment(booking, payment);
             }
@@ -367,7 +366,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         if (payment.getStatus() == PaymentStatus.PENDING) {
             if (isSuccess) {
-                handleSuccessfulPayment(booking, payment);
+                String transId = request.getParameter("transId");
+                handleSuccessfulPayment(booking, payment, transId);
             } else {
                 handleFailedPayment(booking, payment);
             }
@@ -406,7 +406,8 @@ public class PaymentServiceImpl implements PaymentService {
             }
 
             if ("00".equals(request.getParameter("vnp_ResponseCode"))) {
-                handleSuccessfulPayment(booking, payment);
+                String transactionNo = request.getParameter("vnp_TransactionNo");
+                handleSuccessfulPayment(booking, payment, transactionNo);
             } else {
                 handleFailedPayment(booking, payment);
             }
@@ -442,7 +443,8 @@ public class PaymentServiceImpl implements PaymentService {
 
             Integer resultCode = (Integer) requestBody.get("resultCode");
             if (resultCode != null && resultCode == 0) {
-                handleSuccessfulPayment(booking, payment);
+                String transId = String.valueOf(requestBody.get("transId"));
+                handleSuccessfulPayment(booking, payment, transId);
             } else {
                 handleFailedPayment(booking, payment);
             }
@@ -464,9 +466,10 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy giao dịch thanh toán"));
     }
 
-    private void handleSuccessfulPayment(Booking booking, Payment payment) {
+    private void handleSuccessfulPayment(Booking booking, Payment payment, String transactionId) {
         payment.setStatus(PaymentStatus.PAID);
         payment.setPaymentDate(LocalDateTime.now());
+        payment.setTransactionId(transactionId);
         booking.setStatus(BookingStatus.CONFIRMED);
         booking.setPayment(payment);
 
