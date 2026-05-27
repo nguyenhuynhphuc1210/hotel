@@ -8,7 +8,12 @@ import com.example.backend.enums.PaymentStatus;
 import com.example.backend.enums.PaymentMethod;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "payments", indexes = {
+
+        @Index(name = "idx_payment_booking", columnList = "booking_id"),
+
+        @Index(name = "idx_payment_search_sort", columnList = "status, payment_method, created_at")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -52,7 +57,8 @@ public class Payment {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        if (this.status == null) this.status = PaymentStatus.PENDING;
+        if (this.status == null)
+            this.status = PaymentStatus.PENDING;
     }
 
     @PreUpdate

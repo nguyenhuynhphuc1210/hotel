@@ -6,7 +6,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "promotions")
+@Table(name = "promotions", indexes = {
+        @Index(name = "idx_promo_hotel_valid", columnList = "hotel_id, is_active, end_date")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -55,8 +57,10 @@ public class Promotion {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (isActive == null) isActive = true;
-        if (minOrderValue == null) minOrderValue = BigDecimal.ZERO;
+        if (isActive == null)
+            isActive = true;
+        if (minOrderValue == null)
+            minOrderValue = BigDecimal.ZERO;
     }
 
     @PreUpdate
@@ -66,7 +70,7 @@ public class Promotion {
 
     public boolean isValid() {
         LocalDateTime now = LocalDateTime.now();
-        return isActive && (startDate == null || now.isAfter(startDate)) 
-               && (endDate == null || now.isBefore(endDate));
+        return isActive && (startDate == null || now.isAfter(startDate))
+                && (endDate == null || now.isBefore(endDate));
     }
 }

@@ -11,7 +11,15 @@ import java.util.List;
 import com.example.backend.enums.HotelStatus;
 
 @Entity
-@Table(name = "hotels")
+@Table(name = "hotels", indexes = {
+        @Index(name = "idx_hotel_owner", columnList = "owner_id"),
+
+        @Index(name = "idx_hotel_status_deleted", columnList = "status, deleted_at"),
+
+        @Index(name = "idx_hotel_location", columnList = "city, district"),
+
+        @Index(name = "idx_hotel_email", columnList = "email")
+})
 @Getter
 @Setter
 @NoArgsConstructor

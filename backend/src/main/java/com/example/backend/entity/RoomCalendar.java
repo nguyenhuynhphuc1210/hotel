@@ -7,7 +7,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "room_calendar")
+@Table(name = "room_calendar", uniqueConstraints = {
+
+        @UniqueConstraint(name = "uk_roomtype_date", columnNames = { "room_type_id", "date" })
+}, indexes = {
+        @Index(name = "idx_rc_search_availability", columnList = "room_type_id, is_available, date")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -46,13 +51,14 @@ public class RoomCalendar {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        if (this.bookedRooms == null) this.bookedRooms = 0;
-        if (this.isAvailable == null) this.isAvailable = true;
+        if (this.bookedRooms == null)
+            this.bookedRooms = 0;
+        if (this.isAvailable == null)
+            this.isAvailable = true;
     }
 
     @PreUpdate

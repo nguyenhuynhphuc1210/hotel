@@ -8,7 +8,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "reviews")
+@Table(name = "reviews", indexes = {
+        @Index(name = "idx_review_hotel_published", columnList = "hotel_id, is_published"),
+
+        @Index(name = "idx_review_booking", columnList = "booking_id"),
+
+        @Index(name = "idx_review_reported", columnList = "is_reported"),
+
+        @Index(name = "idx_review_user", columnList = "user_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -65,6 +73,7 @@ public class Review {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-        if (this.isPublished == null) this.isPublished = true;
+        if (this.isPublished == null)
+            this.isPublished = true;
     }
 }

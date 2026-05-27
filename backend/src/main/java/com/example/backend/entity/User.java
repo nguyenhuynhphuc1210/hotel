@@ -9,7 +9,9 @@ import java.util.List;
 import com.example.backend.enums.Gender;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+        @Index(name = "idx_user_role_active", columnList = "role_id, is_active")
+})
 @Getter
 @Setter
 @NoArgsConstructor

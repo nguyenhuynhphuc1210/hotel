@@ -32,37 +32,49 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                 h.starRating,
                 h.district,
                 h.city,
-                MIN(rc.price),
+                MIN(roomPrice.totalPrice),
                 h.status,
-                (SELECT img.imageUrl
-                 FROM HotelImage img
-                 WHERE img.hotel.id = h.id
-                 AND img.isPrimary = true)
+                (
+                    SELECT img.imageUrl
+                    FROM HotelImage img
+                    WHERE img.hotel.id = h.id
+                    AND img.isPrimary = true
+                )
             )
             FROM Hotel h
-            JOIN h.roomTypes rt
-            JOIN RoomCalendar rc ON rc.roomType.id = rt.id
-            WHERE h.status = com.example.backend.enums.HotelStatus.APPROVED
-              AND h.deletedAt IS NULL
-              AND rt.isActive = true
-              AND rt.deletedAt IS NULL
-              AND rc.isAvailable = true
-              AND (rc.totalRooms - rc.bookedRooms) > 0
-              AND rc.date >= :checkIn
-              AND rc.date < :checkOut
-              AND rt.maxAdults >= :adults
-              AND (rt.maxAdults + COALESCE(rt.maxChildren,0))
-                  >= (:adults + :children)
+            JOIN (
+                SELECT
+                    rt.id as roomTypeId,
+                    rt.hotel.id as hotelId,
+                    SUM(rc.price)/ :nights as totalPrice
+                FROM RoomType rt
+                JOIN RoomCalendar rc ON rc.roomType.id = rt.id
+                WHERE
+                    rt.isActive = true
+                    AND rt.deletedAt IS NULL
+                    AND rc.isAvailable = true
+                    AND (rc.totalRooms - rc.bookedRooms) > 0
+                    AND rc.date >= :checkIn
+                    AND rc.date < :checkOut
+                    AND rt.maxAdults >= :adults
+                    AND (rt.maxAdults + COALESCE(rt.maxChildren,0))
+                        >= (:adults + :children)
+                GROUP BY rt.id, rt.hotel.id
+                HAVING COUNT(DISTINCT rc.date) = :nights
+            ) roomPrice ON roomPrice.hotelId = h.id
+            WHERE
+                h.status = com.example.backend.enums.HotelStatus.APPROVED
+                AND h.deletedAt IS NULL
 
-              AND (COALESCE(:districts, NULL) IS NULL OR h.district IN :districts)
+                AND (COALESCE(:districts, NULL) IS NULL OR h.district IN :districts)
 
-              AND (:keyword IS NULL
-                   OR LOWER(h.hotelName)
-                   LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(h.addressLine)
-                   LIKE LOWER(CONCAT('%', :keyword, '%')))
+                AND (:keyword IS NULL
+                     OR LOWER(h.hotelName)
+                     LIKE LOWER(CONCAT('%', :keyword, '%'))
+                     OR LOWER(h.addressLine)
+                     LIKE LOWER(CONCAT('%', :keyword, '%')))
 
-              AND (COALESCE(:stars, NULL) IS NULL OR h.starRating IN :stars)
+                AND (COALESCE(:stars, NULL) IS NULL OR h.starRating IN :stars)
 
             GROUP BY
                 h.id,
@@ -72,14 +84,22 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                 h.city,
                 h.status
 
-            HAVING COUNT(DISTINCT rc.date)=:nights
-               AND (:minPrice IS NULL OR MIN(rc.price)>=:minPrice)
-               AND (:maxPrice IS NULL OR MIN(rc.price)<=:maxPrice)
+            HAVING
+                (:minPrice IS NULL OR MIN(roomPrice.totalPrice) >= :minPrice)
+                AND (:maxPrice IS NULL OR MIN(roomPrice.totalPrice) <= :maxPrice)
 
             ORDER BY
-                CASE WHEN :sortBy='price_asc' THEN MIN(rc.price) END ASC,
-                CASE WHEN :sortBy='price_desc' THEN MIN(rc.price) END DESC,
-                CASE WHEN :sortBy='star_desc' THEN h.starRating END DESC
+                CASE WHEN :sortBy='price_asc'
+                     THEN MIN(roomPrice.totalPrice)
+                END ASC,
+
+                CASE WHEN :sortBy='price_desc'
+                     THEN MIN(roomPrice.totalPrice)
+                END DESC,
+
+                CASE WHEN :sortBy='star_desc'
+                     THEN h.starRating
+                END DESC
             """)
     Page<HotelSummaryResponse> searchHotelsWithFilters(
             @Param("districts") List<String> districts,
