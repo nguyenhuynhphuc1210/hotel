@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -32,7 +32,6 @@ const ALL_DISTRICTS = [
     'Huyện Củ Chi', 'Huyện Hóc Môn', 'Huyện Nhà Bè', 'Huyện Bình Chánh', 'Huyện Cần Giờ',
 ]
 
-// ── Page ──────────────────────────────────────────────────
 export default function HotelsPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -46,39 +45,55 @@ export default function HotelsPage() {
     const children = Number(searchParams.get('children') ?? 0)
     const rooms = Number(searchParams.get('rooms') ?? 1)
     const currentPage = Number(searchParams.get('page') ?? 0)
-    const hasFullDates = !!checkIn && !!checkOut
+    
+    const stars = useMemo(() => searchParams.getAll('stars').map(Number), [searchParams])
+    const minPriceUrl = searchParams.get('minPrice') ?? ''
+    const maxPriceUrl = searchParams.get('maxPrice') ?? ''
+    const sortBy = (searchParams.get('sortBy') as SortOption) ?? 'recommended'
 
-    // ── Local state (client-only filters) ──
-    const [starFilter, setStarFilter] = useState<number[]>([])
-    const [sortBy, setSortBy] = useState<SortOption>('recommended')
+    const hasFullDates = !!checkIn && !!checkOut
     const [showFilter, setShowFilter] = useState(true)
-    const [priceMin, setPriceMin] = useState('')
-    const [priceMax, setPriceMax] = useState('')
     const pageSize = 10
 
-    // ── Query params cho API ──
-    const queryParams: HotelSearchParams = {
+    // ── Giải quyết lỗi Cascading Renders ──
+    // Thay vì useEffect, chúng ta khởi tạo state trực tiếp. 
+    // Để input reset khi URL thay đổi (vd: nhấn xóa lọc), ta dùng "key" ở component cha hoặc reset thủ công khi render.
+    const [tempMinPrice, setTempMinPrice] = useState(minPriceUrl)
+    const [tempMaxPrice, setTempMaxPrice] = useState(maxPriceUrl)
+
+    // Nếu URL thay đổi (vd: nhấn nút xóa tất cả), ta cần cập nhật lại temp state
+    // Cách này an toàn hơn useEffect vì nó kiểm tra sự thay đổi giá trị trước khi set
+    if (tempMinPrice !== minPriceUrl && !minPriceUrl && tempMinPrice !== '') {
+        setTempMinPrice('')
+    }
+    if (tempMaxPrice !== maxPriceUrl && !maxPriceUrl && tempMaxPrice !== '') {
+        setTempMaxPrice('')
+    }
+
+    const queryParams: HotelSearchParams = useMemo(() => ({
         keyword: keyword || undefined,
         districts: districts.length > 0 ? districts : undefined,
         checkIn: checkIn || undefined,
         checkOut: checkOut || undefined,
         adults,
         children,
+        stars: stars.length > 0 ? stars : undefined,
+        minPrice: minPriceUrl ? Number(minPriceUrl) : undefined,
+        maxPrice: maxPriceUrl ? Number(maxPriceUrl) : undefined,
+        sortBy: sortBy,
         page: currentPage,
         size: pageSize,
-    }
+    }), [keyword, districts, checkIn, checkOut, adults, children, stars, minPriceUrl, maxPriceUrl, sortBy, currentPage])
 
-    // ── Fetch hotels ──
     const { data: pageData, isLoading } = useQuery({
         queryKey: ['hotels-search', queryParams],
         queryFn: () => hotelApi.search(queryParams).then(r => r.data),
     })
 
-    const hotels: HotelSummaryResponse[] = pageData?.content || []
+    const hotels = pageData?.content || []
     const totalElements = pageData?.totalElements || 0
     const hotelIds = hotels.map((h: HotelSummaryResponse) => h.id).join(',')
 
-    // ── Fetch min prices ──
     const { data: minPrices = {} } = useQuery<MinPriceMap>({
         queryKey: ['min-prices', hotelIds, checkIn, checkOut],
         queryFn: async () => {
@@ -99,118 +114,72 @@ export default function HotelsPage() {
         enabled: hasFullDates && hotels.length > 0,
     })
 
-    // ── Helpers navigation ──
-    // Toggle 1 quận vào/ra khỏi danh sách districts trên URL
-    const toggleDistrict = (district: string) => {
+    // ── Update URL (Fix TypeScript Error ở đây) ──
+    const updateQueryParams = (updates: Record<string, string | string[] | number[] | number | null>) => {
         const p = new URLSearchParams(searchParams.toString())
-        const current = searchParams.getAll('districts')
-        p.delete('districts')
-        const next = current.includes(district)
-            ? current.filter(d => d !== district)
-            : [...current, district]
-        next.forEach(d => p.append('districts', d))
-        p.set('page', '0')
-        router.push(`/hotels?${p.toString()}`)
-    }
-
-    // Xoá toàn bộ districts
-    const clearDistricts = () => {
-        const p = new URLSearchParams(searchParams.toString())
-        p.delete('districts')
-        p.set('page', '0')
-        router.push(`/hotels?${p.toString()}`)
-    }
-
-    const handlePageChange = (page: number) => {
-        const p = new URLSearchParams(searchParams.toString())
-        p.set('page', String(page))
-        router.push(`/hotels?${p.toString()}`)
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-
-    const goToDetail = (id: number) => {
-        const query = hasFullDates
-            ? `?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${rooms}`
-            : ''
-        router.push(`/hotels/${id}${query}`)
-    }
-
-    const handlePriceButtonClick = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-        const p = new URLSearchParams(searchParams.toString())
-        p.set('openPicker', 'true')
-        router.replace(`/hotels?${p.toString()}`)
-    }
-
-    // ── Client-side filter + sort ──
-    function getFiltered(): HotelSummaryResponse[] {
-        let list: HotelSummaryResponse[] = [...hotels]
-
-        if (starFilter.length > 0) {
-            list = list.filter(h => starFilter.includes(Math.floor(Number(h.starRating ?? 0))))
-        }
-        if (priceMin) {
-            const min = Number(priceMin)
-
-            list = list.filter(h => {
-                const price = minPrices[h.id] ?? h.minPrice ?? 0
-                return price >= min
-            })
-        }
-
-        if (priceMax) {
-            const max = Number(priceMax)
-
-            list = list.filter(h => {
-                const price = minPrices[h.id] ?? h.minPrice ?? 0
-                return price <= max
-            })
-        }
-
-        list.sort((a, b) => {
-            const pa = minPrices[a.id] ?? a.minPrice ?? 0
-            const pb = minPrices[b.id] ?? b.minPrice ?? 0
-
-            if (sortBy === 'price_asc') return pa - pb
-            if (sortBy === 'price_desc') return pb - pa
-            if (sortBy === 'star_desc') {
-                return Number(b.starRating ?? 0) - Number(a.starRating ?? 0)
+        
+        Object.entries(updates).forEach(([key, value]) => {
+            p.delete(key)
+            if (Array.isArray(value)) {
+                value.forEach(v => p.append(key, String(v)))
+            } else if (value !== null && value !== '') {
+                p.set(key, String(value))
             }
-
-            return 0
         })
 
-        return list
+        if (!updates.hasOwnProperty('page')) {
+            p.set('page', '0')
+        }
+        
+        router.push(`/hotels?${p.toString()}`)
     }
 
-    const filtered = getFiltered()
+    const toggleDistrict = (district: string) => {
+        const next = districts.includes(district)
+            ? districts.filter(d => d !== district)
+            : [...districts, district]
+        updateQueryParams({ districts: next })
+    }
+
+    const toggleStar = (star: number) => {
+        const next = stars.includes(star)
+            ? stars.filter(s => s !== star)
+            : [...stars, star]
+        updateQueryParams({ stars: next })
+    }
+
+    const clearAllFilters = () => {
+        setTempMinPrice('')
+        setTempMaxPrice('')
+        const p = new URLSearchParams()
+        if (keyword) p.set('keyword', keyword)
+        if (checkIn) p.set('checkIn', checkIn)
+        if (checkOut) p.set('checkOut', checkOut)
+        p.set('adults', String(adults))
+        p.set('children', String(children))
+        p.set('rooms', String(rooms))
+        router.push(`/hotels?${p.toString()}`)
+    }
+
     const nights = hasFullDates
         ? Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000)
         : 0
 
-    const districtLabel = districts.join(', ')
-    const title = keyword || districtLabel
-        ? `${keyword || districtLabel}: tìm thấy ${totalElements} khách sạn`
+    const activeFilterCount = stars.length + (minPriceUrl ? 1 : 0) + (maxPriceUrl ? 1 : 0)
+    const title = keyword || districts.length > 0
+        ? `${keyword || districts.join(', ')}: tìm thấy ${totalElements} khách sạn`
         : `Tất cả khách sạn tại TP.HCM: ${totalElements} kết quả`
-
-    const activeFilterCount = starFilter.length + (priceMin ? 1 : 0) + (priceMax ? 1 : 0)
 
     return (
         <div className="min-h-screen bg-gray-50">
-
-            {/* Sticky search bar */}
             <div className="bg-white border-b border-gray-200 sticky top-16 z-40 py-3 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4">
                     <SearchBar
-                        key={keyword + districtLabel + checkIn + checkOut + searchParams.get('openPicker')}
+                        key={keyword + districts.join('') + checkIn + checkOut}
                         variant="compact"
                         defaultValues={{
-                            keyword: keyword || districtLabel,
-                            checkIn,
-                            checkOut,
-                            adults,
-                            children,
-                            rooms,
+                            keyword: keyword || districts.join(', '),
+                            checkIn, checkOut, adults, children, rooms,
                         }}
                         onSearch={(p) => router.push(`/hotels?${p.toString()}`)}
                     />
@@ -219,263 +188,161 @@ export default function HotelsPage() {
 
             <div className="max-w-7xl mx-auto px-4 py-6">
                 <div className="flex gap-6">
-
-                    {/* Filter sidebar */}
-                    {showFilter && (
-                        <aside className="w-64 shrink-0 space-y-4">
-
-                            {/* Khu vực / Quận */}
-                            <div className="bg-white rounded-xl border border-gray-200 p-4">
-                                <h3 className="text-sm font-semibold text-gray-900 mb-3">Khu vực / Quận</h3>
-                                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                                    {ALL_DISTRICTS.map(d => (
-                                        <button
-                                            key={d}
-                                            onClick={() => toggleDistrict(d)}
-                                            className={`flex items-center gap-2.5 w-full text-left py-1.5 px-2 rounded-lg transition-all ${districts.includes(d)
-                                                ? 'bg-blue-50 text-blue-700'
-                                                : 'hover:bg-blue-50 hover:text-blue-700'
-                                                }`}
-                                        >
-                                            <div className={`w-4 h-4 rounded border shrink-0 transition-colors ${districts.includes(d)
-                                                ? 'bg-blue-500 border-blue-500'
-                                                : 'border-gray-300'
-                                                }`} />
-                                            <span className="text-sm">{d}</span>
-                                        </button>
-                                    ))}
-                                </div>
+                    <aside className={showFilter ? "w-64 shrink-0 space-y-4" : "hidden"}>
+                        <div className="bg-white rounded-xl border border-gray-200 p-4">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Khu vực / Quận</h3>
+                            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                                {ALL_DISTRICTS.map(d => (
+                                    <button
+                                        key={d}
+                                        onClick={() => toggleDistrict(d)}
+                                        className={`flex items-center gap-2.5 w-full text-left py-1.5 px-2 rounded-lg transition-all ${districts.includes(d) ? 'bg-blue-50 text-blue-700' : 'hover:bg-blue-50'}`}
+                                    >
+                                        <div className={`w-4 h-4 rounded border shrink-0 ${districts.includes(d) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`} />
+                                        <span className="text-sm">{d}</span>
+                                    </button>
+                                ))}
                             </div>
+                        </div>
 
-                            {/* Đánh giá sao */}
-                            <div className="bg-white rounded-xl border border-gray-200 p-4">
-                                <h3 className="text-sm font-semibold text-gray-900 mb-3">Đánh giá sao</h3>
-                                <div className="space-y-2">
-                                    {[5, 4, 3, 2, 1].map(s => (
-                                        <label key={s} className="flex items-center gap-2.5 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={starFilter.includes(s)}
-                                                onChange={() =>
-                                                    setStarFilter(prev =>
-                                                        prev.includes(s)
-                                                            ? prev.filter(x => x !== s)
-                                                            : [...prev, s]
-                                                    )
-                                                }
-                                                className="w-4 h-4 rounded accent-blue-600"
-                                            />
-                                            <div className="flex items-center gap-0.5">
-                                                {Array.from({ length: s }).map((_, i) => (
-                                                    <Star key={i} size={13} fill="#f59e0b" className="text-amber-400" />
-                                                ))}
-                                                {Array.from({ length: 5 - s }).map((_, i) => (
-                                                    <Star key={i} size={13} className="text-gray-200" />
-                                                ))}
-                                            </div>
-                                            <span className="text-sm text-gray-600">{s} sao</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Khoảng giá */}
-                            <div className="bg-white rounded-xl border border-gray-200 p-4">
-                                <h3 className="text-sm font-semibold text-gray-900 mb-3">Khoảng giá / đêm</h3>
-                                <div className="space-y-2">
-                                    <div>
-                                        <label className="text-xs text-gray-500 mb-1 block">Từ (₫)</label>
+                        <div className="bg-white rounded-xl border border-gray-200 p-4">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Đánh giá sao</h3>
+                            <div className="space-y-2">
+                                {[5, 4, 3, 2, 1].map(s => (
+                                    <label key={s} className="flex items-center gap-2.5 cursor-pointer">
                                         <input
-                                            type="number"
-                                            value={priceMin}
-                                            onChange={e => setPriceMin(e.target.value)}
-                                            placeholder="0"
-                                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            type="checkbox"
+                                            checked={stars.includes(s)}
+                                            onChange={() => toggleStar(s)}
+                                            className="w-4 h-4 rounded accent-blue-600"
                                         />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-gray-500 mb-1 block">Đến (₫)</label>
-                                        <input
-                                            type="number"
-                                            value={priceMax}
-                                            onChange={e => setPriceMax(e.target.value)}
-                                            placeholder="Không giới hạn"
-                                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="mt-3 flex flex-wrap gap-1.5">
-                                    {[
-                                        { label: '< 500K', min: '', max: '500000' },
-                                        { label: '500K-1M', min: '500000', max: '1000000' },
-                                        { label: '1M-2M', min: '1000000', max: '2000000' },
-                                        { label: '> 2M', min: '2000000', max: '' },
-                                    ].map(p => (
-                                        <button
-                                            key={p.label}
-                                            onClick={() => { setPriceMin(p.min); setPriceMax(p.max) }}
-                                            className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${priceMin === p.min && priceMax === p.max
-                                                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                                : 'border-gray-200 text-gray-600 hover:border-blue-300'
-                                                }`}
-                                        >
-                                            {p.label}
-                                        </button>
-                                    ))}
-                                </div>
+                                        <div className="flex items-center gap-0.5">
+                                            {Array.from({ length: s }).map((_, i) => (
+                                                <Star key={i} size={13} fill="#f59e0b" className="text-amber-400" />
+                                            ))}
+                                        </div>
+                                        <span className="text-sm text-gray-600">{s} sao</span>
+                                    </label>
+                                ))}
                             </div>
+                        </div>
 
-                            {activeFilterCount > 0 && (
-                                <button
-                                    onClick={() => { setStarFilter([]); setPriceMin(''); setPriceMax('') }}
-                                    className="w-full py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
-                                >
-                                    Xoá tất cả bộ lọc
-                                </button>
-                            )}
-                        </aside>
-                    )}
+                        <div className="bg-white rounded-xl border border-gray-200 p-4">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Khoảng giá / đêm</h3>
+                            <div className="space-y-2">
+                                <input
+                                    type="number"
+                                    value={tempMinPrice}
+                                    onChange={e => setTempMinPrice(e.target.value)}
+                                    onBlur={() => updateQueryParams({ minPrice: tempMinPrice })}
+                                    placeholder="Từ (₫)"
+                                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm"
+                                />
+                                <input
+                                    type="number"
+                                    value={tempMaxPrice}
+                                    onChange={e => setTempMaxPrice(e.target.value)}
+                                    onBlur={() => updateQueryParams({ maxPrice: tempMaxPrice })}
+                                    placeholder="Đến (₫)"
+                                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm"
+                                />
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                                {[
+                                    { label: '< 500K', min: '', max: '500000' },
+                                    { label: '500K-1M', min: '500000', max: '1000000' },
+                                    { label: '1M-2M', min: '1000000', max: '2000000' },
+                                ].map(p => (
+                                    <button
+                                        key={p.label}
+                                        onClick={() => {
+                                            setTempMinPrice(p.min);
+                                            setTempMaxPrice(p.max);
+                                            updateQueryParams({ minPrice: p.min, maxPrice: p.max });
+                                        }}
+                                        className={`px-2.5 py-1 rounded-full text-xs border ${minPriceUrl === p.min && maxPriceUrl === p.max ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}
+                                    >
+                                        {p.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
 
-                    {/* Results */}
+                        {activeFilterCount > 0 && (
+                            <button onClick={clearAllFilters} className="w-full py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50">
+                                Xoá tất cả bộ lọc
+                            </button>
+                        )}
+                    </aside>
+
                     <div className="flex-1 min-w-0 space-y-4">
-
-                        {/* Header */}
                         <div className="flex items-center justify-between flex-wrap gap-3">
                             <div>
                                 <h1 className="text-lg font-bold text-gray-900">{title}</h1>
                                 {nights > 0 && (
                                     <p className="text-sm text-gray-500 mt-0.5">
-                                        {new Date(checkIn).toLocaleDateString('vi-VN')} →{' '}
-                                        {new Date(checkOut).toLocaleDateString('vi-VN')} · {nights} đêm
+                                        {new Date(checkIn).toLocaleDateString('vi-VN')} → {new Date(checkOut).toLocaleDateString('vi-VN')} · {nights} đêm
                                     </p>
                                 )}
                             </div>
-
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => setShowFilter(!showFilter)}
-                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-colors ${showFilter
-                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                                        }`}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border ${showFilter ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200'}`}
                                 >
-                                    <SlidersHorizontal size={15} />
-                                    Bộ lọc
-                                    {activeFilterCount > 0 && (
-                                        <span className="w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
-                                            {activeFilterCount}
-                                        </span>
-                                    )}
+                                    <SlidersHorizontal size={15} /> Bộ lọc
+                                    {activeFilterCount > 0 && <span className="w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">{activeFilterCount}</span>}
                                 </button>
-
                                 <div className="relative">
                                     <select
                                         value={sortBy}
-                                        onChange={e => setSortBy(e.target.value as SortOption)}
-                                        className="pl-8 pr-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                                        onChange={e => updateQueryParams({ sortBy: e.target.value })}
+                                        className="pl-8 pr-4 py-2 border border-gray-200 rounded-lg text-sm bg-white appearance-none cursor-pointer"
                                     >
-                                        {SORT_OPTIONS.map(o => (
-                                            <option key={o.value} value={o.value}>{o.label}</option>
-                                        ))}
+                                        {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                     </select>
                                     <ArrowUpDown size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Active filter chips */}
-                        <div className="flex flex-wrap gap-2">
-                            {districts.map(d => (
-                                <span
-                                    key={d}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-medium"
-                                >
-                                    <MapPin size={12} />
-                                    {d}
-                                    <button onClick={() => toggleDistrict(d)}>
-                                        <X size={12} />
-                                    </button>
-                                </span>
-                            ))}
-                            {starFilter.map(s => (
-                                <span
-                                    key={s}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-medium"
-                                >
-                                    {s} sao
-                                    <button onClick={() => setStarFilter(p => p.filter(x => x !== s))}>
-                                        <X size={12} />
-                                    </button>
-                                </span>
-                            ))}
-                            {(priceMin || priceMax) && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-medium">
-                                    {priceMin ? `${Number(priceMin).toLocaleString('vi-VN')}₫` : '0'} –{' '}
-                                    {priceMax ? `${Number(priceMax).toLocaleString('vi-VN')}₫` : '∞'}
-                                    <button onClick={() => { setPriceMin(''); setPriceMax('') }}>
-                                        <X size={12} />
-                                    </button>
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Hotel list */}
                         {isLoading ? (
                             <div className="space-y-4">
-                                {[1, 2, 3].map(i => (
-                                    <div key={i} className="bg-white rounded-2xl border border-gray-200 h-52 animate-pulse" />
-                                ))}
+                                {[1, 2, 3].map(i => <div key={i} className="bg-white rounded-2xl border border-gray-200 h-52 animate-pulse" />)}
                             </div>
-                        ) : filtered.length === 0 ? (
+                        ) : hotels.length === 0 ? (
                             <div className="bg-white rounded-2xl border border-gray-200 py-20 text-center">
                                 <Search size={40} className="text-gray-300 mx-auto mb-3" />
                                 <p className="text-gray-500 font-medium">Không tìm thấy khách sạn nào</p>
-                                <p className="text-gray-400 text-sm mt-1">Thử thay đổi bộ lọc hoặc tìm địa điểm khác</p>
-                                <button
-                                    onClick={() => {
-                                        setStarFilter([])
-                                        setPriceMin('')
-                                        setPriceMax('')
-                                        clearDistricts()
-                                    }}
-                                    className="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                                >
-                                    Xoá tất cả bộ lọc
-                                </button>
+                                <button onClick={clearAllFilters} className="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Xoá bộ lọc</button>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {filtered.map(h => (
+                                {hotels.map(h => (
                                     <HotelCard
                                         key={h.id}
                                         hotel={h}
                                         minPrice={minPrices[h.id]}
                                         nights={nights}
                                         hasFullDates={hasFullDates}
-                                        onCardClick={() => goToDetail(h.id)}
-                                        onPriceButtonClick={handlePriceButtonClick}
+                                        onCardClick={() => router.push(`/hotels/${h.id}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${rooms}`)}
                                     />
                                 ))}
                             </div>
                         )}
 
                         {pageData && pageData.totalPages > 1 && (
-                            <div className="mt-8 bg-white p-4 rounded-2xl border border-gray-200">
-                                <Pagination
-                                    currentPage={currentPage}
-                                    pageSize={pageSize}
-                                    totalPages={pageData.totalPages}
-                                    totalElements={pageData.totalElements}
-                                    onPageChange={handlePageChange}
-                                    onPageSizeChange={() => { }}
-                                />
-                            </div>
+                            <Pagination
+                                currentPage={currentPage}
+                                pageSize={pageSize}
+                                totalPages={pageData.totalPages}
+                                totalElements={pageData.totalElements}
+                                onPageChange={(page) => updateQueryParams({ page })}
+                            />
                         )}
                     </div>
                 </div>
             </div>
-
             <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -486,22 +353,16 @@ export default function HotelsPage() {
     )
 }
 
-// ─── Hotel Card ────────────────────────────────────────────
-function HotelCard({
-    hotel: h,
-    minPrice,
-    nights,
-    onCardClick,
-    onPriceButtonClick,
-    hasFullDates,
-}: {
+// ─── Hotel Card Component ──────────────────────────────────
+interface HotelCardProps {
     hotel: HotelSummaryResponse
     minPrice: number | null | undefined
     nights: number
     onCardClick: () => void
-    onPriceButtonClick: () => void
     hasFullDates: boolean
-}) {
+}
+
+function HotelCard({ hotel: h, minPrice, nights, onCardClick, hasFullDates }: HotelCardProps) {
     const stars = Math.round(Number(h.starRating ?? 0))
     const displayImage = h.thumbnailUrl || h.images?.find(i => i.isPrimary)?.imageUrl
 
@@ -510,51 +371,33 @@ function HotelCard({
             onClick={onCardClick}
             className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group flex"
         >
-            <div className="w-72 shrink-0 relative overflow-hidden bg-gray-100">
+            <div className="w-72 shrink-0 bg-gray-100 relative">
                 {displayImage ? (
-                    <img
-                        src={displayImage}
-                        alt={h.hotelName}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    <img src={displayImage} alt={h.hotelName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-4xl">🏨</div>
                 )}
             </div>
-
             <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
                 <div>
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate mb-1">
-                        {h.hotelName}
-                    </h3>
+                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate mb-1">{h.hotelName}</h3>
                     <div className="flex items-center gap-0.5 mb-2">
                         {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                                key={i}
-                                size={14}
-                                fill={i < stars ? '#f59e0b' : 'none'}
-                                className={i < stars ? 'text-amber-400' : 'text-gray-200'}
-                            />
+                            <Star key={i} size={14} fill={i < stars ? '#f59e0b' : 'none'} className={i < stars ? 'text-amber-400' : 'text-gray-200'} />
                         ))}
                     </div>
                     <div className="flex items-center gap-1 text-sm text-blue-600 mb-3">
-                        <MapPin size={14} />
-                        <span>{h.district}, {h.city}</span>
+                        <MapPin size={14} /> <span>{h.district}, {h.city}</span>
                     </div>
                 </div>
-
                 <div className="flex items-end justify-end mt-4 pt-4 border-t border-gray-100">
                     <div className="text-right">
                         {(minPrice || h.minPrice) ? (
                             <>
-                                <div className="text-xs text-gray-400">
-                                    Giá từ
-                                </div>
-
+                                <div className="text-xs text-gray-400">Giá từ</div>
                                 <div className="text-2xl font-bold text-red-500">
                                     {Number(minPrice || h.minPrice).toLocaleString('vi-VN')}₫
                                 </div>
-
                                 {hasFullDates && nights > 0 && (
                                     <div className="text-xs text-gray-400 mt-0.5">
                                         Tổng {(Number(minPrice || h.minPrice) * nights).toLocaleString('vi-VN')}₫ / {nights} đêm
@@ -562,15 +405,7 @@ function HotelCard({
                                 )}
                             </>
                         ) : (
-                            <>
-                                <div className="text-xs text-gray-400">
-                                    Giá phòng
-                                </div>
-
-                                <div className="text-lg font-bold text-gray-800">
-                                    Đang cập nhật
-                                </div>
-                            </>
+                            <div className="text-lg font-bold text-gray-800">Đang cập nhật</div>
                         )}
                     </div>
                 </div>

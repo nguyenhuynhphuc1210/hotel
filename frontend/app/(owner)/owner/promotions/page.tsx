@@ -18,13 +18,13 @@ const inputClass = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm f
 const labelClass = 'block text-sm font-medium text-gray-700 mb-1'
 
 const promoSchema = z.object({
-  promoCode:        z.string().min(3).max(20).regex(/^[A-Z0-9]+$/, 'Chỉ gồm chữ IN HOA và số'),
-  discountPercent:  z.coerce.number().min(0).max(100),
-  maxDiscountAmount:z.coerce.number().min(0),
-  minOrderValue:    z.coerce.number().min(0).optional(),
-  startDate:        z.string().min(1, 'Chọn ngày bắt đầu'),
-  endDate:          z.string().min(1, 'Chọn ngày kết thúc'),
-  isActive:         z.boolean(),
+  promoCode: z.string().min(3).max(20).regex(/^[A-Z0-9]+$/, 'Chỉ gồm chữ IN HOA và số'),
+  discountPercent: z.coerce.number().min(0).max(100),
+  maxDiscountAmount: z.coerce.number().min(0),
+  minOrderValue: z.coerce.number().min(0).optional(),
+  startDate: z.string().min(1, 'Chọn ngày bắt đầu'),
+  endDate: z.string().min(1, 'Chọn ngày kết thúc'),
+  isActive: z.boolean(),
 })
 
 type PromoForm = z.infer<typeof promoSchema>
@@ -198,7 +198,7 @@ function PromoFormModal({ promo, hotelId, qc, onClose }: {
         ...data,
         hotelId,
         startDate: new Date(data.startDate).toISOString(),
-        endDate:   new Date(data.endDate).toISOString(),
+        endDate: new Date(data.endDate).toISOString(),
       }
       return isEdit
         ? promotionApi.update(promo.id, req)
@@ -218,13 +218,13 @@ function PromoFormModal({ promo, hotelId, qc, onClose }: {
   const { register, handleSubmit, formState: { errors } } = useForm<PromoForm>({
     resolver: zodResolver(promoSchema) as Resolver<PromoForm>,
     defaultValues: {
-      promoCode:         promo?.promoCode         ?? '',
-      discountPercent:   promo?.discountPercent    ?? 10,
-      maxDiscountAmount: promo?.maxDiscountAmount  ?? 100000,
-      minOrderValue:     promo?.minOrderValue      ?? undefined,
-      startDate:         promo ? toDatetimeLocal(promo.startDate) : '',
-      endDate:           promo ? toDatetimeLocal(promo.endDate)   : '',
-      isActive:          promo?.isActive           ?? true,
+      promoCode: promo?.promoCode ?? '',
+      discountPercent: promo?.discountPercent ?? 10,
+      maxDiscountAmount: promo?.maxDiscountAmount ?? 100000,
+      minOrderValue: promo?.minOrderValue ?? undefined,
+      startDate: promo ? toDatetimeLocal(promo.startDate) : '',
+      endDate: promo ? toDatetimeLocal(promo.endDate) : '',
+      isActive: promo?.isActive ?? true,
     },
   })
 
@@ -244,8 +244,16 @@ function PromoFormModal({ promo, hotelId, qc, onClose }: {
 
           <div>
             <label className={labelClass}>Mã giảm giá <span className="text-red-500">*</span></label>
-            <input {...register('promoCode')} className={inputClass}
-              placeholder="VD: SUMMER30" style={{ textTransform: 'uppercase' }} />
+            <input
+              {...register('promoCode', {
+                onChange: (e) => {
+                  e.target.value = e.target.value.toUpperCase();
+                }
+              })}
+              className={inputClass}
+              placeholder="VD: SUMMER30"
+              style={{ textTransform: 'uppercase' }}
+            />
             <p className="text-xs text-gray-400 mt-1">Chỉ dùng chữ IN HOA và số, 3-20 ký tự</p>
             {errors.promoCode && <p className="text-xs text-red-500 mt-1">{errors.promoCode.message}</p>}
           </div>

@@ -20,6 +20,12 @@ interface HotelChatWidgetProps {
     hotelId: number
     hotelName: string
     hotelOwnerEmail: string
+    /** Khi true: ẩn FAB, chỉ render panel chat */
+    panelOnly?: boolean
+    /** Trạng thái mở/đóng được điều khiển từ ngoài */
+    externalOpen?: boolean
+    /** Callback khi người dùng nhấn nút đóng bên trong panel */
+    onToggle?: () => void
 }
 
 function fmt(ts: string) {
@@ -28,10 +34,12 @@ function fmt(ts: string) {
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8080/ws/chat'
 
-export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail }: HotelChatWidgetProps) {
+export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, panelOnly, externalOpen, onToggle }: HotelChatWidgetProps) {
     const { user, token } = useAuthStore()
 
-    const [isOpen, setIsOpen] = useState(false)
+    const [internalOpen, setInternalOpen] = useState(false)
+    const isOpen = panelOnly ? (externalOpen ?? false) : internalOpen
+
     const [messages, setMessages] = useState<ChatMsg[]>([])
     const [inputText, setInputText] = useState('')
     const [isSending, setIsSending] = useState(false)
@@ -49,6 +57,13 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail }:
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages])
+
+    // Focus input khi panel mở
+    useEffect(() => {
+        if (isOpen) {
+            setTimeout(() => inputRef.current?.focus(), 150)
+        }
+    }, [isOpen])
 
     const sendReadReceipt = useCallback((senderEmail: string, client?: Client) => {
         const stomp = client ?? stompClientRef.current
@@ -124,11 +139,30 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail }:
     }, [user, hotelId, sendReadReceipt])
 
     const handleOpen = () => {
-        setIsOpen(true)
-        setUnreadCount(0)
+        if (panelOnly) {
+            onToggle?.()
+        } else {
+            setInternalOpen(true)
+            setUnreadCount(0)
+        }
         if (user) loadHistory()
-        setTimeout(() => inputRef.current?.focus(), 150)
     }
+
+    const handleClose = () => {
+        if (panelOnly) {
+            onToggle?.()
+        } else {
+            setInternalOpen(false)
+        }
+    }
+
+    // Load history khi panel được mở từ bên ngoài (panelOnly mode)
+    useEffect(() => {
+        if (panelOnly && externalOpen && user) {
+            setUnreadCount(0)
+            loadHistory()
+        }
+    }, [panelOnly, externalOpen, user, loadHistory])
 
     const handleSend = () => {
         if (!inputText.trim() || !user || isSending || !stompClientRef.current?.connected) return
@@ -154,10 +188,11 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail }:
     if (!user) return null
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+        <div className="flex flex-col items-end gap-3">
+            {/* ── Chat Panel ── */}
             {isOpen && (
                 <div
-                    className="w-[360px] bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden"
+                    className="w-[360px] bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300"
                     style={{ height: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
                 >
                     {/* Header */}
@@ -174,7 +209,7 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail }:
                                 </span>
                             </div>
                         </div>
-                        <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+                        <button onClick={handleClose} className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
                             <ChevronDown size={20} />
                         </button>
                     </div>
@@ -217,7 +252,6 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail }:
                                                 ${isMine ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white text-gray-800 border border-gray-100 rounded-bl-sm shadow-sm'}`}>
                                                 {msg.content}
                                             </div>
-                                            {/* ── Trạng thái đọc dạng chữ ── */}
                                             <div className={`flex items-center gap-1.5 px-1 ${isMine ? 'flex-row-reverse' : ''}`}>
                                                 <span className="text-[10px] text-gray-400">{fmt(msg.timestamp)}</span>
                                                 {isMine && (
@@ -257,23 +291,25 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail }:
                 </div>
             )}
 
-            {/* FAB */}
-            <button
-                onClick={isOpen ? () => setIsOpen(false) : handleOpen}
-                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 relative
-                    ${isOpen ? 'bg-gray-700 hover:bg-gray-800' : 'bg-blue-600 hover:bg-blue-700'}`}
-                style={{ boxShadow: '0 8px 24px rgba(37,99,235,0.35)' }}
-            >
-                {isOpen ? <X size={22} className="text-white" /> : <MessageSquare size={22} className="text-white" />}
-                {!isOpen && unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                )}
-                {isConnected && !isOpen && (
-                    <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
-                )}
-            </button>
+            {/* ── FAB — chỉ hiển thị khi KHÔNG phải panelOnly ── */}
+            {!panelOnly && (
+                <button
+                    onClick={isOpen ? handleClose : handleOpen}
+                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 relative
+                        ${isOpen ? 'bg-gray-700 hover:bg-gray-800' : 'bg-blue-600 hover:bg-blue-700'}`}
+                    style={{ boxShadow: '0 8px 24px rgba(37,99,235,0.35)' }}
+                >
+                    {isOpen ? <X size={22} className="text-white" /> : <MessageSquare size={22} className="text-white" />}
+                    {!isOpen && unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                    )}
+                    {isConnected && !isOpen && (
+                        <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
+                    )}
+                </button>
+            )}
         </div>
     )
 }

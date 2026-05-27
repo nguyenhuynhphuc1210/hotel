@@ -389,13 +389,13 @@ export default function AdminUsersPage() {
                           )}
                         </button>
 
-                        <button
+                        {/* <button
                           onClick={() => handleDelete(u)}
                           disabled={deleteMutation.isPending}
                           className="p-1.5 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50"
                         >
                           <Trash2 size={15} />
-                        </button>
+                        </button> */}
                       </div>
                     </td>
                   </tr>

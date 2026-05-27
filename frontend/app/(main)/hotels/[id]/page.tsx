@@ -7,7 +7,8 @@ import {
     MapPin, Star, Info,
     CheckCircle2,
     Users, Maximize2, BedDouble, Clock, ShieldCheck, Baby, Dog,
-    LogIn, MessageSquare, Send, Loader2, ImagePlus, X, ChevronLeft, ChevronRight
+    LogIn, MessageSquare, Send, Loader2, ImagePlus, X, ChevronLeft, ChevronRight,
+    Bot
 } from 'lucide-react'
 import hotelApi from '@/lib/api/hotel.api'
 import { RoomTypeResponse } from '@/types/room.types'
@@ -31,6 +32,7 @@ import HotelChatWidget from '@/components/chat/HotelChatWidget'
 import { roomTypeAmenityApi } from '@/lib/api/amenity.api'
 import { RoomTypeAmenityResponse } from '@/types/amenity.types'
 import AIChatWidget from '@/components/chat/AIChatWidget'
+import { cn } from '@/lib/utils'
 
 // ── Hook: fetch calendar cho 1 room trong khoảng checkIn/checkOut ──────────
 function useRoomCalendarPricing(
@@ -349,6 +351,8 @@ export default function HotelDetailPage() {
     const reviewSize = 10
     const reviewSectionRef = useRef<HTMLDivElement>(null);
     const [isSearching, startSearchTransition] = useTransition()
+
+    const [openPanel, setOpenPanel] = useState<'ai' | 'chat' | null>(null);
 
     const handlePageChange = (page: number) => {
         setReviewPage(page);
@@ -1008,13 +1012,57 @@ export default function HotelDetailPage() {
                 )}
             </div>
 
-            <HotelChatWidget
-                hotelId={hotelId}
-                hotelName={hotel?.hotelName ?? ''}
-                hotelOwnerEmail={hotel?.ownerEmail}
-            />
 
-            <AIChatWidget />
+            <div className="fixed bottom-6 right-6 z-[999] flex flex-col items-end gap-4">
+
+                {/* Panel AI */}
+                <AIChatWidget
+                    panelOnly
+                    externalOpen={openPanel === 'ai'}
+                    onToggle={() => setOpenPanel(null)}
+                />
+
+                {/* Panel Hotel Chat */}
+                <HotelChatWidget
+                    hotelId={hotelId}
+                    hotelName={hotel?.hotelName ?? ''}
+                    hotelOwnerEmail={hotel?.ownerEmail ?? ''}
+                    panelOnly
+                    externalOpen={openPanel === 'chat'}
+                    onToggle={() => setOpenPanel(null)}
+                />
+
+                {/* Thanh Bar Điều Khiển */}
+                <div className="flex items-center bg-white rounded-full shadow-2xl border border-gray-200 p-1.5 backdrop-blur-md">
+                    <button
+                        onClick={() => setOpenPanel(openPanel === 'ai' ? null : 'ai')}
+                        className={cn(
+                            "flex items-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all",
+                            openPanel === 'ai'
+                                ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                                : "text-gray-600 hover:bg-gray-100"
+                        )}
+                    >
+                        <Bot size={18} className={openPanel === 'ai' ? "animate-bounce" : ""} />
+                        <span>Hỏi Vago AI</span>
+                    </button>
+
+                    <div className="w-px h-6 bg-gray-200 mx-1" />
+
+                    <button
+                        onClick={() => setOpenPanel(openPanel === 'chat' ? null : 'chat')}
+                        className={cn(
+                            "flex items-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all",
+                            openPanel === 'chat'
+                                ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                                : "text-gray-600 hover:bg-gray-100"
+                        )}
+                    >
+                        <MessageSquare size={18} />
+                        <span>Nhắn cho chủ khách sạn</span>
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }

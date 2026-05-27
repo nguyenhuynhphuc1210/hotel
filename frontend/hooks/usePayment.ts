@@ -4,12 +4,24 @@ import paymentApi from '@/lib/api/payment.api'
 export const usePayments = (
   page: number, 
   size: number, 
-  search?: string,   
-  status?: string    
+  filters: {
+    search?: string;
+    status?: string;
+    method?: string,
+    hotelId?: number | null;
+    ownerId?: number | null;
+  }
 ) => {
   return useQuery({
-    
-    queryKey: ['admin-payments', page, size, search, status], 
-    queryFn: () => paymentApi.getAll(page, size, search, status).then(res => res.data),
+    queryKey: ['admin-payments', page, size, ...Object.values(filters)], 
+    queryFn: () => paymentApi.getAll(
+      page, 
+      size, 
+      filters.search, 
+      filters.status,
+      filters.method, 
+      filters.hotelId, 
+      filters.ownerId
+    ).then(res => res.data),
   })
 }

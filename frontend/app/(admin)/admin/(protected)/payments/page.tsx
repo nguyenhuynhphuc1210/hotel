@@ -1,21 +1,24 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { usePayments } from '@/hooks/usePayment'
-import { PaymentStatus, PaymentResponse } from '@/types/payment.types'
-import { useHotelStatistics } from '@/hooks/useStatistic'
+import { PaymentStatus, PaymentResponse, PaymentMethod } from '@/types/payment.types' // Thêm PaymentMethod vào import
 import {
   Search,
-  CreditCard,
-  CheckCircle2,
   Download,
   Eye,
   Loader2,
-  XCircle,
   RotateCcw,
-  Calendar,
   Building2,
-  TrendingUp,
+  User,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  RefreshCcw, 
+  LucideIcon,
+  X,
+  CreditCard, // Thêm icon cho phương thức thanh toán
 } from 'lucide-react'
 
 import Pagination from '@/components/ui/Pagination'
@@ -25,16 +28,19 @@ import API_CONFIG from '@/config/api.config'
 import { HotelResponse } from '@/lib/api/hotel.api'
 import { exportPayments } from '@/lib/api/export.api'
 import toast from 'react-hot-toast'
+import { useDebounce } from 'use-debounce'
 
 // --- CONFIGS ---
-const STATUS_CONFIG: Record<PaymentStatus, { label: string; dot: string; badge: string }> = {
-  PAID: { label: 'Đã thanh toán', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
-  PENDING: { label: 'Chờ xử lý', dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' },
-  UNPAID: { label: 'Chưa thanh toán', dot: 'bg-slate-400', badge: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200' },
-  FAILED: { label: 'Thất bại', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 ring-1 ring-red-200' },
-  CANCELLED: { label: 'Đã hủy', dot: 'bg-gray-400', badge: 'bg-gray-50 text-gray-600 ring-1 ring-gray-200' },
-  REFUNDED: { label: 'Hoàn tiền', dot: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200' },
+const STATUS_CONFIG: Record<PaymentStatus, { label: string; dot: string; badge: string; icon: LucideIcon; color: string }> = {
+  PENDING: { label: 'Chờ xử lý', dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200', icon: Clock, color: 'text-amber-500' },
+  PAID: { label: 'Đã thanh toán', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', icon: CheckCircle2, color: 'text-emerald-500' },
+  CANCELLED: { label: 'Đã hủy', dot: 'bg-gray-400', badge: 'bg-gray-50 text-gray-600 ring-1 ring-gray-200', icon: XCircle, color: 'text-gray-400' },
+  FAILED: { label: 'Thất bại', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 ring-1 ring-red-200', icon: AlertCircle, color: 'text-red-500' },
+  UNPAID: { label: 'Chưa thanh toán', dot: 'bg-slate-400', badge: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200', icon: Clock, color: 'text-slate-400' },
+  REFUNDED: { label: 'Hoàn tiền', dot: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200', icon: RefreshCcw, color: 'text-violet-500' },
 }
+
+const PAYMENT_STAT_STATUSES: PaymentStatus[] = ['PENDING', 'PAID', 'CANCELLED', 'FAILED', 'REFUNDED']
 
 const METHOD_CONFIG: Record<string, { label: string; dot: string }> = {
   VNPAY: { label: 'VNPay', dot: 'bg-blue-500' },
@@ -60,7 +66,7 @@ function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | 
               <h2 className="text-xl font-bold font-mono">{payment.transactionId || 'N/A'}</h2>
             </div>
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/20 transition-colors">
-              <XCircle size={20} />
+              <X size={20} />
             </button>
           </div>
           <div className="flex items-center gap-3">
@@ -103,64 +109,58 @@ function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | 
   )
 }
 
-// --- Main Component ---
 export default function AdminPaymentsPage() {
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
   const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
+  const [debouncedSearch] = useDebounce(searchInput, 400)
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | ''>('')
+  const [methodFilter, setMethodFilter] = useState<PaymentMethod | ''>('') // Thêm State cho Method
+  const [selectedHotelId, setSelectedHotelId] = useState<number | null>(null)
+  const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<PaymentResponse | null>(null)
   const [isExporting, setIsExporting] = useState(false)
-
-  const [selectedHotelId, setSelectedHotelId] = useState<number | null>(null)
-  const [dateRange, setDateRange] = useState({ fromDate: '', toDate: '' })
-
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput), 500)
-    return () => clearTimeout(timer)
-  }, [searchInput])
 
   const { data: hotels = [] } = useQuery<HotelResponse[]>({
     queryKey: ['admin-hotels-list'],
     queryFn: () => axiosInstance.get(API_CONFIG.ENDPOINTS.HOTELS, { params: { page: 0, size: 1000 } }).then(r => r.data.content),
   })
 
-  const { data: statsData, isLoading: isLoadingStats } = useHotelStatistics({
-    hotelId: selectedHotelId as number,
-    fromDate: dateRange.fromDate,
-    toDate: dateRange.toDate
-  }, !!selectedHotelId)
+  const owners = useMemo(() => {
+    return Array.from(new Map(hotels.map(h => [h.ownerId, { id: h.ownerId, name: h.ownerName }])).values())
+  }, [hotels])
 
-  const { data: pageData, isLoading: isLoadingPayments } = usePayments(currentPage, pageSize, search, statusFilter)
+  // Cập nhật hook usePayments để truyền thêm methodFilter
+  const { data: pageData, isLoading: isLoadingPayments } = usePayments(currentPage, pageSize, {
+    search: debouncedSearch,
+    status: statusFilter,
+    method: methodFilter, // Truyền vào BE
+    hotelId: selectedHotelId,
+    ownerId: selectedOwnerId
+  })
   const payments = pageData?.content || []
 
-  const displayStats = useMemo(() => {
-    if (selectedHotelId && statsData) {
-      return {
-        total: statsData.reduce((sum, item) => sum + (item.grossBookings || 0), 0),
-        paidCount: statsData.reduce((sum, item) => sum + (item.totalBookings || 0), 0),
-        revenue: statsData.reduce((sum, item) => sum + (item.totalRevenue || 0), 0),
-        isScaled: true
-      }
-    }
-    const paidPayments = payments.filter(p => p.status === 'PAID')
-    return {
-      total: pageData?.totalElements || 0,
-      paidCount: paidPayments.length,
-      revenue: paidPayments.reduce((sum, p) => sum + p.amount, 0),
-      isScaled: false
-    }
-  }, [pageData, payments, selectedHotelId, statsData])
+  // Stats filter (tùy chọn: có thể filter stats theo phương thức nếu muốn)
+  const { data: allStatsPage } = usePayments(0, 10000, {
+    hotelId: selectedHotelId,
+    ownerId: selectedOwnerId,
+    method: methodFilter // Filter stats theo method
+  })
+  const statsPayments = allStatsPage?.content || []
 
-  const filteredPayments = useMemo(() => {
-    if (!selectedHotelId) return payments
-    return payments.filter(p => p.hotelId === selectedHotelId)
-  }, [payments, selectedHotelId])
+  const statsCounts = useMemo(() => {
+    return PAYMENT_STAT_STATUSES.reduce((acc, status) => {
+      acc[status] = statsPayments.filter(p => p.status === status).length
+      return acc
+    }, {} as Record<PaymentStatus, number>)
+  }, [statsPayments])
 
   const handleClearFilters = () => {
-    setSearchInput(''); setSearch(''); setStatusFilter('')
-    setSelectedHotelId(null); setDateRange({ fromDate: '', toDate: '' })
+    setSearchInput('')
+    setStatusFilter('')
+    setMethodFilter('') // Reset method
+    setSelectedHotelId(null)
+    setSelectedOwnerId(null)
     setCurrentPage(0)
   }
 
@@ -168,13 +168,15 @@ export default function AdminPaymentsPage() {
     setIsExporting(true)
     try {
       await exportPayments({
-        keyword: search || undefined,
+        keyword: debouncedSearch || undefined,
         status: statusFilter || undefined,
-        hotelId: selectedHotelId,
+        method: methodFilter || undefined, // Thêm method vào export
+        hotelId: selectedHotelId || undefined,
+        ownerId: selectedOwnerId || undefined,
       })
       toast.success('Xuất file thành công!')
     } catch {
-      toast.error('Xuất file thất bại, vui lòng thử lại.')
+      toast.error('Xuất file thất bại.')
     } finally {
       setIsExporting(false)
     }
@@ -187,122 +189,117 @@ export default function AdminPaymentsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Quản lý giao dịch</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {selectedHotelId
-              ? `Đang xem dữ liệu của: ${hotels.find(h => h.id === selectedHotelId)?.hotelName}`
-              : 'Theo dõi dòng tiền và doanh thu hệ thống'}
+            Hệ thống Admin · Tổng {pageData?.totalElements || 0} giao dịch
           </p>
         </div>
 
-        {/* Export button — thay thế nút "Xuất CSV" cũ */}
         <button
           onClick={handleExport}
           disabled={isExporting}
           className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
         >
-          {isExporting
-            ? <Loader2 size={16} className="animate-spin" />
-            : <Download size={16} />}
+          {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
           {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-500 font-medium">Tổng lượt đặt</span>
-            <CreditCard size={18} className="text-blue-500" />
-          </div>
-          <div className="text-2xl font-bold">{displayStats.total}</div>
-          {displayStats.isScaled && <div className="absolute bottom-0 left-0 h-1 w-full bg-blue-500" />}
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-500 font-medium">Thành công (PAID)</span>
-            <CheckCircle2 size={18} className="text-green-500" />
-          </div>
-          <div className="text-2xl font-bold text-green-600">
-            {displayStats.paidCount}
-            <small className="text-xs text-gray-400 font-normal ml-1">mục</small>
-          </div>
-          {displayStats.isScaled && <div className="absolute bottom-0 left-0 h-1 w-full bg-green-500" />}
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-500 font-medium">Doanh thu thống kê</span>
-            <TrendingUp size={18} className="text-indigo-500" />
-          </div>
-          <div className="text-2xl font-bold text-indigo-700">
-            {isLoadingStats
-              ? <Loader2 className="animate-spin h-6 w-6" />
-              : `${displayStats.revenue.toLocaleString('vi-VN')} ₫`}
-          </div>
-          {displayStats.isScaled && <div className="absolute bottom-0 left-0 h-1 w-full bg-indigo-500" />}
-        </div>
+      {/* STATS CARDS */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {PAYMENT_STAT_STATUSES.map((status) => {
+          const config = STATUS_CONFIG[status]
+          const Icon = config.icon
+          const isActive = statusFilter === status
+          return (
+            <button
+              key={status}
+              onClick={() => { setStatusFilter(isActive ? '' : status); setCurrentPage(0) }}
+              className={`p-4 rounded-xl border-2 text-left transition-all ${
+                isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-100 bg-white hover:border-gray-200'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`p-1.5 rounded-lg ${isActive ? 'bg-blue-100' : 'bg-gray-50'}`}>
+                  <Icon size={16} className={config.color} />
+                </div>
+                <span className="text-xs font-medium text-gray-500">{config.label}</span>
+              </div>
+              <div className="text-xl font-bold text-gray-900">{statsCounts[status] || 0}</div>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      {/* FILTERS */}
+      <div className="flex flex-wrap gap-3 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
         <div className="relative flex-1 min-w-[250px]">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Tìm mã booking..."
+            placeholder="Mã booking, mã giao dịch..."
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             value={searchInput}
             onChange={e => { setSearchInput(e.target.value); setCurrentPage(0) }}
           />
         </div>
 
-        <div className="flex items-center gap-2 border border-blue-100 rounded-lg px-2 bg-blue-50/50">
-          <Building2 size={16} className="text-blue-500 ml-1" />
+        {/* BỘ LỌC PHƯƠNG THỨC THANH TOÁN (MỚI) */}
+        <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 bg-white">
+          <CreditCard size={16} className="text-gray-400" />
           <select
-            className="py-2 bg-transparent text-sm outline-none min-w-[180px] font-medium text-blue-700"
+            className="py-2 bg-transparent text-sm outline-none min-w-[160px]"
+            value={methodFilter}
+            onChange={e => { setMethodFilter(e.target.value as PaymentMethod | ''); setCurrentPage(0) }}
+          >
+            <option value="">Tất cả phương thức</option>
+            {Object.entries(METHOD_CONFIG).map(([v, c]) => (
+              <option key={v} value={v}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 bg-white">
+          <User size={16} className="text-gray-400" />
+          <select
+            className="py-2 bg-transparent text-sm outline-none min-w-[150px]"
+            value={selectedOwnerId || ''}
+            onChange={e => { 
+              setSelectedOwnerId(Number(e.target.value) || null)
+              setSelectedHotelId(null)
+              setCurrentPage(0) 
+            }}
+          >
+            <option value="">Tất cả chủ KS</option>
+            {owners.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 bg-white">
+          <Building2 size={16} className="text-gray-400" />
+          <select
+            className="py-2 bg-transparent text-sm outline-none min-w-[180px]"
             value={selectedHotelId || ''}
             onChange={e => { setSelectedHotelId(Number(e.target.value) || null); setCurrentPage(0) }}
           >
             <option value="">Tất cả khách sạn</option>
-            {hotels.map(h => <option key={h.id} value={h.id}>{h.hotelName}</option>)}
+            {hotels
+              .filter(h => !selectedOwnerId || h.ownerId === selectedOwnerId)
+              .map(h => <option key={h.id} value={h.id}>{h.hotelName}</option>)}
           </select>
         </div>
 
-        <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 bg-gray-50/50">
-          <Calendar size={16} className="text-gray-400" />
-          <input type="date" className="bg-transparent text-sm outline-none py-1" value={dateRange.fromDate}
-            onChange={e => setDateRange(prev => ({ ...prev, fromDate: e.target.value }))} />
-          <span className="text-gray-300">-</span>
-          <input type="date" className="bg-transparent text-sm outline-none py-1" value={dateRange.toDate}
-            onChange={e => setDateRange(prev => ({ ...prev, toDate: e.target.value }))} />
-        </div>
-
-        <select
-          className="px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-          value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value as PaymentStatus | ''); setCurrentPage(0) }}
-        >
-          <option value="">Trạng thái</option>
-          {Object.entries(STATUS_CONFIG).map(([key, value]) => (
-            <option key={key} value={key}>{value.label}</option>
-          ))}
-        </select>
-
-        <button onClick={handleClearFilters}
-          className="p-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-red-500 transition-all"
-          title="Xóa lọc">
+        <button onClick={handleClearFilters} className="p-2 border border-gray-200 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
           <RotateCcw size={18} />
         </button>
       </div>
 
-      {/* Export note */}
-      {(search || statusFilter || selectedHotelId) && (
+      {/* HIỂN THỊ DÒNG THÔNG BÁO XUẤT FILE */}
+      {(debouncedSearch || statusFilter || methodFilter || selectedHotelId || selectedOwnerId) && (
         <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
           📌 File Excel sẽ được xuất theo bộ lọc đang áp dụng.
         </p>
       )}
 
-      {/* Table */}
+      {/* TABLE */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
@@ -321,14 +318,14 @@ export default function AdminPaymentsPage() {
             <tbody className="divide-y divide-gray-100">
               {isLoadingPayments ? (
                 <tr><td colSpan={8} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" /></td></tr>
-              ) : filteredPayments.length === 0 ? (
-                <tr><td colSpan={8} className="py-20 text-center text-gray-400 font-medium">Không có dữ liệu</td></tr>
+              ) : payments.length === 0 ? (
+                <tr><td colSpan={8} className="py-20 text-center text-gray-400">Không có dữ liệu</td></tr>
               ) : (
-                filteredPayments.map(p => {
+                payments.map(p => {
                   const hotel = hotels.find(h => h.id === p.hotelId)
                   return (
-                    <tr key={p.id} className="hover:bg-blue-50/30 transition-colors group">
-                      <td className="px-6 py-4 font-mono text-xs text-gray-400 group-hover:text-gray-600">{p.transactionId || '---'}</td>
+                    <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                       <td className="px-6 py-4 font-mono text-xs text-gray-400">{p.transactionId || '---'}</td>
                       <td className="px-6 py-4 font-bold text-blue-600">{p.bookingCode}</td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-semibold text-gray-800">{hotel?.ownerName || '---'}</div>
@@ -361,7 +358,7 @@ export default function AdminPaymentsPage() {
         </div>
 
         {pageData && pageData.totalPages > 1 && (
-          <div className="p-4 border-t border-gray-100 bg-gray-50/30">
+          <div className="p-4 border-t border-gray-100">
             <Pagination
               currentPage={currentPage}
               pageSize={pageSize}

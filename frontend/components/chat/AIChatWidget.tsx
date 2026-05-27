@@ -19,6 +19,15 @@ interface Message {
     status?: 'sending' | 'sent' | 'error'
 }
 
+interface AIChatWidgetProps {
+    /** Khi true: ẩn FAB + Bubble, chỉ render panel chat */
+    panelOnly?: boolean
+    /** Trạng thái mở/đóng được điều khiển từ ngoài */
+    externalOpen?: boolean
+    /** Callback khi người dùng nhấn nút đóng bên trong panel */
+    onToggle?: () => void
+}
+
 // ── Markdown Parser ──────────────────────────────────────────────────────────
 function renderMarkdown(text: string) {
     if (!text) return ''
@@ -43,11 +52,15 @@ const TypingIndicator = () => (
 const WELCOME_TEXT = 'Xin chào! Tôi là **Vago AI** 🤖\n\nTôi có thể giúp bạn tìm phòng, kiểm tra giá, tư vấn lịch trình hoặc giải đáp chính sách khách sạn. Bạn cần hỗ trợ gì hôm nay?'
 
 // ── Main Widget ───────────────────────────────────────────────────────────────
-export default function AIChatWidget() {
+export default function AIChatWidget({ panelOnly, externalOpen, onToggle }: AIChatWidgetProps) {
     const params = useParams()
     const hotelId = params?.id ? Number(params.id) : null
 
-    const [isOpen, setIsOpen] = useState(false)
+    // Nếu panelOnly: dùng externalOpen để biết có hiển thị panel không
+    // Nếu standalone: dùng isOpen nội bộ
+    const [internalOpen, setInternalOpen] = useState(false)
+    const isOpen = panelOnly ? (externalOpen ?? false) : internalOpen
+
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
     const [isTyping, setIsTyping] = useState(false)
@@ -56,45 +69,59 @@ export default function AIChatWidget() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
 
-    // Tạo key lưu trữ riêng biệt theo từng khách sạn
     const storageKey = hotelId ? `vago_ai_chat_hotel_${hotelId}` : 'vago_ai_chat_general'
 
-    // 1. Khởi tạo & Load lịch sử (Chạy lại khi đổi khách sạn)
+    // Load lịch sử
     useEffect(() => {
         const saved = localStorage.getItem(storageKey)
         if (saved) {
             try {
-                const parsed = JSON.parse(saved)
-                setMessages(parsed)
-            } catch (e) {
+                setMessages(JSON.parse(saved))
+            } catch {
                 setMessages([{ id: 'init', role: 'assistant', content: WELCOME_TEXT, timestamp: Date.now() }])
             }
         } else {
             setMessages([{ id: 'init', role: 'assistant', content: WELCOME_TEXT, timestamp: Date.now() }])
         }
-        
-        // Hiển thị lại bong bóng gợi ý khi chuyển trang
-        setShowBubble(true)
-        const t = setTimeout(() => setShowBubble(false), 8000)
-        return () => clearTimeout(t)
-    }, [hotelId, storageKey])
 
-    // 2. Lưu lịch sử khi có tin nhắn mới
+        if (!panelOnly) {
+            setShowBubble(true)
+            const t = setTimeout(() => setShowBubble(false), 8000)
+            return () => clearTimeout(t)
+        }
+    }, [hotelId, storageKey, panelOnly])
+
+    // Lưu lịch sử + scroll
     useEffect(() => {
         if (messages.length > 0) {
             localStorage.setItem(storageKey, JSON.stringify(messages))
         }
-        scrollToBottom()
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages, storageKey])
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
+    // Focus input khi panel mở
+    useEffect(() => {
+        if (isOpen) {
+            setTimeout(() => inputRef.current?.focus(), 300)
+        }
+    }, [isOpen])
 
     const handleOpen = () => {
-        setIsOpen(true)
-        setShowBubble(false)
-        setTimeout(() => inputRef.current?.focus(), 300)
+        if (panelOnly) {
+            onToggle?.()
+        } else {
+            setInternalOpen(true)
+            setShowBubble(false)
+            setTimeout(() => inputRef.current?.focus(), 300)
+        }
+    }
+
+    const handleClose = () => {
+        if (panelOnly) {
+            onToggle?.()
+        } else {
+            setInternalOpen(false)
+        }
     }
 
     const sendMessage = async (overrideText?: string) => {
@@ -129,7 +156,7 @@ export default function AIChatWidget() {
                 timestamp: Date.now()
             }
             setMessages(prev => [...prev, aiMsg])
-        } catch (error) {
+        } catch {
             const errorMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
@@ -156,7 +183,7 @@ export default function AIChatWidget() {
         : ['Tìm khách sạn ở TP. Hồ Chí Minh', 'Chính sách hoàn tiền?', 'Ưu đãi hôm nay']
 
     return (
-        <div className="fixed bottom-6 left-6 z-[60] flex flex-col items-end gap-3">
+        <div className={cn("flex flex-col items-end gap-3", panelOnly && "contents")}>
             
             {/* ── Chat Window ────────────────────────────────────────── */}
             {isOpen && (
@@ -189,7 +216,7 @@ export default function AIChatWidget() {
                                 <button onClick={clearChat} className="p-2 hover:bg-white/10 rounded-full transition-colors text-blue-100" title="Xóa lịch sử">
                                     <Trash2 size={16} />
                                 </button>
-                                <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                <button onClick={handleClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                                     <ChevronDown size={20} />
                                 </button>
                             </div>
@@ -282,51 +309,53 @@ export default function AIChatWidget() {
                 </div>
             )}
 
-            {/* ── Bubble Preview ──────────────────────────────────────── */}
-            {showBubble && !isOpen && (
-                <div 
-                    className="bg-white p-3 rounded-2xl rounded-bl-sm shadow-xl border border-blue-50 max-w-[200px] animate-in slide-in-from-left-5 cursor-pointer hover:bg-blue-50 transition-colors"
-                    onClick={handleOpen}
-                >
-                    <div className="flex items-center gap-2 mb-1.5">
-                        <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
-                            <Bot size={12} className="text-white" />
+            {/* ── Chỉ hiển thị FAB + Bubble khi KHÔNG phải panelOnly ── */}
+            {!panelOnly && (
+                <>
+                    {/* Bubble Preview */}
+                    {showBubble && !internalOpen && (
+                        <div 
+                            className="bg-white p-3 rounded-2xl rounded-bl-sm shadow-xl border border-blue-50 max-w-[200px] animate-in slide-in-from-left-5 cursor-pointer hover:bg-blue-50 transition-colors"
+                            onClick={handleOpen}
+                        >
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
+                                    <Bot size={12} className="text-white" />
+                                </div>
+                                <span className="text-[11px] font-bold text-gray-800">Vago AI</span>
+                            </div>
+                            <p className="text-[11px] text-gray-600 leading-snug">
+                                {hotelId ? "Bạn cần thông tin về khách sạn này?" : "Tôi có thể giúp bạn tìm khách sạn ưng ý!"}
+                            </p>
                         </div>
-                        <span className="text-[11px] font-bold text-gray-800">Vago AI</span>
-                    </div>
-                    <p className="text-[11px] text-gray-600 leading-snug">
-                        {hotelId ? "Bạn cần thông tin về khách sạn này?" : "Tôi có thể giúp bạn tìm khách sạn ưng ý!"}
-                    </p>
-                </div>
-            )}
+                    )}
 
-            {/* ── FAB Button ─────────────────────────────────────────── */}
-            <button
-                onClick={() => isOpen ? setIsOpen(false) : handleOpen()}
-                className={cn(
-                    "w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 relative group active:scale-90",
-                    isOpen ? "bg-gray-800 rotate-90" : "bg-gradient-to-tr from-blue-600 to-indigo-600"
-                )}
-            >
-                {isOpen ? (
-                    <X size={24} className="text-white" />
-                ) : (
-                    <>
-                        <Bot size={26} className="text-white group-hover:scale-110 transition-transform" />
-                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center">
-                            1
-                        </span>
-                        <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20"></div>
-                    </>
-                )}
-            </button>
-            
-            <span className={cn(
-                "text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm transition-all",
-                isOpen ? "bg-gray-100 text-gray-500" : "bg-blue-50 text-blue-600 border border-blue-100"
-            )}>
-                VAGO AI
-            </span>
+                    {/* FAB Button */}
+                    <button
+                        onClick={() => internalOpen ? setInternalOpen(false) : handleOpen()}
+                        className={cn(
+                            "w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 relative group active:scale-90",
+                            internalOpen ? "bg-gray-800 rotate-90" : "bg-gradient-to-tr from-blue-600 to-indigo-600"
+                        )}
+                    >
+                        {internalOpen ? (
+                            <X size={24} className="text-white" />
+                        ) : (
+                            <>
+                                <Bot size={26} className="text-white group-hover:scale-110 transition-transform" />
+                                <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20"></div>
+                            </>
+                        )}
+                    </button>
+                    
+                    <span className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm transition-all",
+                        internalOpen ? "bg-gray-100 text-gray-500" : "bg-blue-50 text-blue-600 border border-blue-100"
+                    )}>
+                        VAGO AI
+                    </span>
+                </>
+            )}
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar {

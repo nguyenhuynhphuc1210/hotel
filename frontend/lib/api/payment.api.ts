@@ -4,13 +4,24 @@ import { PaymentResponse } from '@/types/payment.types'
 import { PageResponse } from './hotel.api' 
 
 const paymentApi = {
-  getAll: (page = 0, size = 10, search?: string, status?: string) =>
+  getAll: (
+    page = 0, 
+    size = 10, 
+    keyword?: string, 
+    status?: string, 
+    method?: string,
+    hotelId?: number | null,
+    ownerId?: number | null
+  ) =>
     axiosInstance.get<PageResponse<PaymentResponse>>(API_CONFIG.ENDPOINTS.PAYMENTS, {
       params: { 
         page, 
         size, 
-        search: search || undefined, 
-        status: status || undefined  
+        keyword: keyword || undefined, 
+        status: status || undefined,
+        method: method || undefined,
+        hotelId: hotelId || undefined,
+        ownerId: ownerId || undefined
       }
     }),
 
