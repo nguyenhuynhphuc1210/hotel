@@ -35,71 +35,49 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                 MIN(roomPrice.totalPrice),
                 h.status,
                 (
-                    SELECT img.imageUrl
-                    FROM HotelImage img
-                    WHERE img.hotel.id = h.id
+                    SELECT img.imageUrl 
+                    FROM HotelImage img 
+                    WHERE img.hotel.id = h.id 
                     AND img.isPrimary = true
                 )
             )
             FROM Hotel h
             JOIN (
-                SELECT
+                SELECT 
                     rt.id as roomTypeId,
                     rt.hotel.id as hotelId,
                     SUM(rc.price)/ :nights as totalPrice
                 FROM RoomType rt
                 JOIN RoomCalendar rc ON rc.roomType.id = rt.id
-                WHERE
-                    rt.isActive = true
+                WHERE 
+                    rt.isActive = true 
                     AND rt.deletedAt IS NULL
                     AND rc.isAvailable = true
                     AND (rc.totalRooms - rc.bookedRooms) > 0
                     AND rc.date >= :checkIn
                     AND rc.date < :checkOut
                     AND rt.maxAdults >= :adults
-                    AND (rt.maxAdults + COALESCE(rt.maxChildren,0))
-                        >= (:adults + :children)
+                    AND (rt.maxAdults + COALESCE(rt.maxChildren,0)) >= (:adults + :children)
                 GROUP BY rt.id, rt.hotel.id
                 HAVING COUNT(DISTINCT rc.date) = :nights
             ) roomPrice ON roomPrice.hotelId = h.id
-            WHERE
+            WHERE 
                 h.status = com.example.backend.enums.HotelStatus.APPROVED
                 AND h.deletedAt IS NULL
-
                 AND (COALESCE(:districts, NULL) IS NULL OR h.district IN :districts)
-
-                AND (:keyword IS NULL
-                     OR LOWER(h.hotelName)
-                     LIKE LOWER(CONCAT('%', :keyword, '%'))
-                     OR LOWER(h.addressLine)
-                     LIKE LOWER(CONCAT('%', :keyword, '%')))
-
+                AND (:keyword IS NULL 
+                     OR LOWER(h.hotelName) LIKE :keyword 
+                     OR LOWER(h.addressLine) LIKE :keyword)
                 AND (COALESCE(:stars, NULL) IS NULL OR h.starRating IN :stars)
-
-            GROUP BY
-                h.id,
-                h.hotelName,
-                h.starRating,
-                h.district,
-                h.city,
-                h.status
-
-            HAVING
+            GROUP BY 
+                h.id, h.hotelName, h.starRating, h.district, h.city, h.status
+            HAVING 
                 (:minPrice IS NULL OR MIN(roomPrice.totalPrice) >= :minPrice)
                 AND (:maxPrice IS NULL OR MIN(roomPrice.totalPrice) <= :maxPrice)
-
-            ORDER BY
-                CASE WHEN :sortBy='price_asc'
-                     THEN MIN(roomPrice.totalPrice)
-                END ASC,
-
-                CASE WHEN :sortBy='price_desc'
-                     THEN MIN(roomPrice.totalPrice)
-                END DESC,
-
-                CASE WHEN :sortBy='star_desc'
-                     THEN h.starRating
-                END DESC
+            ORDER BY 
+                CASE WHEN :sortBy='price_asc' THEN MIN(roomPrice.totalPrice) END ASC,
+                CASE WHEN :sortBy='price_desc' THEN MIN(roomPrice.totalPrice) END DESC,
+                CASE WHEN :sortBy='star_desc' THEN h.starRating END DESC
             """)
     Page<HotelSummaryResponse> searchHotelsWithFilters(
             @Param("districts") List<String> districts,
@@ -116,7 +94,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
             Pageable pageable);
 
     @Query("""
-                SELECT h.owner.email FROM Hotel h
+                SELECT h.owner.email FROM Hotel h 
                 WHERE h.id = :id
             """)
     String findOwnerEmailByHotelId(@Param("id") Long id);
@@ -125,22 +103,18 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
     Optional<Hotel> findByIdWithRoomTypes(@Param("id") Long id);
 
     @Query("""
-            SELECT h
-            FROM Hotel h
+            SELECT h 
+            FROM Hotel h 
             WHERE h.deletedAt IS NULL
             AND (
-                :keyword IS NULL
-                OR LOWER(h.hotelName)
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(h.email)
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(h.district)
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(h.owner.email)
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                :keyword IS NULL 
+                OR LOWER(h.hotelName) LIKE :keyword
+                OR LOWER(h.email) LIKE :keyword
+                OR LOWER(h.district) LIKE :keyword
+                OR LOWER(h.owner.email) LIKE :keyword
             )
             AND (
-                :status IS NULL
+                :status IS NULL 
                 OR h.status = :status
             )
             """)
@@ -150,21 +124,18 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
             Pageable pageable);
 
     @Query("""
-            SELECT h
-            FROM Hotel h
+            SELECT h 
+            FROM Hotel h 
             WHERE h.deletedAt IS NULL
             AND h.owner.email = :ownerEmail
             AND (
-                :keyword IS NULL
-                OR LOWER(h.hotelName)
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(h.email)
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(h.district)
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                :keyword IS NULL 
+                OR LOWER(h.hotelName) LIKE :keyword
+                OR LOWER(h.email) LIKE :keyword
+                OR LOWER(h.district) LIKE :keyword
             )
             AND (
-                :status IS NULL
+                :status IS NULL 
                 OR h.status = :status
             )
             """)

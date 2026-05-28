@@ -66,29 +66,27 @@ public class HotelServiceImpl implements HotelService {
                 size,
                 Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        keyword = (keyword == null || keyword.isBlank())
-                ? null
-                : keyword.trim();
+        String searchKeyword = null;
+        if (keyword != null && !keyword.isBlank()) {
+            searchKeyword = "%" + keyword.trim().toLowerCase() + "%";
+        }
 
         Page<Hotel> hotelPage;
 
         if (isAdmin()) {
-
             hotelPage = hotelRepository.findAdminWithFilter(
-                    keyword,
+                    searchKeyword,
                     status,
                     pageable);
 
         } else if (isHotelOwner()) {
-
             hotelPage = hotelRepository.findOwnerWithFilter(
                     getCurrentUserEmail(),
-                    keyword,
+                    searchKeyword,
                     status,
                     pageable);
 
         } else {
-
             throw new AccessDeniedException(
                     "Bạn không có quyền truy cập trang quản trị");
         }
@@ -365,7 +363,10 @@ public class HotelServiceImpl implements HotelService {
             }
         }
 
-        String searchKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        String searchKeyword = null;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            searchKeyword = "%" + keyword.trim().toLowerCase() + "%";
+        }
 
         Integer searchAdults = (adults != null && adults > 0) ? adults : 1;
         Integer searchChildren = (children != null && children > 0) ? children : 0;

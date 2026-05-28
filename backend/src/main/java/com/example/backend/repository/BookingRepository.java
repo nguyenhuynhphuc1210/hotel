@@ -33,35 +33,17 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             FROM Booking b
             JOIN b.hotel h
             JOIN h.owner o
-
-            WHERE
-
-            (:keyword IS NULL
-            OR LOWER(b.bookingCode)
-            LIKE LOWER(CONCAT('%',:keyword,'%'))
-
-            OR LOWER(b.guestName)
-            LIKE LOWER(CONCAT('%',:keyword,'%'))
-
-            OR LOWER(b.guestEmail)
-            LIKE LOWER(CONCAT('%',:keyword,'%'))
-
-            OR LOWER(h.hotelName)
-            LIKE LOWER(CONCAT('%',:keyword,'%'))
+            WHERE 
+            (:keyword IS NULL 
+            OR LOWER(b.bookingCode) LIKE :keyword 
+            OR LOWER(b.guestName) LIKE :keyword 
+            OR LOWER(b.guestEmail) LIKE :keyword 
+            OR LOWER(h.hotelName) LIKE :keyword 
             )
-
-            AND (:status IS NULL
-            OR b.status=:status)
-
-            AND (:hotelId IS NULL
-            OR h.id=:hotelId)
-
-            AND (:ownerId IS NULL
-            OR o.id=:ownerId)
-
-            AND (:currentOwnerEmail IS NULL
-            OR o.email=:currentOwnerEmail)
-
+            AND (:status IS NULL OR b.status = :status)
+            AND (:hotelId IS NULL OR h.id = :hotelId)
+            AND (:ownerId IS NULL OR o.id = :ownerId)
+            AND (:currentOwnerEmail IS NULL OR o.email = :currentOwnerEmail)
             """)
     Page<Booking> searchBookings(
             @Param("keyword") String keyword,
@@ -85,49 +67,22 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                     b.totalAmount,
                     b.createdAt
                 )
-
                 FROM Booking b
                 JOIN b.hotel h
                 JOIN h.owner o
                 LEFT JOIN Payment p ON p.booking = b
-
-                WHERE
-
+                WHERE 
                 (
-                    :keyword IS NULL
-                    OR LOWER(b.bookingCode)
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
-
-                    OR LOWER(b.guestName)
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
-
-                    OR LOWER(b.guestEmail)
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
-
-                    OR LOWER(h.hotelName)
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
+                    :keyword IS NULL 
+                    OR LOWER(b.bookingCode) LIKE :keyword 
+                    OR LOWER(b.guestName) LIKE :keyword 
+                    OR LOWER(b.guestEmail) LIKE :keyword 
+                    OR LOWER(h.hotelName) LIKE :keyword 
                 )
-
-                AND (
-                    :status IS NULL
-                    OR b.status = :status
-                )
-
-                AND (
-                    :hotelId IS NULL
-                    OR h.id = :hotelId
-                )
-
-                AND (
-                    :ownerId IS NULL
-                    OR o.id = :ownerId
-                )
-
-                AND (
-                    :currentOwnerEmail IS NULL
-                    OR o.email = :currentOwnerEmail
-                )
-
+                AND (:status IS NULL OR b.status = :status)
+                AND (:hotelId IS NULL OR h.id = :hotelId)
+                AND (:ownerId IS NULL OR o.id = :ownerId)
+                AND (:currentOwnerEmail IS NULL OR o.email = :currentOwnerEmail)
                 ORDER BY b.createdAt DESC
             """)
     List<BookingExport> exportBookings(

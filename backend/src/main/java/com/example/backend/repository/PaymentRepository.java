@@ -25,44 +25,29 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
                 JOIN p.booking b
                 JOIN b.hotel h
                 JOIN h.owner o
-
                 WHERE (
-
                     :keyword IS NULL
-
-                    OR LOWER(b.bookingCode)
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
-
-                    OR LOWER(COALESCE(p.transactionId, ''))
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
-
-                    OR LOWER(b.guestName)
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
-
-                    OR LOWER(h.hotelName)
-                        LIKE LOWER(CONCAT('%', :keyword, '%'))
+                    OR LOWER(b.bookingCode) LIKE :keyword
+                    OR LOWER(COALESCE(p.transactionId, '')) LIKE :keyword
+                    OR LOWER(b.guestName) LIKE :keyword
+                    OR LOWER(h.hotelName) LIKE :keyword
                 )
-
                 AND (
                     :status IS NULL
                     OR p.status = :status
                 )
-
                 AND (
                     :method IS NULL
                     OR p.paymentMethod = :method
                 )
-
                 AND (
                     :hotelId IS NULL
                     OR h.id = :hotelId
                 )
-
                 AND (
                     :ownerId IS NULL
                     OR o.id = :ownerId
                 )
-
                 AND (
                     :currentOwnerEmail IS NULL
                     OR o.email = :currentOwnerEmail
@@ -89,54 +74,37 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
                 p.paymentDate,
                 p.createdAt
             )
-
             FROM Payment p
             JOIN p.booking b
             JOIN b.hotel h
             JOIN h.owner o
-
             WHERE (
-
                 :keyword IS NULL
-
-                OR LOWER(b.bookingCode)
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
-
-                OR LOWER(COALESCE(p.transactionId, ''))
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
-
-                OR LOWER(b.guestName)
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
-
-                OR LOWER(h.hotelName)
-                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(b.bookingCode) LIKE :keyword
+                OR LOWER(COALESCE(p.transactionId, '')) LIKE :keyword
+                OR LOWER(b.guestName) LIKE :keyword
+                OR LOWER(h.hotelName) LIKE :keyword
             )
-
             AND (
                 :status IS NULL
                 OR p.status = :status
             )
-
             AND (
                 :method IS NULL
                 OR p.paymentMethod = :method
             )
-
             AND (
                 :hotelId IS NULL
                 OR h.id = :hotelId
             )
-
             AND (
                 :ownerId IS NULL
                 OR o.id = :ownerId
             )
-
             AND (
                 :currentOwnerEmail IS NULL
                 OR o.email = :currentOwnerEmail
             )
-
             ORDER BY p.createdAt DESC
             """)
     List<PaymentExport> exportPayments(

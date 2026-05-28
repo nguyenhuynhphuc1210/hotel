@@ -33,7 +33,7 @@ import java.time.LocalDateTime;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +49,9 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
@@ -74,9 +77,10 @@ public class PaymentServiceImpl implements PaymentService {
                 size,
                 Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        keyword = (keyword == null || keyword.isBlank())
-                ? null
-                : keyword.trim();
+        String searchKeyword = null;
+        if (keyword != null && !keyword.isBlank()) {
+            searchKeyword = "%" + keyword.trim().toLowerCase() + "%";
+        }
 
         String currentOwnerEmail = null;
 
@@ -92,7 +96,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         return paymentRepository.searchPayments(
-                keyword,
+                searchKeyword,
                 status,
                 method,
                 hotelId,
@@ -111,7 +115,11 @@ public class PaymentServiceImpl implements PaymentService {
             Long hotelId,
             Long ownerId) throws IOException {
 
-        keyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        String searchKeyword = null;
+        if (keyword != null && !keyword.isBlank()) {
+            searchKeyword = "%" + keyword.trim().toLowerCase() + "%";
+        }
+        
         String currentOwnerEmail = null;
 
         if (SecurityUtils.isHotelOwner() && !SecurityUtils.isAdmin()) {
@@ -121,7 +129,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         List<PaymentExport> payments = paymentRepository.exportPayments(
-                keyword, status, method, hotelId, ownerId, currentOwnerEmail);
+                searchKeyword, status, method, hotelId, ownerId, currentOwnerEmail);
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Payments Report");
@@ -342,10 +350,10 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (isSuccess) {
-            return "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode() + "&id="
+            return frontendUrl + "/booking/success?bookingCode=" + booking.getBookingCode() + "&id="
                     + booking.getId();
         } else {
-            return "http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode() + "&id="
+            return frontendUrl + "/booking/failed?bookingCode=" + booking.getBookingCode() + "&id="
                     + booking.getId();
         }
     }
@@ -374,10 +382,10 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (isSuccess) {
-            return "http://localhost:3000/booking/success?bookingCode=" + booking.getBookingCode() + "&id="
+            return frontendUrl + "/booking/success?bookingCode=" + booking.getBookingCode() + "&id="
                     + booking.getId();
         } else {
-            return "http://localhost:3000/booking/failed?bookingCode=" + booking.getBookingCode() + "&id="
+            return frontendUrl + "/booking/failed?bookingCode=" + booking.getBookingCode() + "&id="
                     + booking.getId();
         }
     }

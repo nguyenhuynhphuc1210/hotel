@@ -437,9 +437,14 @@ public class BookingServiceImpl implements BookingService {
             currentOwnerEmail = SecurityUtils.getCurrentUserEmail();
         }
 
+        String searchKeyword = null;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            searchKeyword = "%" + keyword.trim().toLowerCase() + "%";
+        }
+
         return bookingRepository
                 .searchBookings(
-                        keyword,
+                        searchKeyword,
                         status,
                         hotelId,
                         ownerId,
@@ -546,8 +551,13 @@ public class BookingServiceImpl implements BookingService {
             throw new AccessDeniedException("Bạn không có quyền export dữ liệu");
         }
 
+        String searchKeyword = null;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            searchKeyword = "%" + keyword.trim().toLowerCase() + "%";
+        }
+
         List<BookingExport> bookings = bookingRepository.exportBookings(
-                keyword, status, hotelId, ownerId, currentOwnerEmail);
+                searchKeyword, status, hotelId, ownerId, currentOwnerEmail);
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Bookings Report");
