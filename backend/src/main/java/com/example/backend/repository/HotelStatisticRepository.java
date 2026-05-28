@@ -46,27 +46,27 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             WHERE hs.hotel.id = :hotelId
 
             AND (
-                :year IS NULL
+                CAST(:year AS integer) IS NULL
                 OR YEAR(hs.statDate) = :year
             )
 
             AND (
-                :month IS NULL
+                CAST(:month AS integer) IS NULL
                 OR MONTH(hs.statDate) = :month
             )
 
             AND (
-                :day IS NULL
+                CAST(:day AS integer) IS NULL
                 OR DAY(hs.statDate) = :day
             )
 
             AND (
-                :fromDate IS NULL
+                CAST(:fromDate AS date) IS NULL
                 OR hs.statDate >= :fromDate
             )
 
             AND (
-                :toDate IS NULL
+                CAST(:toDate AS date) IS NULL
                 OR hs.statDate <= :toDate
             )
 
@@ -94,44 +94,37 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             JOIN h.owner o
 
             WHERE (
-
-                :hotelId IS NULL
+                CAST(:hotelId AS long) IS NULL
                 OR h.id = :hotelId
             )
 
             AND (
-
-                :ownerId IS NULL
+                CAST(:ownerId AS long) IS NULL
                 OR o.id = :ownerId
             )
 
             AND (
-
-                :currentOwnerEmail IS NULL
+                CAST(:currentOwnerEmail AS string) IS NULL
                 OR o.email = :currentOwnerEmail
             )
 
             AND (
-
-                :month IS NULL
+                CAST(:month AS integer) IS NULL
                 OR MONTH(hs.statDate) = :month
             )
 
             AND (
-
-                :year IS NULL
+                CAST(:year AS integer) IS NULL
                 OR YEAR(hs.statDate) = :year
             )
 
             AND (
-
-                :fromDate IS NULL
+                CAST(:fromDate AS date) IS NULL
                 OR hs.statDate >= :fromDate
             )
 
             AND (
-
-                :toDate IS NULL
+                CAST(:toDate AS date) IS NULL
                 OR hs.statDate <= :toDate
             )
 
@@ -154,10 +147,10 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
                 SUM(hs.totalRevenue)
             )
             FROM HotelStatistic hs
-            WHERE (:month IS NULL OR MONTH(hs.statDate) = :month)
-              AND (:year IS NULL OR YEAR(hs.statDate) = :year)
-              AND (:fromDate IS NULL OR hs.statDate >= :fromDate)
-              AND (:toDate IS NULL OR hs.statDate <= :toDate)
+            WHERE (CAST(:month AS integer) IS NULL OR MONTH(hs.statDate) = :month)
+              AND (CAST(:year AS integer) IS NULL OR YEAR(hs.statDate) = :year)
+              AND (CAST(:fromDate AS date) IS NULL OR hs.statDate >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR hs.statDate <= :toDate)
             """)
     SystemStatisticSummary getSystemStatisticSummary(
             @Param("month") Integer month,
@@ -177,13 +170,13 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             FROM HotelStatistic hs
             JOIN hs.hotel h
             JOIN h.owner o
-            WHERE (:hotelId IS NULL OR h.id = :hotelId)
-              AND (:ownerId IS NULL OR o.id = :ownerId)
-              AND (:ownerEmail IS NULL OR o.email = :ownerEmail)
-              AND (:month IS NULL OR MONTH(hs.statDate) = :month)
-              AND (:year IS NULL OR YEAR(hs.statDate) = :year)
-              AND (:fromDate IS NULL OR hs.statDate >= :fromDate)
-              AND (:toDate IS NULL OR hs.statDate <= :toDate)
+            WHERE (CAST(:hotelId AS long) IS NULL OR h.id = :hotelId)
+              AND (CAST(:ownerId AS long) IS NULL OR o.id = :ownerId)
+              AND (CAST(:ownerEmail AS string) IS NULL OR o.email = :ownerEmail)
+              AND (CAST(:month AS integer) IS NULL OR MONTH(hs.statDate) = :month)
+              AND (CAST(:year AS integer) IS NULL OR YEAR(hs.statDate) = :year)
+              AND (CAST(:fromDate AS date) IS NULL OR hs.statDate >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR hs.statDate <= :toDate)
             GROUP BY h.id, h.hotelName
             ORDER BY SUM(hs.totalRevenue) DESC
             """)
@@ -207,13 +200,13 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             FROM HotelStatistic hs
             JOIN hs.hotel h
             JOIN h.owner o
-            WHERE (:ownerEmail IS NULL OR o.email = :ownerEmail)
-              AND (:ownerId IS NULL OR o.id = :ownerId)
-              AND (:hotelId IS NULL OR h.id = :hotelId)
-              AND (:month IS NULL OR MONTH(hs.statDate) = :month)
-              AND (:year IS NULL OR YEAR(hs.statDate) = :year)
-              AND (:fromDate IS NULL OR hs.statDate >= :fromDate)
-              AND (:toDate IS NULL OR hs.statDate <= :toDate)
+            WHERE (CAST(:ownerEmail AS string) IS NULL OR o.email = :ownerEmail)
+              AND (CAST(:ownerId AS long) IS NULL OR o.id = :ownerId)
+              AND (CAST(:hotelId AS long) IS NULL OR h.id = :hotelId)
+              AND (CAST(:month AS integer) IS NULL OR MONTH(hs.statDate) = :month)
+              AND (CAST(:year AS integer) IS NULL OR YEAR(hs.statDate) = :year)
+              AND (CAST(:fromDate AS date) IS NULL OR hs.statDate >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR hs.statDate <= :toDate)
             GROUP BY hs.statDate
             ORDER BY hs.statDate ASC
             """)
