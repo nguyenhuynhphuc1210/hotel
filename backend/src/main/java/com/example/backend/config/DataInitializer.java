@@ -47,18 +47,18 @@ public class DataInitializer implements ApplicationRunner {
         ensureRole("ROLE_HOTEL_OWNER");
         Role adminRole = ensureRole("ROLE_ADMIN");
 
-        User admin = userRepository.findByEmail(adminEmail)
-                .orElseGet(() -> User.builder()
-                        .email(adminEmail)
-                        .build());
-
-        admin.setFullName(adminFullName);
-        admin.setRole(adminRole);
-        admin.setIsActive(true);
-
-        if (admin.getPasswordHash() == null || admin.getPasswordHash().isBlank()) {
-            admin.setPasswordHash(passwordEncoder.encode(adminPassword));
+        if (userRepository.existsByEmail(adminEmail)) {
+            log.info("Admin already exists: {}", adminEmail);
+            return;
         }
+
+        User admin = User.builder()
+                .email(adminEmail)
+                .fullName(adminFullName)
+                .passwordHash(passwordEncoder.encode(adminPassword))
+                .role(adminRole)
+                .isActive(true)
+                .build();
 
         userRepository.save(admin);
 
