@@ -52,11 +52,17 @@ public class VNPayService {
         vnp_Params.put("vnp_ReturnUrl", vnp_ReturnUrl);
         vnp_Params.put("vnp_IpAddr", vnp_IpAddr);
 
-        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+        TimeZone tz = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
+
+        Calendar cld = Calendar.getInstance(tz);
+
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        formatter.setTimeZone(tz);
+
         vnp_Params.put("vnp_CreateDate", formatter.format(cld.getTime()));
 
         cld.add(Calendar.MINUTE, 15);
+
         vnp_Params.put("vnp_ExpireDate", formatter.format(cld.getTime()));
 
         List<String> fieldNames = new ArrayList<>(vnp_Params.keySet());
