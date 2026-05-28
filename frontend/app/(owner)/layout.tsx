@@ -3,15 +3,19 @@
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import React, { useRef, ChangeEvent } from 'react' // Thêm useRef, ChangeEvent
 import {
   LayoutDashboard, Hotel, BedDouble, CalendarDays,
   CalendarCheck, Star, Tag, LogOut, ChevronRight, ChevronDown,
-  Building2, CreditCard, MessageSquare
+  Building2, CreditCard, MessageSquare, Camera, Loader2, User as UserIcon // Thêm icons
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
 import { OwnerHotelProvider, useOwnerHotel } from './owner-hotel-context'
-import NotificationBell from '@/components/layout/NotificationBell'  
+import NotificationBell from '@/components/layout/NotificationBell'
+import userApi from '@/lib/api/user.api' // Thêm api
+import { useMutation } from '@tanstack/react-query' // Thêm mutation
+import toast from 'react-hot-toast' // Thêm toast
 
 const navItems = [
   { href: '/owner', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -29,11 +33,31 @@ const navItems = [
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, clearAuth } = useAuthStore()
+  const { user, clearAuth, setUser } = useAuthStore() // Lấy thêm setUser
+  const fileInputRef = useRef<HTMLInputElement>(null) // Ref cho input file
 
   const handleLogout = () => {
     clearAuth()
     router.push('/admin/login')
+  }
+
+  // LOGIC UPLOAD AVATAR
+  const uploadAvatarMutation = useMutation({
+    mutationFn: (file: File) => userApi.uploadAvatar(file),
+    onSuccess: async () => {
+      toast.success('Cập nhật ảnh đại diện thành công!')
+      try {
+        const res = await userApi.getMyProfile()
+        if (setUser) setUser(res.data)
+      } catch { }
+    },
+    onError: () => toast.error('Upload ảnh thất bại'),
+  })
+
+  const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      uploadAvatarMutation.mutate(e.target.files[0])
+    }
   }
 
   const { hotels, activeHotelId, setActiveHotelId, isLoading } = useOwnerHotel()
@@ -67,17 +91,53 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* User + Logout */}
+        {/* User Section với chức năng Avatar */}
         <div className="border-t border-gray-200 p-3 space-y-1">
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-sm font-semibold shrink-0">
-              {user?.fullName?.charAt(0) ?? 'O'}
+          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 relative group">
+            
+            {/* AVATAR CONTAINER */}
+            <div className="relative shrink-0">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-sm font-semibold overflow-hidden border border-gray-200">
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  user?.fullName?.charAt(0) ?? <UserIcon size={20} />
+                )}
+              </div>
+              
+              {/* Nút upload nhỏ đè lên avatar khi hover */}
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadAvatarMutation.isPending}
+                className="absolute -bottom-1 -right-1 p-1 bg-white border border-gray-200 rounded-full shadow-sm text-gray-600 hover:text-blue-600 transition-colors"
+              >
+                {uploadAvatarMutation.isPending ? (
+                  <Loader2 size={10} className="animate-spin" />
+                ) : (
+                  <Camera size={10} />
+                )}
+              </button>
+              
+              {/* Input file ẩn */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={onFileChange}
+              />
             </div>
+
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate">{user?.fullName ?? 'Owner'}</div>
-              <div className="text-xs text-gray-400 truncate">{user?.email ?? ''}</div>
+              <div className="text-sm font-bold text-gray-900 truncate">
+                {user?.fullName ?? 'Owner'}
+              </div>
+              <div className="text-[10px] text-gray-400 truncate">
+                {user?.email ?? ''}
+              </div>
             </div>
           </div>
+
           <button onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
             <LogOut size={17} />Đăng xuất
@@ -97,7 +157,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          {/* Right side: Hotel selector + Notification Bell */}
+          {/* Right side */}
           <div className="flex items-center gap-3">
             <span className="hidden md:inline text-xs text-gray-400 font-medium uppercase tracking-wider">Khách sạn:</span>
             <div className="relative">
@@ -119,9 +179,19 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
             </div>
 
-            {/* ── Notification Bell ── */}
             <div className="w-px h-5 bg-gray-200 mx-1" />
             <NotificationBell />
+            
+            {/* Hiển thị avatar nhỏ ở header cho đồng bộ */}
+            <div className="w-8 h-8 rounded-full bg-blue-100 overflow-hidden border border-gray-200">
+               {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-blue-700 text-xs font-bold">
+                    {user?.fullName?.charAt(0)}
+                  </div>
+                )}
+            </div>
           </div>
         </header>
 

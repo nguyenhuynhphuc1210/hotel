@@ -184,7 +184,7 @@ function DatePicker({
 
     return (
         <div
-            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-2xl shadow-2xl z-[400] overflow-hidden"
+            className="absolute top-full w-[840px] mt-1 bg-white border border-gray-200 rounded-2xl shadow-2xl z-[400] overflow-hidden"
             onClick={stop}
             onMouseDown={stop}
         >
@@ -198,7 +198,7 @@ function DatePicker({
                         onMouseDown={stop}
                         onClick={tab.onClick}
                         className={[
-                            'flex items-start gap-4 px-6 py-5 text-left transition-colors',
+                            'flex items-start gap-4 px-6 py-3 text-left transition-colors',
                             i === 0 ? 'border-r border-gray-200' : '',
                             tab.active ? 'bg-blue-50' : 'hover:bg-gray-50',
                         ].join(' ')}
@@ -691,7 +691,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
                     <div className="relative grid grid-cols-3 divide-x divide-gray-100">
                         <button
                             onClick={() => { setShowDate(true); setPickingEnd(false); setShowGuests(false); setShowSuggest(false) }}
-                            className="flex flex-col px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+                            className="flex flex-col px-6 py-3 text-left hover:bg-gray-50 transition-colors"
                         >
                             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Nhận phòng</span>
                             <span className={`text-base font-bold leading-tight ${checkIn ? 'text-gray-900' : 'text-gray-400'}`}>
@@ -702,7 +702,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
 
                         <button
                             onClick={() => { setShowDate(true); setPickingEnd(true); setShowGuests(false); setShowSuggest(false) }}
-                            className="flex flex-col px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+                            className="flex flex-col px-6 py-3 text-left hover:bg-gray-50 transition-colors"
                         >
                             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Trả phòng</span>
                             <span className={`text-base font-bold leading-tight ${checkOut ? 'text-gray-900' : 'text-gray-400'}`}>
@@ -714,7 +714,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
                         <div className="relative">
                             <button
                                 onClick={() => { setShowGuests(v => !v); setShowDate(false); setShowSuggest(false) }}
-                                className="w-full flex flex-col px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+                                className="w-full flex flex-col px-6 py-3 text-left hover:bg-gray-50 transition-colors"
                             >
                                 <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Khách & phòng</span>
                                 <div className="flex items-center gap-2">

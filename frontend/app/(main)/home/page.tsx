@@ -11,6 +11,7 @@ import hotelApi, { HotelSummaryResponse } from '@/lib/api/hotel.api'
 import promotionApi from '@/lib/api/promotion.api'
 import SearchBar from '@/components/common/SearchBar'
 import { PromotionResponse } from '@/types/promotion.types'
+import UpgradeToPartnerModal from '@/components/auth/UpgradeToPartnerModal'
 
 
 // ─── Districts ────────────────────────────────────────────
@@ -89,25 +90,31 @@ export default function HomePage() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    const [isModalOpen, setIsModalOpen] = useState(false)
+
     return (
+
         <div className="pb-20">
+
             <div className={`fixed top-16 left-0 w-full z-40 bg-white border-b border-gray-100 py-3 px-4 shadow-xl transition-all duration-500 transform ${isSticky ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
                 }`}>
                 <SearchBar variant="compact" />
             </div>
 
-           <section className="relative bg-gradient-to-br from-blue-700 via-blue-600 to-emerald-500 text-white">
-            <div className="max-w-7xl mx-auto px-4 pt-16 pb-32">
-                <div className="text-center mb-10">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                        Khám phá khách sạn tốt nhất
-                    </h1>
-                </div>                
-                <div className="max-w-5xl mx-auto">
-                    <SearchBar variant="hero" />
+            <UpgradeToPartnerModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+            <section className="relative bg-gradient-to-br from-blue-700 via-blue-600 to-emerald-500 text-white">
+                <div className="max-w-7xl mx-auto px-4 pt-16 pb-32">
+                    <div className="text-center mb-10">
+                        <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                            Khám phá khách sạn tốt nhất
+                        </h1>
+                    </div>
+                    <div className="max-w-5xl mx-auto">
+                        <SearchBar variant="hero" />
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
             <section className="max-w-7xl mx-auto px-4 mt-14">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">
                     Các điểm thu hút nhất TP. Hồ Chí Minh
@@ -202,10 +209,10 @@ export default function HomePage() {
                         <p className="text-blue-100">Đăng ký ngay để tiếp cận hàng nghìn khách hàng tiềm năng tại TP.HCM</p>
                     </div>
                     <button
-                        onClick={() => router.push('/register')}
-                        className="flex items-center gap-2 bg-white text-blue-700 font-semibold px-6 py-3 rounded-xl hover:bg-blue-50 transition-colors shrink-0"
+                        onClick={() => setIsModalOpen(true)}
+                        className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap"
                     >
-                        Đăng ký ngay <ArrowRight size={18} />
+                        Đăng ký ngay →
                     </button>
                 </div>
             </section>

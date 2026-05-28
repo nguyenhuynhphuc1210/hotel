@@ -26,6 +26,7 @@ interface HotelChatWidgetProps {
     externalOpen?: boolean
     /** Callback khi người dùng nhấn nút đóng bên trong panel */
     onToggle?: () => void
+    onUnreadChange?: (count: number) => void
 }
 
 function fmt(ts: string) {
@@ -34,7 +35,7 @@ function fmt(ts: string) {
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8080/ws/chat'
 
-export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, panelOnly, externalOpen, onToggle }: HotelChatWidgetProps) {
+export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, panelOnly, externalOpen, onToggle, onUnreadChange  }: HotelChatWidgetProps) {
     const { user, token } = useAuthStore()
 
     const [internalOpen, setInternalOpen] = useState(false)
@@ -57,6 +58,16 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, p
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages])
+
+     useEffect(() => {
+        onUnreadChange?.(unreadCount)
+    }, [unreadCount, onUnreadChange])
+
+    useEffect(() => {
+        if (isOpen) {
+            setUnreadCount(0)
+        }
+    }, [isOpen])
 
     // Focus input khi panel mở
     useEffect(() => {
@@ -83,11 +94,13 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, p
             reconnectDelay: 5000,
             onConnect: () => {
                 setIsConnected(true)
-
                 client.subscribe('/user/queue/messages', (frame) => {
                     const msg: ChatMsg = JSON.parse(frame.body)
+                    
+                    // Kiểm tra nếu tin nhắn thuộc hội thoại hiện tại
                     if (msg.conversationId && conversationIdRef.current === null)
                         conversationIdRef.current = msg.conversationId
+                    
                     if (msg.conversationId !== conversationIdRef.current) return
 
                     setMessages(prev => {
@@ -97,10 +110,12 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, p
                         return [...prev, msg]
                     })
 
-                    if (isOpenRef.current && msg.senderEmail !== user.email)
+                    if (isOpenRef.current && msg.senderEmail !== user.email) {
                         sendReadReceipt(msg.senderEmail, client)
-                    else if (!isOpenRef.current)
+                    } else if (!isOpenRef.current && msg.senderEmail !== user.email) {
+                        
                         setUnreadCount(n => n + 1)
+                    }
                 })
 
                 client.subscribe('/user/queue/read', (frame) => {

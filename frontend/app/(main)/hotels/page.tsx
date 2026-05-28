@@ -1,20 +1,17 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
     MapPin, Star, SlidersHorizontal,
     Search, X, ArrowUpDown,
 } from 'lucide-react'
-import axiosInstance from '@/lib/api/axios'
-import API_CONFIG from '@/config/api.config'
 import hotelApi, { HotelSummaryResponse, HotelSearchParams } from '@/lib/api/hotel.api'
 import SearchBar from '@/components/common/SearchBar'
 import Pagination from '@/components/ui/Pagination'
 
 // ── Types ─────────────────────────────────────────────────
-type MinPriceMap = Record<number, number | null>
 type SortOption = 'recommended' | 'price_asc' | 'price_desc' | 'star_desc'
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
@@ -56,13 +53,9 @@ export default function HotelsPage() {
     const pageSize = 10
 
     // ── Giải quyết lỗi Cascading Renders ──
-    // Thay vì useEffect, chúng ta khởi tạo state trực tiếp. 
-    // Để input reset khi URL thay đổi (vd: nhấn xóa lọc), ta dùng "key" ở component cha hoặc reset thủ công khi render.
     const [tempMinPrice, setTempMinPrice] = useState(minPriceUrl)
     const [tempMaxPrice, setTempMaxPrice] = useState(maxPriceUrl)
 
-    // Nếu URL thay đổi (vd: nhấn nút xóa tất cả), ta cần cập nhật lại temp state
-    // Cách này an toàn hơn useEffect vì nó kiểm tra sự thay đổi giá trị trước khi set
     if (tempMinPrice !== minPriceUrl && !minPriceUrl && tempMinPrice !== '') {
         setTempMinPrice('')
     }
@@ -92,29 +85,8 @@ export default function HotelsPage() {
 
     const hotels = pageData?.content || []
     const totalElements = pageData?.totalElements || 0
-    const hotelIds = hotels.map((h: HotelSummaryResponse) => h.id).join(',')
 
-    const { data: minPrices = {} } = useQuery<MinPriceMap>({
-        queryKey: ['min-prices', hotelIds, checkIn, checkOut],
-        queryFn: async () => {
-            if (!hasFullDates || hotels.length === 0) return {}
-            const results = await Promise.allSettled(
-                hotels.map((h: HotelSummaryResponse) =>
-                    axiosInstance.get(API_CONFIG.ENDPOINTS.HOTEL_MIN_PRICE(h.id), {
-                        params: { checkIn, checkOut },
-                    }).then(r => ({ id: h.id, price: r.data }))
-                )
-            )
-            const map: MinPriceMap = {}
-            results.forEach(r => {
-                if (r.status === 'fulfilled') map[r.value.id] = r.value.price
-            })
-            return map
-        },
-        enabled: hasFullDates && hotels.length > 0,
-    })
-
-    // ── Update URL (Fix TypeScript Error ở đây) ──
+    // ── Update URL ──
     const updateQueryParams = (updates: Record<string, string | string[] | number[] | number | null>) => {
         const p = new URLSearchParams(searchParams.toString())
         
@@ -322,7 +294,6 @@ export default function HotelsPage() {
                                     <HotelCard
                                         key={h.id}
                                         hotel={h}
-                                        minPrice={minPrices[h.id]}
                                         nights={nights}
                                         hasFullDates={hasFullDates}
                                         onCardClick={() => router.push(`/hotels/${h.id}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${rooms}`)}
@@ -356,13 +327,12 @@ export default function HotelsPage() {
 // ─── Hotel Card Component ──────────────────────────────────
 interface HotelCardProps {
     hotel: HotelSummaryResponse
-    minPrice: number | null | undefined
     nights: number
     onCardClick: () => void
     hasFullDates: boolean
 }
 
-function HotelCard({ hotel: h, minPrice, nights, onCardClick, hasFullDates }: HotelCardProps) {
+function HotelCard({ hotel: h, nights, onCardClick, hasFullDates }: HotelCardProps) {
     const stars = Math.round(Number(h.starRating ?? 0))
     const displayImage = h.thumbnailUrl || h.images?.find(i => i.isPrimary)?.imageUrl
 
@@ -392,15 +362,15 @@ function HotelCard({ hotel: h, minPrice, nights, onCardClick, hasFullDates }: Ho
                 </div>
                 <div className="flex items-end justify-end mt-4 pt-4 border-t border-gray-100">
                     <div className="text-right">
-                        {(minPrice || h.minPrice) ? (
+                        {h.minPrice ? (
                             <>
                                 <div className="text-xs text-gray-400">Giá từ</div>
                                 <div className="text-2xl font-bold text-red-500">
-                                    {Number(minPrice || h.minPrice).toLocaleString('vi-VN')}₫
+                                    {Number(h.minPrice).toLocaleString('vi-VN')}₫
                                 </div>
                                 {hasFullDates && nights > 0 && (
                                     <div className="text-xs text-gray-400 mt-0.5">
-                                        Tổng {(Number(minPrice || h.minPrice) * nights).toLocaleString('vi-VN')}₫ / {nights} đêm
+                                        Tổng {(Number(h.minPrice) * nights).toLocaleString('vi-VN')}₫ / {nights} đêm
                                     </div>
                                 )}
                             </>
