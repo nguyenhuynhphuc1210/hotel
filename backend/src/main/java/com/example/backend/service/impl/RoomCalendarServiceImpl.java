@@ -85,7 +85,8 @@ public class RoomCalendarServiceImpl implements RoomCalendarService {
     public void updateCalendarByDateRange(Long roomTypeId, UpdateCalendarRequest request) {
 
         if (request.getStartDate().isAfter(request.getEndDate())) {
-            throw new IllegalArgumentException("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc");
+            throw new IllegalArgumentException(
+                    "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc");
         }
 
         RoomType roomType = roomTypeRepository.findById(roomTypeId)
@@ -95,10 +96,14 @@ public class RoomCalendarServiceImpl implements RoomCalendarService {
                 roomType.getHotel().getOwner().getEmail());
 
         List<RoomCalendar> calendarsToUpdate = roomCalendarRepository
-                .findByRoomType_IdAndDateBetween(roomTypeId, request.getStartDate(), request.getEndDate());
+                .findByRoomType_IdAndDateBetween(
+                        roomTypeId,
+                        request.getStartDate(),
+                        request.getEndDate());
 
         if (calendarsToUpdate.isEmpty()) {
-            throw new IllegalArgumentException("Không tìm thấy dữ liệu lịch cho khoảng thời gian này. Vui lòng kiểm tra lại.");
+            throw new IllegalArgumentException(
+                    "Không tìm thấy dữ liệu lịch cho khoảng thời gian này");
         }
 
         for (RoomCalendar calendar : calendarsToUpdate) {
@@ -109,6 +114,18 @@ public class RoomCalendarServiceImpl implements RoomCalendarService {
 
             if (request.getIsAvailable() != null) {
                 calendar.setIsAvailable(request.getIsAvailable());
+            }
+
+            if (request.getTotalRooms() != null) {
+
+                if (request.getTotalRooms() < calendar.getBookedRooms()) {
+                    throw new IllegalArgumentException(
+                            "Tổng số phòng không thể nhỏ hơn số phòng đã đặt (" +
+                                    calendar.getBookedRooms() + ") vào ngày " +
+                                    calendar.getDate());
+                }
+
+                calendar.setTotalRooms(request.getTotalRooms());
             }
         }
 

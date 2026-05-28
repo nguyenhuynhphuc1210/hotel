@@ -14,7 +14,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.beans.factory.annotation.Value;
 import java.io.UnsupportedEncodingException;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -25,6 +25,9 @@ public class EmailServiceImpl implements EmailService {
 
         private final JavaMailSender mailSender;
         private final BookingRepository bookingRepository;
+
+        @Value("${app.frontend.url}")
+        private String frontendUrl;
 
         @Override
         @Async
@@ -114,8 +117,8 @@ public class EmailServiceImpl implements EmailService {
                                 : "Đã thanh toán trực tuyến (" + booking.getPayment().getPaymentMethod().name() + ")";
 
                 String manageLink = booking.getUser() != null
-                                ? "http://localhost:3000/booking/detail/" + booking.getId()
-                                : "http://localhost:3000/booking/lookup?code=" + booking.getBookingCode();
+                                ? frontendUrl + "/booking/detail/" + booking.getId()
+                                : frontendUrl + "/booking/lookup?code=" + booking.getBookingCode();
 
                 String htmlMsg = "<div style='background-color: #f2f5f8; padding: 30px 10px; font-family: Arial, Helvetica, sans-serif; color: #333; line-height: 1.5;'>"
                                 + "<div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; overflow: hidden;'>"
@@ -216,7 +219,7 @@ public class EmailServiceImpl implements EmailService {
                 String address = booking.getHotel().getAddressLine() + ", " + booking.getHotel().getWard() + ", "
                                 + booking.getHotel().getDistrict() + ", " + booking.getHotel().getCity();
 
-                String homeLink = "http://localhost:3000";
+                String homeLink = frontendUrl;
 
                 String htmlMsg = "<div style='background-color: #f0f2f5; padding: 30px 10px; font-family: Arial, Helvetica, sans-serif; color: #333; line-height: 1.5;'>"
                                 + "<div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; overflow: hidden;'>"
