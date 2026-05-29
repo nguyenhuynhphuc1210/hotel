@@ -1,9 +1,10 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import { XCircle, ArrowLeft, RefreshCw, Home } from 'lucide-react'
+import { XCircle, RefreshCw, Home } from 'lucide-react'
+import { Suspense } from 'react'
 
-export default function PaymentFailedPage() {
+function PaymentFailedContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const bookingCode = searchParams.get('bookingCode') || ''
@@ -76,5 +77,13 @@ export default function PaymentFailedPage() {
                 </p>
             </div>
         </div>
+    )
+}
+
+export default function PaymentFailedPage() {
+    return (
+        <Suspense fallback={null}>
+            <PaymentFailedContent />
+        </Suspense>
     )
 }
