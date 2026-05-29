@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "promotions", indexes = {
         @Index(name = "idx_promo_hotel_valid", columnList = "hotel_id, is_active, end_date")
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "uk_hotel_promo", columnNames = { "hotel_id", "promo_code" })
 })
 @Getter
 @Setter
@@ -24,7 +26,7 @@ public class Promotion {
     @JoinColumn(name = "hotel_id")
     private Hotel hotel;
 
-    @Column(name = "promo_code", nullable = false, unique = true, length = 20)
+    @Column(name = "promo_code", nullable = false, length = 20)
     private String promoCode;
 
     @Column(name = "discount_percent", precision = 5, scale = 2)
