@@ -29,19 +29,29 @@ interface ChatMsg {
     isRead: boolean
 }
 
+function parseTs(ts: string): Date {
+    if (!ts) return new Date()
+    if (!ts.endsWith('Z') && !/[+\-]\d{2}:\d{2}$/.test(ts)) {
+        return new Date(ts + 'Z')
+    }
+    return new Date(ts)
+}
+
+// SỬA fmt — chỉ đổi new Date(ts) → parseTs(ts)
+function fmt(ts: string) {
+    return parseTs(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+}
+
+// SỬA timeAgo — chỉ đổi new Date(ts) → parseTs(ts)
 function timeAgo(ts: string) {
     if (!ts) return ''
-    const diff = Date.now() - new Date(ts).getTime()
+    const diff = Date.now() - parseTs(ts).getTime()
     const mins = Math.floor(diff / 60000)
     if (mins < 1) return 'Vừa xong'
     if (mins < 60) return `${mins} phút trước`
     const hrs = Math.floor(mins / 60)
     if (hrs < 24) return `${hrs} giờ trước`
-    return new Date(ts).toLocaleDateString('vi-VN')
-}
-
-function fmt(ts: string) {
-    return new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    return parseTs(ts).toLocaleDateString('vi-VN')
 }
 
 function initials(name: string) {
@@ -105,6 +115,7 @@ export default function OwnerMessagesPage() {
                 client.subscribe('/user/queue/messages', (frame) => {
                     const msg: ChatMsg = JSON.parse(frame.body)
                     const current = selectedConvRef.current
+                    console.log('WS msg timestamp:', msg.timestamp)
 
                     if (current && msg.conversationId === current.id) {
                         // Đang xem conversation này → thêm tin + gửi read receipt ngay

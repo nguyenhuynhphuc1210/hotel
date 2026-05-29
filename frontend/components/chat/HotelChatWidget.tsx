@@ -29,8 +29,30 @@ interface HotelChatWidgetProps {
     onUnreadChange?: (count: number) => void
 }
 
+// THÊM hàm này
+function parseTs(ts: string): Date {
+    if (!ts) return new Date()
+    if (!ts.endsWith('Z') && !/[+\-]\d{2}:\d{2}$/.test(ts)) {
+        return new Date(ts + 'Z')
+    }
+    return new Date(ts)
+}
+
+// SỬA fmt — chỉ đổi new Date(ts) → parseTs(ts)
 function fmt(ts: string) {
-    return new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    return parseTs(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+}
+
+// SỬA timeAgo — chỉ đổi new Date(ts) → parseTs(ts)
+function timeAgo(ts: string) {
+    if (!ts) return ''
+    const diff = Date.now() - parseTs(ts).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'Vừa xong'
+    if (mins < 60) return `${mins} phút trước`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs} giờ trước`
+    return parseTs(ts).toLocaleDateString('vi-VN')
 }
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8080/ws/chat'
