@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { useState, useRef, useMemo, useTransition } from 'react'
+import { useState, useRef, useMemo, useTransition, Suspense  } from 'react'
 import {
     MapPin, Star, Info,
     CheckCircle2,
@@ -334,7 +334,7 @@ function RoomCard({
 }
 
 // ── Page chính ────────────────────────────────────────────────────────────
-export default function HotelDetailPage() {
+function HotelDetailContent() {
     const router = useRouter()
     const { id } = useParams()
     const hotelId = Number(id)
@@ -1087,4 +1087,12 @@ export default function HotelDetailPage() {
             </div>
         </div>
     )
+}
+
+export default function HotelDetailPage() {
+  return (
+    <Suspense fallback={<div className="py-20 text-center">Đang tải...</div>}>
+      <HotelDetailContent />
+    </Suspense>
+  )
 }
