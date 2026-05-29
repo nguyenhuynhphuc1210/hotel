@@ -2,12 +2,13 @@
 
 import { useSearchParams, useRouter } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
+import { Suspense } from 'react'
 
-export default function BookingSuccessPage() {
+function BookingSuccessContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const bookingCode = searchParams.get('bookingCode')
-     const bookingId = searchParams.get('id') 
+    const bookingId = searchParams.get('id')
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -31,5 +32,13 @@ export default function BookingSuccessPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function BookingSuccessPage() {
+    return (
+        <Suspense fallback={null}>
+            <BookingSuccessContent />
+        </Suspense>
     )
 }
