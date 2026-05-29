@@ -66,7 +66,7 @@ export default function UserEditModal({ user, onClose }: Props) {
       roleId: data.roleId,
       // Chỉ gửi password nếu có nhập
       password: data.password || 'KEEP_UNCHANGED',
-      avatarUrl: data.avatarUrl || undefined,
+      
     })
     onClose()
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Suspense  } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -29,7 +29,7 @@ const ALL_DISTRICTS = [
     'Huyện Củ Chi', 'Huyện Hóc Môn', 'Huyện Nhà Bè', 'Huyện Bình Chánh', 'Huyện Cần Giờ',
 ]
 
-export default function HotelsPage() {
+function HotelsContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
 
@@ -382,4 +382,12 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates }: HotelCardPro
             </div>
         </div>
     )
+}
+
+export default function HotelsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <HotelsContent />
+    </Suspense>
+  )
 }

@@ -47,7 +47,7 @@ export default function UserCreateModal({ open, onClose }: Props) {
       dateOfBirth: data.dateOfBirth || undefined,
       gender: data.gender,
       roleId: data.roleId,
-      avatarUrl: data.avatarUrl || undefined,
+      
     })
     reset()
     onClose()

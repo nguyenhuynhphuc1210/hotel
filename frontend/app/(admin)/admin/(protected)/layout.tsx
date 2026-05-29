@@ -26,7 +26,7 @@ const navItems = [
   { href: '/admin/trash', label: 'Thùng rác', icon: Trash2 },
 ]
 
-function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayout({ children }: { children: React.ReactNode; params?: Promise<Record<string, string>> }) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, clearAuth, setUser } = useAuthStore()
@@ -186,4 +186,4 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default dynamic(() => Promise.resolve(AdminLayout), { ssr: false })
+export default AdminLayout

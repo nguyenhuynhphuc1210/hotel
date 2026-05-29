@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense  } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -51,7 +51,7 @@ const DISTRICT_IMAGES: Record<string, string> = {
 }
 const FALLBACK = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=300&fit=crop'
 
-export default function HomePage() {
+function HomeContent() {
     const router = useRouter()
     const [currentPage, setCurrentPage] = useState(0)
     const pageSize = 8
@@ -384,4 +384,12 @@ function PromotionCard({ promotion }: {
             </div>
         </div>
     )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <HomeContent />
+    </Suspense>
+  )
 }

@@ -11,7 +11,7 @@ import {
     Tag, X, ChevronRight,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, Suspense  } from 'react'
 
 import hotelApi from '@/lib/api/hotel.api'
 import roomApi from '@/lib/api/room.api'
@@ -84,7 +84,7 @@ const submitButtonConfig = {
     },
 }
 
-export default function BookingPage() {
+function BookingContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const user = useAuthStore((s) => s.user)
@@ -675,5 +675,20 @@ export default function BookingPage() {
                 </form>
             </div>
         </div>
+    )
+}
+
+export default function BookingPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-[#f7f8fa] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="animate-spin text-blue-600" size={32} />
+                    <p className="text-gray-400 text-sm">Đang tải...</p>
+                </div>
+            </div>
+        }>
+            <BookingContent />
+        </Suspense>
     )
 }
