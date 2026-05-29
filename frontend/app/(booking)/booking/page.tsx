@@ -11,7 +11,7 @@ import {
     Tag, X, ChevronRight,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useMemo, useState, Suspense  } from 'react'
+import { useMemo, useState, Suspense } from 'react'
 
 import hotelApi from '@/lib/api/hotel.api'
 import roomApi from '@/lib/api/room.api'
@@ -252,6 +252,25 @@ function BookingContent() {
         }
     }
 
+    const { data: availablePromos = [] } = useQuery<PromotionResponse[]>({
+        queryKey: ['available-promotions', hotelId],
+        queryFn: () => promotionApi.getAll().then(r => r.data),
+        select: (data) => {
+            const now = new Date()
+            return data.filter(p =>
+                p.isActive &&
+                new Date(p.startDate) <= now &&
+                new Date(p.endDate) >= now &&
+                (!p.hotelId || p.hotelId === hotelId)
+            )
+        }
+    })
+
+    const selectQuickPromo = (code: string) => {
+        setPromoCode(code)
+        setPromoError('')
+    }
+
     const formatDate = (dateStr: string) => {
         if (!dateStr) return ''
         return new Date(dateStr).toLocaleDateString('vi-VN', {
@@ -379,7 +398,6 @@ function BookingContent() {
                                 <div className="flex items-center gap-3 mb-5">
                                     <div className="step-badge">2</div>
                                     <h2 className="text-base font-bold text-gray-900">Mã giảm giá</h2>
-                                    <span className="text-xs text-gray-400 font-normal">(Không bắt buộc)</span>
                                 </div>
 
                                 {appliedPromo ? (
@@ -423,7 +441,7 @@ function BookingContent() {
                                     </div>
                                 ) : (
                                     // ── Chưa áp dụng ──
-                                    <div>
+                                    <div className="space-y-4">
                                         <div className="flex">
                                             <input
                                                 type="text"
@@ -433,7 +451,7 @@ function BookingContent() {
                                                     if (promoError) setPromoError('')
                                                 }}
                                                 onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleApplyPromo())}
-                                                placeholder="Nhập mã giảm giá"
+                                                placeholder="NHẬP MÃ GIẢM GIÁ"
                                                 className={`promo-input ${promoError ? 'promo-error' : ''}`}
                                                 disabled={isValidatingPromo}
                                             />
@@ -449,11 +467,53 @@ function BookingContent() {
                                                 }
                                             </button>
                                         </div>
+
                                         {promoError && (
-                                            <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
+                                            <p className="text-red-500 text-xs mt-1 flex items-center gap-1 italic font-medium">
                                                 <X size={11} /> {promoError}
                                             </p>
                                         )}
+
+                                        {/* DANH SÁCH THẺ GIẢM GIÁ GỢI Ý */}
+                                        {availablePromos.length > 0 && (
+                                            <div className="space-y-2 mt-4">
+                                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Ưu đãi dành cho bạn</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {availablePromos.map((p) => {
+                                                        const isMinOrderMet = !p.minOrderValue || totalPrice >= p.minOrderValue;
+                                                        return (
+                                                            <button
+                                                                key={p.id}
+                                                                type="button"
+                                                                onClick={() => selectQuickPromo(p.promoCode)}
+                                                                disabled={!isMinOrderMet}
+                                                                className={`flex items-center gap-2 border-2 border-dashed rounded-xl px-3 py-2 text-left transition-all hover:scale-[1.02] active:scale-95 group 
+                                        ${!isMinOrderMet
+                                                                        ? 'opacity-50 grayscale cursor-not-allowed border-gray-200 bg-gray-50'
+                                                                        : 'border-blue-100 bg-blue-50/30 hover:border-blue-400 hover:bg-blue-50'
+                                                                    }`}
+                                                            >
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${!isMinOrderMet ? 'bg-gray-200' : 'bg-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors'}`}>
+                                                                    <Tag size={14} className={!isMinOrderMet ? 'text-gray-400' : 'text-blue-600 group-hover:text-white'} />
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="font-bold text-gray-800 text-xs">{p.promoCode}</span>
+                                                                        <span className="text-[10px] font-black text-red-500">-{p.discountPercent}%</span>
+                                                                    </div>
+                                                                    <p className="text-[10px] text-gray-500 truncate">
+                                                                        {p.minOrderValue
+                                                                            ? `Đơn từ ${p.minOrderValue.toLocaleString('vi-VN')}₫`
+                                                                            : 'Mọi đơn hàng'}
+                                                                    </p>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <p className="text-[11px] text-gray-400 mt-2">
                                             Mã giảm giá sẽ được áp dụng vào tổng tiền thanh toán.
                                         </p>
@@ -588,7 +648,7 @@ function BookingContent() {
                                         <div className="space-y-2.5">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-gray-500">
-                                                     {avgPricePerNight.toLocaleString('vi-VN')}₫ × {nights} đêm × {quantity} phòng
+                                                    {avgPricePerNight.toLocaleString('vi-VN')}₫ × {nights} đêm × {quantity} phòng
                                                 </span>
                                                 <span className="font-semibold text-gray-800">
                                                     {totalPrice.toLocaleString('vi-VN')}₫

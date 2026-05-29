@@ -64,6 +64,13 @@ export default function AdminBookingsPage() {
     }).then(r => r.data.content),
   })
 
+  const calculateNights = (checkIn: string, checkOut: string): number => {
+    const start = new Date(checkIn + 'T00:00:00');
+    const end = new Date(checkOut + 'T00:00:00');
+    const diff = end.getTime() - start.getTime();
+    return Math.ceil(diff / (1000 * 3600 * 24));
+  };
+
   const owners = Array.from(
     new Map(hotels.map(h => [h.ownerId, { id: h.ownerId, name: h.ownerName }])).values()
   )
@@ -135,9 +142,8 @@ export default function AdminBookingsPage() {
             <button
               key={s}
               onClick={() => handleStatusChange(active ? '' : s)}
-              className={`rounded-xl border-2 p-3 text-left transition-all ${
-                active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
+              className={`rounded-xl border-2 p-3 text-left transition-all ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
             >
               <div className="flex items-center gap-1.5 mb-1">
                 <Icon size={13} className={active ? 'text-blue-600' : 'text-gray-400'} />
@@ -221,6 +227,7 @@ export default function AdminBookingsPage() {
                 <th className="text-left px-4 py-3">Mã booking</th>
                 <th className="text-left px-4 py-3">Khách</th>
                 <th className="text-left px-4 py-3">Khách sạn</th>
+                <th className="text-left px-4 py-3">Ngày đặt</th>
                 <th className="text-left px-4 py-3">Ngày lưu trú</th>
                 <th className="text-left px-4 py-3">Tổng tiền</th>
                 <th className="text-left px-4 py-3">Thanh toán</th>
@@ -229,6 +236,7 @@ export default function AdminBookingsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
+
               {isBookingsLoading ? (
                 <tr>
                   <td colSpan={8} className="text-center py-12">
@@ -248,10 +256,17 @@ export default function AdminBookingsPage() {
                   const ownerName = hotels.find(h => h.id === b.hotelId)?.ownerName ?? '—'
                   const paymentInfo = b.paymentMethod ? (PAYMENT_METHOD_LABELS[b.paymentMethod] ?? b.paymentMethod) : null
                   const paymentStatus = b.paymentStatus ? PAYMENT_STATUS_CONFIG[b.paymentStatus] : null
+                  const nights = calculateNights(b.checkInDate, b.checkOutDate);
 
                   return (
                     <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-gray-600">{b.bookingCode}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-mono text-xs text-blue-600 font-bold">{b.bookingCode}</div>
+                        {/* Thêm Ngày đặt đơn */}
+                        <div className="text-[10px] text-gray-400 mt-1">
+                          {new Date(b.createdAt).toLocaleDateString('vi-VN')} {new Date(b.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-xs">
                         <div className="font-medium text-gray-900 text-sm">{b.guestName}</div>
                         <div className="text-gray-400">{b.guestEmail}</div>
@@ -261,11 +276,22 @@ export default function AdminBookingsPage() {
                         <div className="text-gray-400">Chủ: {ownerName}</div>
                       </td>
                       <td className="px-4 py-3 text-gray-600 text-xs">
-                        <div>{new Date(b.checkInDate + 'T00:00:00').toLocaleDateString('vi-VN')}</div>
+                        <div className="font-medium">{new Date(b.checkInDate + 'T00:00:00').toLocaleDateString('vi-VN')}</div>
                         <div className="text-gray-400">→ {new Date(b.checkOutDate + 'T00:00:00').toLocaleDateString('vi-VN')}</div>
+                        {/* Thêm Badge số đêm */}
+                        <span className="inline-block mt-1 px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold">
+                          {nights} đêm
+                        </span>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-gray-900">
-                        {Number(b.totalAmount).toLocaleString('vi-VN')}₫
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-gray-900">
+                          {Number(b.totalAmount).toLocaleString('vi-VN')}₫
+                        </div>
+                        {Number(b.discountAmount) > 0 && (
+                          <div className="text-[10px] text-red-500 font-medium">
+                            Giảm: -{Number(b.discountAmount).toLocaleString('vi-VN')}₫
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-xs text-gray-600">{paymentInfo ?? '—'}</div>
@@ -350,125 +376,155 @@ function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }:
   const s = BOOKING_STATUS_CONFIG[b.status]
   const Icon = s.icon
   const nextStatuses = BOOKING_STATUS_TRANSITIONS[b.status]
-  const paymentStatus = b.paymentStatus ? PAYMENT_STATUS_CONFIG[b.paymentStatus] : null
-  const paymentMethod = b.paymentMethod ? (PAYMENT_METHOD_LABELS[b.paymentMethod] ?? b.paymentMethod) : '—'
+
+  // Tránh dùng any bằng cách ép kiểu key an toàn
+  const pStatusKey = (b.paymentStatus || 'PENDING') as keyof typeof PAYMENT_STATUS_CONFIG;
+  const paymentStatus = PAYMENT_STATUS_CONFIG[pStatusKey];
+
+  const pMethodKey = (b.paymentMethod || 'CASH') as keyof typeof PAYMENT_METHOD_LABELS;
+  const paymentMethod = PAYMENT_METHOD_LABELS[pMethodKey] || b.paymentMethod;
+
+  const calculateNights = (checkIn: string, checkOut: string): number => {
+    const start = new Date(checkIn + 'T00:00:00');
+    const end = new Date(checkOut + 'T00:00:00');
+    const diff = end.getTime() - start.getTime();
+    return Math.ceil(diff / (1000 * 3600 * 24));
+  };
+
+  const nights = calculateNights(b.checkInDate, b.checkOutDate);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/50">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Chi tiết đặt phòng</h2>
-            <p className="text-xs text-gray-400 font-mono mt-0.5">{b.bookingCode}</p>
+            <h2 className="text-base font-bold text-gray-900">Chi tiết đơn đặt phòng</h2>
+            <p className="text-[10px] text-gray-400 font-mono mt-0.5">ID: {b.bookingCode} · Đặt lúc {new Date(b.createdAt).toLocaleString('vi-VN')}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors">
             <X size={18} />
           </button>
         </div>
 
-        <div className="px-6 py-2 overflow-y-auto flex-1 divide-y divide-gray-50">
-          <div className="flex items-center justify-between py-3">
-            <span className="text-sm text-gray-500">Trạng thái</span>
-            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${s.class}`}>
-              <Icon size={11} /> {s.label}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between py-3">
-            <span className="text-sm text-gray-500">Thanh toán</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-700">{paymentMethod}</span>
-              {paymentStatus && (
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${paymentStatus.class}`}>
+        <div className="px-6 py-4 overflow-y-auto flex-1 space-y-6">
+          {/* Section: Status & Payment */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 rounded-xl border border-gray-100 bg-gray-50/30">
+              <span className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Trạng thái đơn</span>
+              <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${s.class}`}>
+                <Icon size={12} /> {s.label}
+              </span>
+            </div>
+            <div className="p-3 rounded-xl border border-gray-100 bg-gray-50/30">
+              <span className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Thanh toán</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-semibold text-gray-700">{paymentMethod}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold w-fit ${paymentStatus.class}`}>
                   {paymentStatus.label}
                 </span>
-              )}
+              </div>
             </div>
           </div>
 
-          {[
-            { label: 'Khách sạn', value: b.hotelName },
-            { label: 'Khách hàng', value: b.guestName },
-            { label: 'Email', value: b.guestEmail },
-            { label: 'SĐT', value: b.guestPhone ?? '—' },
-            { label: 'Nhận phòng', value: new Date(b.checkInDate + 'T00:00:00').toLocaleDateString('vi-VN') },
-            { label: 'Trả phòng', value: new Date(b.checkOutDate + 'T00:00:00').toLocaleDateString('vi-VN') },
-            { label: 'Tổng tiền', value: `${Number(b.totalAmount).toLocaleString('vi-VN')}₫` },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between py-3">
-              <span className="text-sm text-gray-500">{label}</span>
-              <span className="text-sm font-medium text-gray-900">{value}</span>
-            </div>
-          ))}
-
-          {b.status === 'CANCELLED' && b.cancelReason && (
-            <div className="py-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Lý do hủy</p>
-              <div className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-                <span className="text-red-400 mt-0.5 shrink-0">⚠</span>
-                <p className="text-sm text-red-700 leading-relaxed">{b.cancelReason}</p>
+          {/* Section: Guest & Hotel */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Thông tin khách</p>
+              <div className="text-sm space-y-1">
+                <p className="font-bold text-gray-900">{b.guestName}</p>
+                <p className="text-gray-500">{b.guestPhone}</p>
+                <p className="text-gray-500 break-all">{b.guestEmail}</p>
               </div>
-              {b.cancelledBy && (
-                <p className="text-[11px] text-gray-400 mt-1.5 pl-1">
-                  Hủy bởi: <span className="font-medium text-gray-500">{b.cancelledBy}</span>
-                  {b.cancelledAt && (
-                    <span className="ml-1">
-                      · {new Date(b.cancelledAt).toLocaleString('vi-VN')}
-                    </span>
-                  )}
-                </p>
-              )}
             </div>
-          )}
+            <div className="space-y-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cơ sở lưu trú</p>
+              <div className="text-sm space-y-1">
+                <p className="font-bold text-gray-900">{b.hotelName}</p>
+                <p className="text-gray-500 text-xs">{b.hotelAddress}</p>
+                <p className="text-blue-600 font-medium text-[11px]">Chủ: {b.cancelledBy || '---'}</p>
+              </div>
+            </div>
+          </div>
 
-          {b.bookingRooms?.length > 0 && (
-            <div className="py-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Phòng đã đặt</p>
-              <div className="bg-gray-50 rounded-xl divide-y divide-gray-100">
-                {b.bookingRooms.map(r => (
-                  <div key={r.id} className="flex justify-between items-center px-4 py-2.5 text-sm">
-                    <span className="text-gray-700">
-                      {r.roomTypeName}
-                      <span className="text-gray-400 ml-1">× {r.quantity}</span>
-                    </span>
-                    <span className="font-medium text-gray-900">
-                      {Number(r.pricePerNight).toLocaleString('vi-VN')}₫/đêm
-                    </span>
+          {/* Section: Stay Details */}
+          <div className="bg-blue-50/50 rounded-xl p-4 flex justify-between items-center">
+            <div className="text-center flex-1">
+              <p className="text-[10px] font-bold text-blue-400 uppercase mb-1">Check-in</p>
+              <p className="text-sm font-bold text-blue-900">{new Date(b.checkInDate + 'T00:00:00').toLocaleDateString('vi-VN')}</p>
+            </div>
+            <div className="px-4 flex flex-col items-center">
+              <div className="h-px w-8 bg-blue-200 mb-1"></div>
+              <span className="text-[10px] font-black text-blue-600 bg-white border border-blue-100 px-2 py-0.5 rounded-full">{nights} đêm</span>
+              <div className="h-px w-8 bg-blue-200 mt-1"></div>
+            </div>
+            <div className="text-center flex-1">
+              <p className="text-[10px] font-bold text-blue-400 uppercase mb-1">Check-out</p>
+              <p className="text-sm font-bold text-blue-900">{new Date(b.checkOutDate + 'T00:00:00').toLocaleDateString('vi-VN')}</p>
+            </div>
+          </div>
+
+          {/* Section: Price Breakdown */}
+          <div className="space-y-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Chi tiết giá mỗ đêm</p>
+            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+              {b.bookingRooms.map(r => (
+                <div key={r.id} className="flex justify-between items-center px-4 py-3 text-sm border-b border-gray-50 last:border-0">
+                  <div className="flex flex-col">
+                    <span className="font-medium text-gray-800">{r.roomTypeName}</span>
+                    <span className="text-[11px] text-gray-400">Số lượng: {r.quantity} phòng</span>
                   </div>
-                ))}
+                  <span className="font-bold text-gray-900">{Number(r.pricePerNight).toLocaleString('vi-VN')}₫</span>
+                </div>
+              ))}
+
+              <div className="bg-gray-50/50 p-4 space-y-2">
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Tạm tính</span>
+                  <span>{Number(b.subtotal).toLocaleString('vi-VN')}₫</span>
+                </div>
+                {b.promoCode && (
+                  <div className="flex justify-between text-sm text-red-500 font-medium">
+                    <span>Khuyến mãi ({b.promoCode})</span>
+                    <span>-{Number(b.discountAmount).toLocaleString('vi-VN')}₫</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-base font-black text-blue-600 pt-2 border-t border-gray-200">
+                  <span>Tổng tiền</span>
+                  <span>{Number(b.totalAmount).toLocaleString('vi-VN')}₫</span>
+                </div>
               </div>
+            </div>
+          </div>
+
+          {/* Section: Cancel Info (nếu có) */}
+          {b.status === 'CANCELLED' && (
+            <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
+              <p className="text-xs font-bold text-red-600 uppercase mb-2">Lý do hủy phòng</p>
+              <p className="text-sm text-red-800 leading-relaxed">{b.cancelReason || 'Không cung cấp lý do'}</p>
+              <p className="text-[10px] text-red-400 mt-2 italic">Hủy bởi {b.cancelledBy} vào {new Date(b.cancelledAt!).toLocaleString('vi-VN')}</p>
             </div>
           )}
         </div>
 
+        {/* Footer Actions - Giữ nguyên logic cũ của bạn */}
         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Đóng
-          </button>
-
+          <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-200 rounded-lg transition-colors">Đóng</button>
           {nextStatuses && (
             <div className="flex gap-2">
-              {nextStatuses.map(ns => {
-                const isDanger = ns === 'CANCELLED' || ns === 'NO_SHOW'
-                return (
-                  <button
-                    key={ns}
-                    disabled={isUpdating}
-                    onClick={() => onUpdateStatus(b.id, ns)}
-                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 ${
-                      isDanger
-                        ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-100'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
+              {nextStatuses.map(ns => (
+                <button
+                  key={ns}
+                  disabled={isUpdating}
+                  onClick={() => onUpdateStatus(b.id, ns)}
+                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-all disabled:opacity-50 ${ns === 'CANCELLED' || ns === 'NO_SHOW'
+                      ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-100'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-100'
                     }`}
-                  >
-                    {isUpdating && <Loader2 size={12} className="animate-spin" />}
-                    {BOOKING_TRANSITION_LABELS[ns] ?? BOOKING_STATUS_CONFIG[ns].label}
-                  </button>
-                )
-              })}
+                >
+                  {isUpdating && <Loader2 size={12} className="animate-spin mr-1 inline" />}
+                  {BOOKING_TRANSITION_LABELS[ns] ?? BOOKING_STATUS_CONFIG[ns].label}
+                </button>
+              ))}
             </div>
           )}
         </div>

@@ -318,23 +318,24 @@ export default function OwnerPaymentsPage() {
     <div className="min-h-screen bg-slate-50/50 p-6 space-y-6">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <ReceiptText size={20} className="text-teal-600" />
-            <h1 className="text-2xl font-black text-slate-900">Giao dịch thanh toán</h1>
-          </div>
-          <p className="text-sm text-slate-500">Theo dõi dòng tiền khách sạn</p>
-        </div>
+  <div>
+    <div className="flex items-center gap-2 mb-1">
+      <ReceiptText size={20} className="text-teal-600" />
+      <h1 className="text-2xl font-black text-slate-900">Giao dịch thanh toán</h1>
+    </div>
+    <p className="text-sm text-slate-500">Theo dõi dòng tiền khách sạn</p>
+  </div>
 
-        <button
-          onClick={handleExport}
-          disabled={isExporting || !activeHotelId}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-medium rounded-lg transition-colors shadow-sm shrink-0"
-        >
-          {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-          {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
-        </button>
-      </div>
+  {/* ĐOẠN ĐÃ SỬA: Đồng bộ nút Xuất Excel giống trang Booking */}
+  <button
+    onClick={handleExport}
+    disabled={isExporting || !activeHotelId}
+    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-medium rounded-lg transition-colors shadow-sm shrink-0 self-start md:self-center"
+  >
+    {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+    {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
+  </button>
+</div>
 
       {/* HOTEL SWITCHER */}
       {hotels.length > 1 && (
@@ -394,7 +395,7 @@ export default function OwnerPaymentsPage() {
         <select
           value={methodFilter}
           onChange={e => setMethodFilter(e.target.value as PaymentMethod | '')} // Thêm 'as PaymentMethod | '''
-          className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-teal-500"
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Tất cả phương thức</option>
           {Object.entries(METHOD_CONFIG).map(([v, c]) => (

@@ -324,7 +324,7 @@ function RoomCard({
                                 : 'bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 shadow-none'
                                 } disabled:opacity-50`}
                         >
-                            {hasFullDates ? 'Đặt ngay' : 'Xem giá'}
+                            {hasFullDates ? 'Đặt ngay' : 'Nhập ngày'}
                         </button>
                     </div>
                 </div>
@@ -344,7 +344,7 @@ function HotelDetailContent() {
 
     const checkIn = searchParams.get('checkIn') || ''
     const checkOut = searchParams.get('checkOut') || ''
-    const adults = Number(searchParams.get('adults') || 2)
+    const adults = Number(searchParams.get('adults') || 1)
     const rooms = Number(searchParams.get('rooms') || 1)
     const hasFullDates = !!checkIn && !!checkOut
 

@@ -172,7 +172,7 @@ export default function AdminPromotionsPage() {
             className="pl-8 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
           >
             <option value="all">Tất cả khách sạn</option>
-            <option value={0}>Toàn hệ thống (Global)</option>
+            <option value={0}>Toàn hệ thống </option>
             {hotels.map(h => (
               <option key={h.id} value={h.id}>{h.hotelName}</option>
             ))}
@@ -407,7 +407,7 @@ function PromoFormModal({
             <div className="relative">
               <Hotel size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               <select {...register('hotelId')} className={`${inputClass} pl-8`}>
-                <option value="">🌐 Toàn hệ thống (Global)</option>
+                <option value="">🌐 Toàn hệ thống </option>
                 {hotels.map(h => (
                   <option key={h.id} value={h.id}>{h.hotelName}</option>
                 ))}

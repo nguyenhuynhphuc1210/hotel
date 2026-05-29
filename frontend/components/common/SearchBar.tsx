@@ -529,7 +529,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
     const [checkOut, setCheckOut] = useState<Date | null>(
         parseDate(defaultValues?.checkOut || searchParams.get('checkOut') || undefined)
     )
-    const [adults, setAdults] = useState(Number(searchParams.get('adults')) || defaultValues?.adults || 2)
+    const [adults, setAdults] = useState(Number(searchParams.get('adults')) || defaultValues?.adults || 1)
     const [children, setChildren] = useState(Number(searchParams.get('children')) || defaultValues?.children || 0)
     const [rooms, setRooms] = useState(Number(searchParams.get('rooms')) || defaultValues?.rooms || 1)
     // childAges: mảng số, -1 = chưa chọn

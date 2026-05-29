@@ -38,7 +38,7 @@ function HotelsContent() {
     const districts = searchParams.getAll('districts')
     const checkIn = searchParams.get('checkIn') ?? ''
     const checkOut = searchParams.get('checkOut') ?? ''
-    const adults = Number(searchParams.get('adults') ?? 2)
+    const adults = Number(searchParams.get('adults') ?? 1)
     const children = Number(searchParams.get('children') ?? 0)
     const rooms = Number(searchParams.get('rooms') ?? 1)
     const currentPage = Number(searchParams.get('page') ?? 0)
