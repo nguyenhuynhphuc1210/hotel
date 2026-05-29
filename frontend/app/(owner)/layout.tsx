@@ -204,10 +204,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default dynamic(() => Promise.resolve(function OwnerLayout({ children }: { children: React.ReactNode }) {
+function OwnerLayout({ children }: { children: React.ReactNode; params?: Promise<Record<string, string>> }) {
   return (
     <OwnerHotelProvider>
       <LayoutContent>{children}</LayoutContent>
     </OwnerHotelProvider>
   )
-}), { ssr: false })
+}
+
+export default OwnerLayout
