@@ -33,18 +33,31 @@ public class EmailServiceImpl implements EmailService {
         @Async
         public void sendOtpEmail(String to, String otp) {
                 try {
+                        System.out.println("=== START SEND OTP EMAIL ===");
+
                         MimeMessage message = mailSender.createMimeMessage();
                         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
                         helper.setFrom("nguyenhuynhphuc1210@gmail.com", "Vago");
                         helper.setTo(to);
                         helper.setSubject("Mã OTP khôi phục mật khẩu");
-                        String htmlMsg = "<p>Chào bạn,</p>"
-                                        + "<p>Mã OTP để khôi phục mật khẩu của bạn là: <strong>" + otp + "</strong></p>"
-                                        + "<p>Mã này có hiệu lực trong 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>";
+
+                        String htmlMsg = """
+                                        <p>Chào bạn,</p>
+                                        <p>Mã OTP của bạn là: <strong>%s</strong></p>
+                                        """.formatted(otp);
+
                         helper.setText(htmlMsg, true);
+
+                        System.out.println("Sending to: " + to);
+
                         mailSender.send(message);
-                } catch (MessagingException | UnsupportedEncodingException e) {
-                        throw new RuntimeException("Lỗi khi gửi email xác thực: " + e.getMessage());
+
+                        System.out.println("=== SEND EMAIL SUCCESS ===");
+
+                } catch (Exception e) {
+                        System.err.println("=== SEND EMAIL FAILED ===");
+                        e.printStackTrace();
                 }
         }
 
