@@ -30,17 +30,32 @@ public class EmailServiceImpl implements EmailService {
         private String frontendUrl;
 
         @Override
-        @Async
         public void sendOtpEmail(String to, String otp) {
+
+                System.out.println("=================================");
+                System.out.println("START SEND OTP EMAIL");
+                System.out.println("TO: " + to);
+                System.out.println("=================================");
+
                 try {
-                        System.out.println("=== START SEND OTP EMAIL ===");
 
                         MimeMessage message = mailSender.createMimeMessage();
+
                         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+                        System.out.println("STEP 1: Create MimeMessage SUCCESS");
+
                         helper.setFrom("nguyenhuynhphuc1210@gmail.com", "Vago");
+
+                        System.out.println("STEP 2: Set From SUCCESS");
+
                         helper.setTo(to);
+
+                        System.out.println("STEP 3: Set To SUCCESS");
+
                         helper.setSubject("Mã OTP khôi phục mật khẩu");
+
+                        System.out.println("STEP 4: Set Subject SUCCESS");
 
                         String htmlMsg = """
                                         <p>Chào bạn,</p>
@@ -49,20 +64,70 @@ public class EmailServiceImpl implements EmailService {
 
                         helper.setText(htmlMsg, true);
 
-                        System.out.println("Sending to: " + to);
+                        System.out.println("STEP 5: Set HTML SUCCESS");
+
+                        System.out.println("=================================");
+                        System.out.println("CALLING mailSender.send()");
+                        System.out.println("=================================");
 
                         mailSender.send(message);
 
-                        System.out.println("=== SEND EMAIL SUCCESS ===");
+                        System.out.println("=================================");
+                        System.out.println("SEND EMAIL SUCCESS");
+                        System.out.println("=================================");
 
-                } catch (Exception e) {
-                        System.err.println("=== SEND EMAIL FAILED ===");
+                }
+
+                catch (org.springframework.mail.MailAuthenticationException e) {
+
+                        System.err.println("MAIL AUTH ERROR");
+                        System.err.println("Sai username/password SMTP");
                         e.printStackTrace();
+                }
+
+                catch (org.springframework.mail.MailSendException e) {
+
+                        System.err.println("MAIL SEND ERROR");
+                        System.err.println("Không gửi được email");
+                        e.printStackTrace();
+                }
+
+                catch (org.springframework.mail.MailParseException e) {
+
+                        System.err.println("MAIL PARSE ERROR");
+                        System.err.println("Lỗi format email");
+                        e.printStackTrace();
+                }
+
+                catch (jakarta.mail.AuthenticationFailedException e) {
+
+                        System.err.println("SMTP AUTH FAILED");
+                        System.err.println("Sai tài khoản SMTP Brevo");
+                        e.printStackTrace();
+                }
+
+                catch (jakarta.mail.MessagingException e) {
+
+                        System.err.println("MESSAGING ERROR");
+                        System.err.println("Lỗi SMTP hoặc kết nối");
+                        e.printStackTrace();
+                }
+
+                catch (Exception e) {
+
+                        System.err.println("UNKNOWN ERROR");
+                        e.printStackTrace();
+                }
+
+                finally {
+
+                        System.out.println("=================================");
+                        System.out.println("END SEND OTP EMAIL");
+                        System.out.println("=================================");
                 }
         }
 
         @Override
-        @Async
         @Transactional(readOnly = true)
         public void sendBookingConfirmationEmail(Long bookingId) {
                 Booking booking = bookingRepository.findByIdWithDetails(bookingId)
@@ -200,7 +265,6 @@ public class EmailServiceImpl implements EmailService {
         }
 
         @Override
-        @Async
         @Transactional(readOnly = true)
         public void sendBookingCancellationEmail(Long bookingId, String reason) {
 
