@@ -64,7 +64,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers("/api/auth/**").permitAll()
-
+                        .requestMatchers("/ping").permitAll()
                         .requestMatchers("/ws/chat/**").permitAll()
                         .requestMatchers("/api/chat/ai").permitAll()
                         .requestMatchers("/api/chat/**").authenticated()
