@@ -29,19 +29,29 @@ interface ChatMsg {
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8080/ws/chat'
 
+function parseTs(ts: string): Date {
+    if (!ts) return new Date()
+    if (!ts.endsWith('Z') && !/[+\-]\d{2}:\d{2}$/.test(ts)) {
+        return new Date(ts + 'Z')
+    }
+    return new Date(ts)
+}
+
+// SỬA fmt — chỉ đổi new Date(ts) → parseTs(ts)
+function fmt(ts: string) {
+    return parseTs(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+}
+
+// SỬA timeAgo — chỉ đổi new Date(ts) → parseTs(ts)
 function timeAgo(ts: string) {
     if (!ts) return ''
-    const diff = Date.now() - new Date(ts).getTime()
+    const diff = Date.now() - parseTs(ts).getTime()
     const mins = Math.floor(diff / 60000)
     if (mins < 1) return 'Vừa xong'
     if (mins < 60) return `${mins} phút trước`
     const hrs = Math.floor(mins / 60)
     if (hrs < 24) return `${hrs} giờ trước`
-    return new Date(ts).toLocaleDateString('vi-VN')
-}
-
-function fmt(ts: string) {
-    return new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    return parseTs(ts).toLocaleDateString('vi-VN')
 }
 
 export default function UserMessagesPage() {
@@ -58,15 +68,18 @@ export default function UserMessagesPage() {
     const [unreadConvIds, setUnreadConvIds] = useState<Set<number>>(new Set())
 
     const stompClientRef = useRef<Client | null>(null)
-    const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const selectedConvRef = useRef<UserConversationResponse | null>(null)
     selectedConvRef.current = selectedConv
 
     // Cuộn xuống cuối khi có tin nhắn mới
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [messages])
+    const messagesContainerRef = useRef<HTMLDivElement>(null)
+
+useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+}, [messages])
 
     // Lấy danh sách inbox của user
     const { data: conversations = [], isLoading: isLoadingInbox } = useQuery({
@@ -255,7 +268,7 @@ export default function UserMessagesPage() {
                         </div>
 
                         {/* Danh sách tin nhắn */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/50">
+                        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/50">
                             {isLoadingMsgs ? (
                                 <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin text-blue-500" /></div>
                             ) : (
@@ -285,7 +298,6 @@ export default function UserMessagesPage() {
                                     )
                                 })
                             )}
-                            <div ref={messagesEndRef} />
                         </div>
 
                         {/* Ô nhập tin nhắn */}

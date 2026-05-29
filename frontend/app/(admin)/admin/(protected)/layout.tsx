@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation'
 import { 
   LayoutDashboard, Hotel, CalendarCheck, Users, LogOut, 
   ChevronRight, Sparkles, Star, Trash2, CreditCard,
-  Camera, Loader2, User as UserIcon // Thêm icons
+  Camera, Loader2, User as UserIcon, // Thêm icons
+  Tag
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
@@ -23,6 +24,7 @@ const navItems = [
   { href: '/admin/users',    label: 'Người dùng',   icon: Users },
   { href: '/admin/amenities', label: 'Tiện ích', icon: Sparkles },
   { href: '/admin/reviews', label: 'Đánh giá', icon: Star },
+  { href: '/admin/promotions', label: 'Khuyến mãi', icon: Tag },
   { href: '/admin/trash', label: 'Thùng rác', icon: Trash2 },
 ]
 
