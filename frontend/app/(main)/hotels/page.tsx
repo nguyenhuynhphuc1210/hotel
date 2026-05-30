@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, Suspense } from 'react'
+import { useState, useMemo, Suspense, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -52,16 +52,12 @@ function HotelsContent() {
     const [showFilter, setShowFilter] = useState(true)
     const pageSize = 10
 
-    // ── Giải quyết lỗi Cascading Renders ──
-    const [tempMinPrice, setTempMinPrice] = useState(minPriceUrl)
-    const [tempMaxPrice, setTempMaxPrice] = useState(maxPriceUrl)
+    const [localMin, setLocalMin] = useState(minPriceUrl)
+    const [localMax, setLocalMax] = useState(maxPriceUrl)
+    const isQuickClickRef = useRef(false)
 
-    if (tempMinPrice !== minPriceUrl && !minPriceUrl && tempMinPrice !== '') {
-        setTempMinPrice('')
-    }
-    if (tempMaxPrice !== maxPriceUrl && !maxPriceUrl && tempMaxPrice !== '') {
-        setTempMaxPrice('')
-    }
+    useEffect(() => { setLocalMin(minPriceUrl) }, [minPriceUrl])
+    useEffect(() => { setLocalMax(maxPriceUrl) }, [maxPriceUrl])
 
     const queryParams: HotelSearchParams = useMemo(() => ({
         keyword: keyword || undefined,
@@ -83,7 +79,19 @@ function HotelsContent() {
         queryFn: () => hotelApi.search(queryParams).then(r => r.data),
     })
 
-    const hotels = pageData?.content || []
+    const hotels = useMemo(() => {
+    const list = pageData?.content || []
+    if (sortBy === 'star_desc') {
+        return [...list].sort((a, b) => Number(b.starRating ?? 0) - Number(a.starRating ?? 0))
+    }
+    if (sortBy === 'price_asc') {
+        return [...list].sort((a, b) => Number(a.minPrice ?? 0) - Number(b.minPrice ?? 0))
+    }
+    if (sortBy === 'price_desc') {
+        return [...list].sort((a, b) => Number(b.minPrice ?? 0) - Number(a.minPrice ?? 0))
+    }
+    return list
+}, [pageData, sortBy])
     const totalElements = pageData?.totalElements || 0
 
     // ── Update URL ──
@@ -121,8 +129,8 @@ function HotelsContent() {
     }
 
     const clearAllFilters = () => {
-        setTempMinPrice('')
-        setTempMaxPrice('')
+        setLocalMin('')
+        setLocalMax('')
         const p = new URLSearchParams()
         if (keyword) p.set('keyword', keyword)
         if (checkIn) p.set('checkIn', checkIn)
@@ -205,42 +213,33 @@ function HotelsContent() {
                                 <input
                                     type="text"
                                     inputMode="numeric"
-                                    value={tempMinPrice}
-                                    onChange={e => setTempMinPrice(e.target.value.replace(/\D/g, ''))}
-                                    onKeyDown={e => e.key === 'Enter' && updateQueryParams({ minPrice: tempMinPrice })}
-                                    onBlur={() => updateQueryParams({ minPrice: tempMinPrice })}
+                                    value={localMin}
+                                    onChange={e => setLocalMin(e.target.value.replace(/\D/g, ''))}
+                                    onKeyDown={e => e.key === 'Enter' && updateQueryParams({ minPrice: localMin, maxPrice: localMax })}
+                                    onBlur={() => {
+                                        if (!isQuickClickRef.current) {
+                                            updateQueryParams({ minPrice: localMin, maxPrice: localMax })
+                                        }
+                                        isQuickClickRef.current = false
+                                    }}
                                     placeholder="Từ (₫)"
                                     className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400"
                                 />
                                 <input
                                     type="text"
                                     inputMode="numeric"
-                                    value={tempMaxPrice}
-                                    onChange={e => setTempMaxPrice(e.target.value.replace(/\D/g, ''))}
-                                    onKeyDown={e => e.key === 'Enter' && updateQueryParams({ maxPrice: tempMaxPrice })}
-                                    onBlur={() => updateQueryParams({ maxPrice: tempMaxPrice })}
+                                    value={localMax}
+                                    onChange={e => setLocalMax(e.target.value.replace(/\D/g, ''))}
+                                    onKeyDown={e => e.key === 'Enter' && updateQueryParams({ minPrice: localMin, maxPrice: localMax })}
+                                    onBlur={() => {
+                                        if (!isQuickClickRef.current) {
+                                            updateQueryParams({ minPrice: localMin, maxPrice: localMax })
+                                        }
+                                        isQuickClickRef.current = false
+                                    }}
                                     placeholder="Đến (₫)"
                                     className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400"
                                 />
-                            </div>
-                            <div className="mt-3 flex flex-wrap gap-1.5">
-                                {[
-                                    { label: '< 500K', min: '', max: '500000' },
-                                    { label: '500K-1M', min: '500000', max: '1000000' },
-                                    { label: '1M-2M', min: '1000000', max: '2000000' },
-                                ].map(p => (
-                                    <button
-                                        key={p.label}
-                                        onClick={() => {
-                                            setTempMinPrice(p.min);
-                                            setTempMaxPrice(p.max);
-                                            updateQueryParams({ minPrice: p.min, maxPrice: p.max });
-                                        }}
-                                        className={`px-2.5 py-1 rounded-full text-xs border ${minPriceUrl === p.min && maxPriceUrl === p.max ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}
-                                    >
-                                        {p.label}
-                                    </button>
-                                ))}
                             </div>
                         </div>
 
