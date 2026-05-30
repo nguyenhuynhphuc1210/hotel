@@ -57,8 +57,12 @@ export interface RecentBookingResponse {
   bookingId: number
   bookingCode: string
   guestName: string
-  status: string
+  hotelName: string
   totalAmount: number
+  status: string
+  paymentStatus: string
+  checkInDate: string
+  checkOutDate: string
   createdAt: string
 }
 
