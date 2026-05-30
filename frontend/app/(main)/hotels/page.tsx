@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, Suspense  } from 'react'
+import { useState, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -42,7 +42,7 @@ function HotelsContent() {
     const children = Number(searchParams.get('children') ?? 0)
     const rooms = Number(searchParams.get('rooms') ?? 1)
     const currentPage = Number(searchParams.get('page') ?? 0)
-    
+
     const stars = useMemo(() => searchParams.getAll('stars').map(Number), [searchParams])
     const minPriceUrl = searchParams.get('minPrice') ?? ''
     const maxPriceUrl = searchParams.get('maxPrice') ?? ''
@@ -89,7 +89,7 @@ function HotelsContent() {
     // ── Update URL ──
     const updateQueryParams = (updates: Record<string, string | string[] | number[] | number | null>) => {
         const p = new URLSearchParams(searchParams.toString())
-        
+
         Object.entries(updates).forEach(([key, value]) => {
             p.delete(key)
             if (Array.isArray(value)) {
@@ -102,7 +102,7 @@ function HotelsContent() {
         if (!updates.hasOwnProperty('page')) {
             p.set('page', '0')
         }
-        
+
         router.push(`/hotels?${p.toString()}`)
     }
 
@@ -203,20 +203,24 @@ function HotelsContent() {
                             <h3 className="text-sm font-semibold text-gray-900 mb-3">Khoảng giá / đêm</h3>
                             <div className="space-y-2">
                                 <input
-                                    type="number"
+                                    type="text"
+                                    inputMode="numeric"
                                     value={tempMinPrice}
-                                    onChange={e => setTempMinPrice(e.target.value)}
+                                    onChange={e => setTempMinPrice(e.target.value.replace(/\D/g, ''))}
+                                    onKeyDown={e => e.key === 'Enter' && updateQueryParams({ minPrice: tempMinPrice })}
                                     onBlur={() => updateQueryParams({ minPrice: tempMinPrice })}
                                     placeholder="Từ (₫)"
-                                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm"
+                                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400"
                                 />
                                 <input
-                                    type="number"
+                                    type="text"
+                                    inputMode="numeric"
                                     value={tempMaxPrice}
-                                    onChange={e => setTempMaxPrice(e.target.value)}
+                                    onChange={e => setTempMaxPrice(e.target.value.replace(/\D/g, ''))}
+                                    onKeyDown={e => e.key === 'Enter' && updateQueryParams({ maxPrice: tempMaxPrice })}
                                     onBlur={() => updateQueryParams({ maxPrice: tempMaxPrice })}
                                     placeholder="Đến (₫)"
-                                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm"
+                                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400"
                                 />
                             </div>
                             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -385,9 +389,9 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates }: HotelCardPro
 }
 
 export default function HotelsPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
-      <HotelsContent />
-    </Suspense>
-  )
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+            <HotelsContent />
+        </Suspense>
+    )
 }
