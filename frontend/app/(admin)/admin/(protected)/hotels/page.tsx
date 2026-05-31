@@ -148,7 +148,7 @@ export default function AdminHotelsPage() {
             Hiển thị {filtered.length} / {pageData?.totalElements || 0} khách sạn
           </p>
         </div>
-
+        {/* 
         <button
           onClick={() => {
             setEditingHotel(null)
@@ -158,7 +158,7 @@ export default function AdminHotelsPage() {
         >
           <Plus size={16} />
           Thêm khách sạn
-        </button>
+        </button> */}
       </div>
 
       {/* Stat cards */}
