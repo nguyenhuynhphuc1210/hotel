@@ -6,6 +6,8 @@ import lombok.*;
 
 import java.time.LocalTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -16,9 +18,11 @@ public class HotelPolicyRequest {
     private Long hotelId;
 
     @NotNull(message = "Giờ nhận phòng không được để trống")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
     private LocalTime checkInTime;
 
     @NotNull(message = "Giờ trả phòng không được để trống")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
     private LocalTime checkOutTime;
 
     @NotBlank(message = "Chính sách hủy phòng không được để trống")
