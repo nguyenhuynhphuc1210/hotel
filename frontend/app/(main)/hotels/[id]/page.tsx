@@ -333,6 +333,11 @@ function RoomCard({
     )
 }
 
+const todayStr = new Date().toISOString().split('T')[0];
+const tomorrow = new Date();
+tomorrow.setDate(tomorrow.getDate() + 1);
+const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
 // ── Page chính ────────────────────────────────────────────────────────────
 function HotelDetailContent() {
     const router = useRouter()
@@ -342,8 +347,8 @@ function HotelDetailContent() {
     const { user } = useAuthStore()
     const qc = useQueryClient()
 
-    const checkIn = searchParams.get('checkIn') || ''
-    const checkOut = searchParams.get('checkOut') || ''
+    const checkIn = searchParams.get('checkIn') || todayStr
+    const checkOut = searchParams.get('checkOut') || tomorrowStr
     const adults = Number(searchParams.get('adults') || 1)
     const rooms = Number(searchParams.get('rooms') || 1)
     const hasFullDates = !!checkIn && !!checkOut

@@ -317,18 +317,24 @@ function PolicyTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
 
   const saveMutation = useMutation({
     mutationFn: (data: PolicyForm) => {
-      const req = { ...data, hotelId: hotel.id }
-      return policy ? policyApi.update(policy.id, req) : policyApi.create(req)
+      const req = {
+        ...data,
+        hotelId: hotel.id,
+        checkInTime: `${data.checkInTime}:00`,
+        checkOutTime: `${data.checkOutTime}:00`,
+      };
+
+      return policy ? policyApi.update(policy.id, req) : policyApi.create(req);
     },
     onSuccess: () => {
-      toast.success('Lưu chính sách thành công!')
-      qc.invalidateQueries({ queryKey: ['hotel-policies', hotel.id] })
+      toast.success("Lưu chính sách thành công!");
+      qc.invalidateQueries({ queryKey: ["hotel-policies", hotel.id] });
     },
     onError: (e: unknown) => {
-      const err = e as ApiError
-      toast.error(err?.response?.data?.message || 'Lỗi lưu chính sách')
+      const err = e as ApiError;
+      toast.error(err?.response?.data?.message || "Lỗi lưu chính sách");
     },
-  })
+  });
 
   if (isPoliciesLoading) {
     return (

@@ -389,7 +389,7 @@ function UpdateModal({ roomId, selectedDates, calendarData, qc, calYear, calMont
                   className="accent-green-600"
                 />
                 <CheckCircle size={16} className={isAvailable ? 'text-green-600' : 'text-gray-300'} />
-                <span className={`text-sm font-medium ${isAvailable ? 'text-green-700' : 'text-gray-500'}`}>Mở bán</span>
+                <span className={`text-sm font-medium ${isAvailable ? 'text-green-700' : 'text-gray-500'}`}>Mở đặt</span>
               </label>
 
               <label className={`flex-1 flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 cursor-pointer transition-colors ${!isAvailable ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'

@@ -419,8 +419,7 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates }: HotelCardPro
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-4xl">🏨</div>
                 )}
-
-                {/* NÚT YÊU THÍCH (GÓC TRÊN PHẢI HÌNH ẢNH) */}
+                
                 <button
                     onClick={handleToggleFavorite}
                     disabled={isTogglingFav}

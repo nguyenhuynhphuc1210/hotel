@@ -496,12 +496,21 @@ function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }:
             </div>
           </div>
 
-          {/* Section: Cancel Info (nếu có) */}
           {b.status === 'CANCELLED' && (
             <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
               <p className="text-xs font-bold text-red-600 uppercase mb-2">Lý do hủy phòng</p>
-              <p className="text-sm text-red-800 leading-relaxed">{b.cancelReason || 'Không cung cấp lý do'}</p>
-              <p className="text-[10px] text-red-400 mt-2 italic">Hủy bởi {b.cancelledBy} vào {new Date(b.cancelledAt!).toLocaleString('vi-VN')}</p>
+              <p className="text-sm text-red-800 leading-relaxed">
+                {b.cancelReason || 'Không cung cấp lý do'}
+              </p>
+              <p className="text-[10px] text-red-400 mt-2 italic">
+                Hủy bởi {b.cancelledBy || 'Hệ thống'} vào {' '}
+                {b.cancelledAt
+                  ? new Date(b.cancelledAt).toLocaleString('vi-VN')
+                  : b.updatedAt
+                    ? new Date(b.updatedAt).toLocaleString('vi-VN')
+                    : new Date(b.createdAt).toLocaleString('vi-VN')
+                }
+              </p>
             </div>
           )}
         </div>
@@ -517,8 +526,8 @@ function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }:
                   disabled={isUpdating}
                   onClick={() => onUpdateStatus(b.id, ns)}
                   className={`px-4 py-2 text-xs font-bold rounded-lg transition-all disabled:opacity-50 ${ns === 'CANCELLED' || ns === 'NO_SHOW'
-                      ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-100'
-                      : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-100'
+                    ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-100'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-100'
                     }`}
                 >
                   {isUpdating && <Loader2 size={12} className="animate-spin mr-1 inline" />}

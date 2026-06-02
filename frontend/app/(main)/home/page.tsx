@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -12,6 +12,7 @@ import promotionApi from '@/lib/api/promotion.api'
 import SearchBar from '@/components/common/SearchBar'
 import { PromotionResponse } from '@/types/promotion.types'
 import UpgradeToPartnerModal from '@/components/auth/UpgradeToPartnerModal'
+
 
 
 // ─── Districts ────────────────────────────────────────────
@@ -51,14 +52,36 @@ const DISTRICT_IMAGES: Record<string, string> = {
 }
 const FALLBACK = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=300&fit=crop'
 
+const getToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
+const getTomorrow = () => { const d = getToday(); d.setDate(d.getDate() + 1); return d }
+const toISO = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 function HomeContent() {
     const router = useRouter()
     const [currentPage, setCurrentPage] = useState(0)
-    const pageSize = 8
+    const pageSize = 24
 
-    const { data: hotelsPage, isLoading: hotelsLoading } = useQuery({
-        queryKey: ['hotels-active', currentPage],
-        queryFn: () => hotelApi.getActive(currentPage, pageSize).then(r => r.data),
+    const defaultCheckIn = useMemo(() => toISO(getToday()), [])
+    const defaultCheckOut = useMemo(() => toISO(getTomorrow()), [])
+
+    const { data: pageData, isLoading: hotelsLoading } = useQuery({
+        // Thêm các tham số người lớn/phòng vào queryKey để tự động refetch khi thay đổi
+        queryKey: ['hotels-home-dynamic', defaultCheckIn, defaultCheckOut, currentPage],
+        queryFn: () => hotelApi.search({
+            checkIn: defaultCheckIn,
+            checkOut: defaultCheckOut,
+            adults: 1,      // Khớp với SearchBar: 1 người lớn
+            children: 0,    // Khớp với SearchBar: 0 trẻ em
+            rooms: 1,    // Nếu API search của bạn có nhận rooms
+            page: currentPage,
+            size: pageSize,
+            sortBy: 'recommended'
+        }).then(r => r.data),
     })
 
     const { data: promotions = [] } = useQuery<PromotionResponse[]>({
@@ -75,7 +98,7 @@ function HomeContent() {
         },
     })
 
-    const hotels = hotelsPage?.content || []
+    const hotels = pageData?.content || []
 
     const featuredHotels = [...hotels]
         .sort((a, b) => (b.starRating ?? 0) - (a.starRating ?? 0))
@@ -191,7 +214,11 @@ function HomeContent() {
                                         className="shrink-0"
                                         style={{ width: `calc((100% - ${(VISIBLE_HOTELS - 1) * 1}rem) / ${VISIBLE_HOTELS})` }}
                                     >
-                                        <HotelCard hotel={h} />
+                                        <HotelCard
+                                            hotel={h}
+                                            checkIn={defaultCheckIn}
+                                            checkOut={defaultCheckOut}
+                                        />
                                     </div>
                                 ))}
                             </div>
@@ -330,51 +357,71 @@ function DistrictCarousel({
 }
 
 // ─── Hotel Card ───────────────────────────────────────────
-function HotelCard({ hotel }: { hotel: HotelSummaryResponse }) {
+function HotelCard({
+    hotel,
+    checkIn,
+    checkOut
+}: {
+    hotel: HotelSummaryResponse,
+    checkIn: string,
+    checkOut: string
+}) {
     const router = useRouter()
+
     const handleCardClick = () => {
-        router.push(`/hotels/${hotel.id}`)
+        // Truyền đúng các tham số đã dùng để search ở Home sang trang chi tiết
+        router.push(`/hotels/${hotel.id}?checkIn=${checkIn}&checkOut=${checkOut}&adults=1&children=0&rooms=1`)
     }
+
     const displayImage = hotel.thumbnailUrl || hotel.images?.find(i => i.isPrimary)?.imageUrl;
+    const stars = Math.round(Number(hotel.starRating ?? 0));
 
     return (
         <div
             onClick={handleCardClick}
-            className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group"
+            className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-xl transition-all cursor-pointer group flex flex-col h-full"
         >
-            <div className="h-44 bg-gradient-to-br from-blue-100 to-emerald-50 relative overflow-hidden">
+            {/* Image Section */}
+            <div className="h-44 bg-gray-100 relative overflow-hidden shrink-0">
                 {displayImage ? (
                     <img
                         src={displayImage}
                         alt={hotel.hotelName}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-5xl">🏨</div>
                 )}
-                <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full">
+                <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full shadow-sm">
                     <Star size={11} fill="#f59e0b" className="text-amber-500" />
-                    <span className="text-xs font-semibold text-gray-800">{hotel.starRating ?? 0}</span>
+                    <span className="text-xs font-bold text-gray-800">{hotel.starRating ?? 0}</span>
                 </div>
             </div>
-            <div className="p-3">
-                <h3 className="font-semibold text-gray-900 text-sm truncate group-hover:text-blue-700 transition-colors">
+
+            {/* Content Section */}
+            <div className="p-4 flex flex-col flex-1">
+                <h3 className="font-bold text-gray-900 text-sm line-clamp-1 group-hover:text-blue-700 transition-colors">
                     {hotel.hotelName}
                 </h3>
                 <div className="flex items-center gap-1 mt-1 text-gray-400">
                     <MapPin size={11} />
-                    <span className="text-xs truncate">{hotel.district}, {hotel.city}</span>
+                    <span className="text-[11px] truncate">{hotel.district}, {hotel.city}</span>
                 </div>
-                <div className="mt-3 flex items-center justify-between">
-                    <div>
-                        <span className="text-xs text-gray-400">Từ</span>
-                        <div className="text-blue-600 font-bold text-sm">
-                            {hotel.minPrice ? `${hotel.minPrice.toLocaleString()}₫` : 'Liên hệ'}
+
+                <div className="mt-auto pt-4 flex items-end justify-between border-t border-gray-50">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] text-gray-400 uppercase font-medium">Giá 1 đêm từ</span>
+                        <div className="text-red-600 font-bold text-lg">
+                            {hotel.minPrice ? (
+                                `${hotel.minPrice.toLocaleString('vi-VN')}₫`
+                            ) : (
+                                <span className="text-gray-400 text-sm font-normal italic">Liên hệ</span>
+                            )}
                         </div>
                     </div>
-                    <button className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors">
+                    <div className="text-[11px] bg-blue-600 text-white px-3 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-sm">
                         Xem chi tiết
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>
