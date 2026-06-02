@@ -4,10 +4,12 @@ import com.example.backend.entity.Hotel;
 import com.example.backend.entity.HotelAmenity;
 import com.example.backend.entity.HotelPolicy;
 import com.example.backend.entity.RoomTypeAmenity;
+import com.example.backend.entity.Promotion;
 import com.example.backend.repository.HotelRepository;
 import com.example.backend.repository.RoomTypeAmenityRepository;
 import com.example.backend.repository.HotelAmenityRepository;
 import com.example.backend.repository.HotelPolicyRepository;
+import com.example.backend.repository.PromotionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,9 +23,11 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -40,6 +44,8 @@ public class GeminiService {
     private final HotelPolicyRepository hotelPolicyRepository;
     private final HotelAmenityRepository hotelAmenityRepository;
     private final RoomTypeAmenityRepository roomTypeAmenityRepository;
+    private final PromotionRepository promotionRepository; // Thêm dòng này
+
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -49,7 +55,6 @@ public class GeminiService {
         }
 
         try {
-
             String context = buildHotelContext(hotelId);
             String finalPrompt = context + "\nCÂU HỎI CỦA KHÁCH: " + userPrompt;
             
@@ -113,6 +118,42 @@ public class GeminiService {
             sb.append("- Trẻ em: ").append(policy.getChildrenPolicy()).append("\n");
             sb.append("- Thú cưng: ").append(policy.getPetPolicy() != null ? policy.getPetPolicy() : "Không cho phép").append("\n");
         }
+
+        // ================= THÊM LOGIC PROMOTION Ở ĐÂY =================
+        List<Promotion> allPromotions = promotionRepository.findByHotel_Id(hotelId);
+        if (allPromotions != null && !allPromotions.isEmpty()) {
+            // Chỉ lọc lấy các mã đang active và trong thời gian hiệu lực
+            List<Promotion> validPromos = allPromotions.stream()
+                    .filter(Promotion::isValid)
+                    .collect(Collectors.toList());
+
+            if (!validPromos.isEmpty()) {
+                sb.append("\n--- CHƯƠNG TRÌNH KHUYẾN MÃI ĐANG ÁP DỤNG ---\n");
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                
+                validPromos.forEach(promo -> {
+                    sb.append("- Mã ưu đãi: ").append(promo.getPromoCode());
+                    
+                    if (promo.getDiscountPercent() != null) {
+                        sb.append(" (Giảm ").append(promo.getDiscountPercent()).append("%)");
+                    }
+                    
+                    if (promo.getMaxDiscountAmount() != null) {
+                        sb.append(", giảm tối đa ").append(promo.getMaxDiscountAmount()).append(" VNĐ");
+                    }
+                    
+                    if (promo.getMinOrderValue() != null && promo.getMinOrderValue().compareTo(BigDecimal.ZERO) > 0) {
+                        sb.append(", áp dụng cho đơn từ ").append(promo.getMinOrderValue()).append(" VNĐ");
+                    }
+                    
+                    if (promo.getEndDate() != null) {
+                        sb.append(". Hạn dùng: ").append(promo.getEndDate().format(formatter));
+                    }
+                    sb.append("\n");
+                });
+            }
+        }
+        // =============================================================
 
         sb.append("\nLƯU Ý QUAN TRỌNG: Nếu khách hỏi thông tin KHÔNG có trong dữ liệu trên, tuyệt đối không được tự bịa ra. Hãy xin lỗi và hướng dẫn khách chat với Chủ khách sạn để được hỗ trợ.\n");
         

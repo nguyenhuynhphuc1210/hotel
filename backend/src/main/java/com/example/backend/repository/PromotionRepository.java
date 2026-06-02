@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.Optional;
+import java.util.List;
 
 public interface PromotionRepository extends JpaRepository<Promotion, Long> {
     @Query("SELECT p FROM Promotion p WHERE p.promoCode = :code AND p.isActive = true AND p.startDate <= :today AND p.endDate >= :today")
@@ -16,4 +17,6 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
     boolean existsByHotelIdAndPromoCode(Long hotelId, String promoCode);
 
     boolean existsByHotelIsNullAndPromoCode(String promoCode);
+
+    List<Promotion> findByHotel_Id(Long hotelId);
 }
