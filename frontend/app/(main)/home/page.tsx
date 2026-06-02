@@ -70,14 +70,12 @@ function HomeContent() {
     const defaultCheckOut = useMemo(() => toISO(getTomorrow()), [])
 
     const { data: pageData, isLoading: hotelsLoading } = useQuery({
-        // Thêm các tham số người lớn/phòng vào queryKey để tự động refetch khi thay đổi
         queryKey: ['hotels-home-dynamic', defaultCheckIn, defaultCheckOut, currentPage],
         queryFn: () => hotelApi.search({
             checkIn: defaultCheckIn,
             checkOut: defaultCheckOut,
-            adults: 1,      // Khớp với SearchBar: 1 người lớn
-            children: 0,    // Khớp với SearchBar: 0 trẻ em
-            rooms: 1,    // Nếu API search của bạn có nhận rooms
+            adults: 1,      
+            children: 0,                
             page: currentPage,
             size: pageSize,
             sortBy: 'recommended'
