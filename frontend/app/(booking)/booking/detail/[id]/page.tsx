@@ -167,8 +167,8 @@ function BookingDetailPage() {
 
     const getStatusInfo = (status: string) => {
         switch (status) {
-            case 'CONFIRMED': return { label: 'Đã xác nhận', color: 'bg-emerald-500', icon: <CheckCircle2 size={18} /> }
-            case 'PENDING': return { label: 'Chờ xử lý', color: 'bg-amber-500', icon: <Clock size={18} /> }
+            case 'CONFIRMED': return { label: 'Đã xác nhận', color: 'bg-blue-600', icon: <CheckCircle2 size={18} /> }
+            case 'PENDING': return { label: 'Chờ xử lý', color: 'bg-blue-500', icon: <Clock size={18} /> }
             case 'CANCELLED': return { label: 'Đã hủy', color: 'bg-red-500', icon: <AlertCircle size={18} /> }
             case 'COMPLETED': return { label: 'Đã hoàn thành', color: 'bg-blue-500', icon: <CheckCircle2 size={18} /> }
             default: return { label: status, color: 'bg-gray-500', icon: <Clock size={18} /> }
