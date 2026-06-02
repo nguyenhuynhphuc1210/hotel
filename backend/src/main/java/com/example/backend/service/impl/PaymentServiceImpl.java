@@ -119,7 +119,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (keyword != null && !keyword.isBlank()) {
             searchKeyword = "%" + keyword.trim().toLowerCase() + "%";
         }
-        
+
         String currentOwnerEmail = null;
 
         if (SecurityUtils.isHotelOwner() && !SecurityUtils.isAdmin()) {
@@ -343,9 +343,32 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() == PaymentStatus.PENDING) {
             if (isSuccess) {
                 String transactionNo = request.getParameter("vnp_TransactionNo");
-                handleSuccessfulPayment(booking, payment, transactionNo);
+
+                handleSuccessfulPayment(
+                        booking,
+                        payment,
+                        transactionNo);
+
             } else {
-                handleFailedPayment(booking, payment);
+                String responseCode = request.getParameter("vnp_ResponseCode");
+
+                String cancelledBy = "SYSTEM";
+                String reason = "Thanh toán VNPay thất bại";
+
+                if ("24".equals(responseCode)) {
+                    cancelledBy = "CUSTOMER";
+                    reason = "Khách hàng hủy giao dịch trên VNPay";
+                } else if ("51".equals(responseCode)) {
+                    reason = "Tài khoản không đủ số dư";
+                } else if ("65".equals(responseCode)) {
+                    reason = "Vượt hạn mức giao dịch";
+                }
+
+                handleFailedPayment(
+                        booking,
+                        payment,
+                        reason,
+                        cancelledBy);
             }
         }
 
@@ -377,7 +400,22 @@ public class PaymentServiceImpl implements PaymentService {
                 String transId = request.getParameter("transId");
                 handleSuccessfulPayment(booking, payment, transId);
             } else {
-                handleFailedPayment(booking, payment);
+                Integer resultCode = Integer.valueOf(
+                        request.getParameter("resultCode"));
+
+                String cancelledBy = "SYSTEM";
+                String reason = "Thanh toán MoMo thất bại";
+
+                if (resultCode == 1006) {
+                    cancelledBy = "CUSTOMER";
+                    reason = "Khách hàng hủy giao dịch MoMo";
+                }
+
+                handleFailedPayment(
+                        booking,
+                        payment,
+                        reason,
+                        cancelledBy);
             }
         }
 
@@ -417,7 +455,25 @@ public class PaymentServiceImpl implements PaymentService {
                 String transactionNo = request.getParameter("vnp_TransactionNo");
                 handleSuccessfulPayment(booking, payment, transactionNo);
             } else {
-                handleFailedPayment(booking, payment);
+                String responseCode = request.getParameter("vnp_ResponseCode");
+
+                String cancelledBy = "SYSTEM";
+                String reason = "Thanh toán VNPay thất bại";
+
+                if ("24".equals(responseCode)) {
+                    cancelledBy = "CUSTOMER";
+                    reason = "Khách hàng hủy giao dịch trên VNPay";
+                } else if ("51".equals(responseCode)) {
+                    reason = "Tài khoản không đủ số dư";
+                } else if ("65".equals(responseCode)) {
+                    reason = "Vượt hạn mức giao dịch";
+                }
+
+                handleFailedPayment(
+                        booking,
+                        payment,
+                        reason,
+                        cancelledBy);
             }
 
             return ResponseEntity.ok(Map.of("RspCode", "00", "Message", "Confirm Success"));
@@ -445,16 +501,33 @@ public class PaymentServiceImpl implements PaymentService {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
 
-            if (payment.getStatus() == PaymentStatus.PAID || payment.getStatus() == PaymentStatus.CANCELLED) {
+            if (payment.getStatus() == PaymentStatus.PAID
+                    || payment.getStatus() == PaymentStatus.CANCELLED) {
                 return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
             }
 
             Integer resultCode = (Integer) requestBody.get("resultCode");
+
             if (resultCode != null && resultCode == 0) {
+
                 String transId = String.valueOf(requestBody.get("transId"));
                 handleSuccessfulPayment(booking, payment, transId);
+
             } else {
-                handleFailedPayment(booking, payment);
+
+                String cancelledBy = "SYSTEM";
+                String reason = "Thanh toán MoMo thất bại";
+
+                if (resultCode != null && resultCode == 1006) {
+                    cancelledBy = "CUSTOMER";
+                    reason = "Khách hàng hủy giao dịch MoMo";
+                }
+
+                handleFailedPayment(
+                        booking,
+                        payment,
+                        reason,
+                        cancelledBy);
             }
 
             return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -491,9 +564,12 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
-    private void handleFailedPayment(Booking booking, Payment payment) {
+    private void handleFailedPayment(Booking booking, Payment payment, String reason, String cancelledBy) {
         payment.setStatus(PaymentStatus.CANCELLED);
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancelledAt(LocalDateTime.now());
+        booking.setCancelReason(reason);
+        booking.setCancelledBy(cancelledBy);
         booking.setPayment(payment);
 
         for (BookingRoom br : booking.getBookingRooms()) {

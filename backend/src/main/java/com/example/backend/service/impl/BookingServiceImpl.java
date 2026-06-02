@@ -232,47 +232,78 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse cancelBooking(Long bookingId, CancelBookingRequest request) {
+
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn đặt phòng"));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy đơn đặt phòng"));
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAuthenticated = auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser");
+
+        boolean isAuthenticated = auth != null
+                && auth.isAuthenticated()
+                && !"anonymousUser".equals(auth.getName());
 
         if (!isAuthenticated) {
-            throw new AccessDeniedException("Vui lòng đăng nhập để thực hiện thao tác này.");
+            throw new AccessDeniedException(
+                    "Vui lòng đăng nhập để thực hiện thao tác này.");
         }
 
-        String cancelledBy = auth.getName();
-        boolean isAdminOrOwner = SecurityUtils.isAdmin();
+        String currentUserEmail = auth.getName();
 
-        if (!isAdminOrOwner) {
-            boolean isOwnerOfThisHotel = booking.getHotel().getOwner().getEmail().equals(cancelledBy);
-            boolean isGuestOfThisBooking = booking.getUser() != null
-                    && booking.getUser().getEmail().equals(cancelledBy);
+        boolean isAdmin = SecurityUtils.isAdmin();
 
-            if (isOwnerOfThisHotel) {
-                isAdminOrOwner = true;
-            }
+        boolean isOwner = booking.getHotel()
+                .getOwner()
+                .getEmail()
+                .equals(currentUserEmail);
 
-            if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
-                throw new AccessDeniedException("Bạn không có quyền hủy đơn đặt phòng này.");
-            }
+        boolean isCustomer = booking.getUser() != null
+                && booking.getUser()
+                        .getEmail()
+                        .equals(currentUserEmail);
+
+        if (!isAdmin && !isOwner && !isCustomer) {
+            throw new AccessDeniedException(
+                    "Bạn không có quyền hủy đơn đặt phòng này.");
         }
 
-        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.COMPLETED) {
-            throw new IllegalArgumentException("Không thể hủy đơn đặt phòng ở trạng thái hiện tại");
+        if (booking.getStatus() == BookingStatus.CANCELLED
+                || booking.getStatus() == BookingStatus.COMPLETED) {
+
+            throw new IllegalArgumentException(
+                    "Không thể hủy đơn đặt phòng ở trạng thái hiện tại");
         }
 
         restoreRoomInventory(booking);
 
+        String cancelledBy;
         String finalReason;
-        if (request != null && request.getCancelReason() != null && !request.getCancelReason().isBlank()) {
-            finalReason = request.getCancelReason().trim();
+
+        if (isAdmin) {
+            cancelledBy = "ADMIN";
+        } else if (isOwner) {
+            cancelledBy = "OWNER";
         } else {
-            if (isAdminOrOwner) {
-                finalReason = "Hủy bởi Quản trị viên / Chủ khách sạn";
-            } else {
-                finalReason = "Khách hàng thay đổi kế hoạch (Không cung cấp lý do cụ thể)";
+            cancelledBy = "CUSTOMER";
+        }
+
+        if (request != null
+                && request.getCancelReason() != null
+                && !request.getCancelReason().isBlank()) {
+
+            finalReason = request.getCancelReason().trim();
+
+        } else {
+
+            switch (cancelledBy) {
+                case "ADMIN" ->
+                    finalReason = "Đơn đặt phòng bị hủy bởi quản trị viên";
+
+                case "OWNER" ->
+                    finalReason = "Đơn đặt phòng bị hủy bởi chủ khách sạn";
+
+                default ->
+                    finalReason = "Khách hàng thay đổi kế hoạch";
             }
         }
 
@@ -289,33 +320,52 @@ public class BookingServiceImpl implements BookingService {
                 LocalDate.now(),
                 BookingStatus.CANCELLED);
 
-        paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
-            if (payment.getStatus() == PaymentStatus.PAID) {
-                payment.setStatus(PaymentStatus.REFUNDED);
-            } else if (payment.getStatus() == PaymentStatus.UNPAID || payment.getStatus() == PaymentStatus.PENDING) {
-                payment.setStatus(PaymentStatus.CANCELLED);
-            }
-            paymentRepository.save(payment);
-        });
+        paymentRepository.findByBooking_Id(savedBooking.getId())
+                .ifPresent(payment -> {
+
+                    if (payment.getStatus() == PaymentStatus.PAID) {
+                        payment.setStatus(PaymentStatus.REFUNDED);
+                    } else if (payment.getStatus() == PaymentStatus.UNPAID
+                            || payment.getStatus() == PaymentStatus.PENDING) {
+                        payment.setStatus(PaymentStatus.CANCELLED);
+                    }
+
+                    paymentRepository.save(payment);
+                });
 
         try {
             eventPublisher.publishEvent(
-                    new BookingEmailEvent(savedBooking.getId(), "CANCEL", finalReason));
+                    new BookingEmailEvent(
+                            savedBooking.getId(),
+                            "CANCEL",
+                            finalReason));
         } catch (Exception e) {
-            log.error("Lỗi khi gửi email hủy phòng cho booking ID {}: {}", booking.getId(), e.getMessage());
+            log.error(
+                    "Lỗi khi gửi email hủy phòng cho booking ID {}: {}",
+                    savedBooking.getId(),
+                    e.getMessage());
         }
+
+        String actor = switch (cancelledBy) {
+            case "ADMIN" -> "Quản trị viên";
+            case "OWNER" -> "Chủ khách sạn";
+            default -> "Khách hàng";
+        };
 
         String cancellationMessage = String.format(
                 "%s đã hủy đơn đặt phòng %s.",
-                savedBooking.getCancelledBy(),
+                actor,
                 savedBooking.getBookingCode());
+
         try {
             notificationService.createNotification(
                     savedBooking.getHotel().getOwner().getEmail(),
                     "Đơn đặt phòng đã bị hủy",
                     cancellationMessage);
         } catch (Exception ex) {
-            log.error("Không thể tạo notification hủy booking: {}", ex.getMessage());
+            log.error(
+                    "Không thể tạo notification hủy booking: {}",
+                    ex.getMessage());
         }
 
         return bookingMapper.toBookingResponse(savedBooking);
@@ -323,78 +373,122 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse updateBookingStatus(Long bookingId, UpdateBookingStatusRequest request) {
+    public BookingResponse updateBookingStatus(
+            Long bookingId,
+            UpdateBookingStatusRequest request) {
+
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn đặt phòng"));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy đơn đặt phòng"));
 
-        SecurityUtils.checkOwnerOrAdmin(booking.getHotel().getOwner().getEmail());
+        SecurityUtils.checkOwnerOrAdmin(
+                booking.getHotel().getOwner().getEmail());
 
-        BookingStatus newStatus = request.getStatus();
         BookingStatus currentStatus = booking.getStatus();
+        BookingStatus newStatus = request.getStatus();
 
         if (!isValidTransition(currentStatus, newStatus)) {
             throw new IllegalArgumentException(
-                    "Không thể chuyển trạng thái từ " + currentStatus + " sang " + newStatus);
+                    "Không thể chuyển trạng thái từ "
+                            + currentStatus
+                            + " sang "
+                            + newStatus);
         }
 
-        if (booking.getStatus() == BookingStatus.CANCELLED && newStatus != BookingStatus.CANCELLED) {
-            throw new IllegalArgumentException("Đơn đã hủy không thể phục hồi trạng thái.");
+        if (currentStatus == BookingStatus.CANCELLED
+                && newStatus != BookingStatus.CANCELLED) {
+            throw new IllegalArgumentException(
+                    "Đơn đã hủy không thể phục hồi trạng thái.");
         }
 
-        if (newStatus == BookingStatus.CANCELLED && booking.getStatus() != BookingStatus.CANCELLED) {
+        if (newStatus == BookingStatus.CANCELLED
+                && currentStatus != BookingStatus.CANCELLED) {
+
             restoreRoomInventory(booking);
 
-            String cancelReason = (request.getReason() != null && !request.getReason().isBlank())
-                    ? request.getReason().trim()
-                    : "Hủy bởi Quản trị viên / Chủ khách sạn (Chuyển trạng thái hệ thống)";
+            String cancelReason = (request.getReason() != null
+                    && !request.getReason().isBlank())
+                            ? request.getReason().trim()
+                            : (SecurityUtils.isAdmin()
+                                    ? "Đơn đặt phòng bị hủy bởi quản trị viên"
+                                    : "Đơn đặt phòng bị hủy bởi chủ khách sạn");
+
+            String cancelledBy = SecurityUtils.isAdmin()
+                    ? "ADMIN"
+                    : "OWNER";
 
             booking.setCancelledAt(LocalDateTime.now());
             booking.setCancelReason(cancelReason);
-            booking.setCancelledBy(SecurityUtils.getCurrentUserEmail());
+            booking.setCancelledBy(cancelledBy);
 
-            paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
-                if (payment.getStatus() == PaymentStatus.PAID) {
-                    payment.setStatus(PaymentStatus.REFUNDED);
-                } else {
-                    payment.setStatus(PaymentStatus.CANCELLED);
-                }
-                paymentRepository.save(payment);
-            });
+            paymentRepository.findByBooking_Id(booking.getId())
+                    .ifPresent(payment -> {
+
+                        if (payment.getStatus() == PaymentStatus.PAID) {
+                            payment.setStatus(PaymentStatus.REFUNDED);
+                        } else {
+                            payment.setStatus(PaymentStatus.CANCELLED);
+                        }
+
+                        paymentRepository.save(payment);
+                    });
 
             try {
-                eventPublisher.publishEvent(new BookingEmailEvent(booking.getId(), "CANCEL", cancelReason));
+                eventPublisher.publishEvent(
+                        new BookingEmailEvent(
+                                booking.getId(),
+                                "CANCEL",
+                                cancelReason));
             } catch (Exception e) {
-
-                log.error("Lỗi khi gửi email hủy phòng cho booking ID {}: {}", booking.getId(), e.getMessage());
+                log.error(
+                        "Lỗi khi gửi email hủy phòng cho booking ID {}: {}",
+                        booking.getId(),
+                        e.getMessage());
             }
         }
 
-        if (newStatus == BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.CHECKED_IN) {
-            paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
-                if (payment.getPaymentMethod() == PaymentMethod.CASH && payment.getStatus() == PaymentStatus.UNPAID) {
-                    payment.setStatus(PaymentStatus.PAID);
-                    payment.setPaymentDate(LocalDateTime.now());
-                    paymentRepository.save(payment);
-                }
-            });
+        if (newStatus == BookingStatus.CHECKED_IN
+                && currentStatus != BookingStatus.CHECKED_IN) {
+
+            paymentRepository.findByBooking_Id(booking.getId())
+                    .ifPresent(payment -> {
+
+                        if (payment.getPaymentMethod() == PaymentMethod.CASH
+                                && payment.getStatus() == PaymentStatus.UNPAID) {
+
+                            payment.setStatus(PaymentStatus.PAID);
+                            payment.setPaymentDate(LocalDateTime.now());
+
+                            paymentRepository.save(payment);
+                        }
+                    });
         }
 
-        if (newStatus == BookingStatus.NO_SHOW && booking.getStatus() != BookingStatus.NO_SHOW) {
+        if (newStatus == BookingStatus.NO_SHOW
+                && currentStatus != BookingStatus.NO_SHOW) {
+
             restoreRoomInventory(booking);
-            paymentRepository.findByBooking_Id(booking.getId()).ifPresent(payment -> {
-                if (payment.getStatus() == PaymentStatus.PENDING
-                        || payment.getStatus() == PaymentStatus.UNPAID) {
-                    payment.setStatus(PaymentStatus.CANCELLED);
-                }
-                paymentRepository.save(payment);
-            });
+
+            paymentRepository.findByBooking_Id(booking.getId())
+                    .ifPresent(payment -> {
+
+                        if (payment.getStatus() == PaymentStatus.PENDING
+                                || payment.getStatus() == PaymentStatus.UNPAID) {
+
+                            payment.setStatus(PaymentStatus.CANCELLED);
+                        }
+
+                        paymentRepository.save(payment);
+                    });
         }
 
         booking.setStatus(newStatus);
+
         Booking savedBooking = bookingRepository.save(booking);
 
-        if (currentStatus != newStatus &&
-                (newStatus == BookingStatus.COMPLETED || newStatus == BookingStatus.CANCELLED
+        if (currentStatus != newStatus
+                && (newStatus == BookingStatus.COMPLETED
+                        || newStatus == BookingStatus.CANCELLED
                         || newStatus == BookingStatus.NO_SHOW)) {
 
             hotelStatisticService.recordRealtimeStatistic(
