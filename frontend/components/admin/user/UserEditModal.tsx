@@ -35,7 +35,7 @@ export default function UserEditModal({ user, onClose }: Props) {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
-    defaultValues: { roleId: 3 },
+    defaultValues: { roleId: 1 },
   })
 
   // Load dữ liệu user vào form khi mở
@@ -139,9 +139,9 @@ export default function UserEditModal({ user, onClose }: Props) {
               {...register('roleId')}
               className={`${inputClass} bg-white`}
             >
-              <option value={1}>Admin</option>
+              <option value={3}>Admin</option>
               <option value={2}>Chủ khách sạn</option>
-              <option value={3}>Khách hàng</option>
+              <option value={1}>Khách hàng</option>
             </select>
             {errors.roleId && <p className="text-xs text-red-500 mt-1">{errors.roleId.message}</p>}
           </div>

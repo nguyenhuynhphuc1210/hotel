@@ -515,7 +515,10 @@ function SuggestDropdown({
 export default function SearchBar({ variant = 'hero', defaultValues, onSearch }: SearchBarProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
+
     const today = getToday()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(today.getDate() + 1)
 
     const initialKeyword = defaultValues?.keyword
         || defaultValues?.district || searchParams.get('keyword')
@@ -523,12 +526,17 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
         || ''
 
     const [keyword, setKeyword] = useState(initialKeyword)
-    const [checkIn, setCheckIn] = useState<Date | null>(
-        parseDate(defaultValues?.checkIn || searchParams.get('checkIn') || undefined)
-    )
-    const [checkOut, setCheckOut] = useState<Date | null>(
-        parseDate(defaultValues?.checkOut || searchParams.get('checkOut') || undefined)
-    )
+
+    const [checkIn, setCheckIn] = useState<Date | null>(() => {
+        const val = defaultValues?.checkIn || searchParams.get('checkIn')
+        return val ? parseDate(val) : today
+    })
+
+    const [checkOut, setCheckOut] = useState<Date | null>(() => {
+        const val = defaultValues?.checkOut || searchParams.get('checkOut')
+        return val ? parseDate(val) : tomorrow
+    })
+    
     const [adults, setAdults] = useState(Number(searchParams.get('adults')) || defaultValues?.adults || 1)
     const [children, setChildren] = useState(Number(searchParams.get('children')) || defaultValues?.children || 0)
     const [rooms, setRooms] = useState(Number(searchParams.get('rooms')) || defaultValues?.rooms || 1)

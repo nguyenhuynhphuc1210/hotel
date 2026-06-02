@@ -129,7 +129,6 @@ export default function HotelFormModal({ open, onClose, hotel }: Props) {
                 <div>
                   <label className={labelClass}>
                     Email <span className="text-red-500">*</span>
-                    <span className="text-xs text-gray-400 font-normal ml-1">(tự điền khi chọn chủ)</span>
                   </label>
                   <input
                     {...register('email')}
@@ -195,7 +194,6 @@ export default function HotelFormModal({ open, onClose, hotel }: Props) {
                 onChange={e => {
                   const selectedId = Number(e.target.value)
                   setValue('ownerId', selectedId)
-                  // Tự động điền email của owner vào ô email khách sạn
                   const selectedOwner = owners.find(o => o.id === selectedId)
                   if (selectedOwner) {
                     setValue('email', selectedOwner.email, { shouldValidate: true })
@@ -205,7 +203,7 @@ export default function HotelFormModal({ open, onClose, hotel }: Props) {
                 <option value="">-- Chọn chủ khách sạn --</option>
                 {owners.map(o => (
                   <option key={o.id} value={o.id}>
-                    {o.fullName}
+                    {o.fullName} — ({o.email})
                   </option>
                 ))}
               </select>

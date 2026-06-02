@@ -5,11 +5,17 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
     MapPin, Star, SlidersHorizontal,
-    Search, X, ArrowUpDown,
+    Search, X, ArrowUpDown, Heart,
+    Loader2, 
 } from 'lucide-react'
 import hotelApi, { HotelSummaryResponse, HotelSearchParams } from '@/lib/api/hotel.api'
 import SearchBar from '@/components/common/SearchBar'
 import Pagination from '@/components/ui/Pagination'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '@/store/authStore'
+import toast from 'react-hot-toast'
+import favoriteApi from '@/lib/api/favorite.api'
+import { cn } from '@/lib/utils'
 
 // ── Types ─────────────────────────────────────────────────
 type SortOption = 'recommended' | 'price_asc' | 'price_desc' | 'star_desc'
@@ -335,28 +341,121 @@ interface HotelCardProps {
     hasFullDates: boolean
 }
 
+interface FavoriteHotelSummary {
+    id: number
+    hotelName: string
+    thumbnailUrl?: string
+}
+
+interface FavoriteItem {
+    hotel: FavoriteHotelSummary
+    createdAt: string
+}
+
+interface FavoritePageResponse {
+    content: FavoriteItem[]
+    totalElements: number
+    totalPages: number
+    number: number
+    size: number
+}
+
 function HotelCard({ hotel: h, nights, onCardClick, hasFullDates }: HotelCardProps) {
+    const { user } = useAuthStore()
+    const router = useRouter()
+    const queryClient = useQueryClient()
+    const [isTogglingFav, setIsTogglingFav] = useState(false)
+
     const stars = Math.round(Number(h.starRating ?? 0))
     const displayImage = h.thumbnailUrl || h.images?.find(i => i.isPrimary)?.imageUrl
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+
+    // Lấy danh sách yêu thích để kiểm tra trạng thái trái tim
+    const { data: myFavsPage } = useQuery<FavoritePageResponse>({
+        queryKey: ['my-favorites', user?.id],
+        queryFn: () => favoriteApi.getMyFavorites(0, 100).then(r => r.data as FavoritePageResponse),
+        enabled: !!token && !!user,
+        staleTime: 1000 * 60 * 5, // Cache 5 phút
+    })
+
+    const isFavorited = useMemo(() => {
+        if (!myFavsPage?.content) return false
+        return myFavsPage.content.some((fav: FavoriteItem) => fav.hotel.id === h.id)
+    }, [myFavsPage, h.id])
+
+    const handleToggleFavorite = async (e: React.MouseEvent) => {
+        e.stopPropagation() // Ngăn chặn sự kiện click vào Card
+        if (!token) {
+            toast.error('Vui lòng đăng nhập để lưu khách sạn!')
+            router.push(`/login?redirect=${window.location.pathname}`)
+            return
+        }
+
+        setIsTogglingFav(true)
+        try {
+            const res = await favoriteApi.toggle(h.id)
+            // Làm mới query list để cập nhật trạng thái trái tim đồng bộ trên toàn app
+            await queryClient.invalidateQueries({ queryKey: ['my-favorites', user?.id] })
+            toast.success(res.data.isFavorited ? 'Đã thêm vào yêu thích!' : 'Đã xóa khỏi yêu thích!')
+        } catch {
+            toast.error('Có lỗi xảy ra, vui lòng thử lại')
+        } finally {
+            setIsTogglingFav(false)
+        }
+    }
 
     return (
         <div
             onClick={onCardClick}
-            className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group flex"
+            className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group flex relative"
         >
-            <div className="w-72 shrink-0 bg-gray-100 relative">
+            <div className="w-72 shrink-0 bg-gray-100 relative overflow-hidden">
                 {displayImage ? (
-                    <img src={displayImage} alt={h.hotelName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <img 
+                        src={displayImage} 
+                        alt={h.hotelName} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                    />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-4xl">🏨</div>
                 )}
+
+                {/* NÚT YÊU THÍCH (GÓC TRÊN PHẢI HÌNH ẢNH) */}
+                <button
+                    onClick={handleToggleFavorite}
+                    disabled={isTogglingFav}
+                    className={cn(
+                        "absolute top-3 right-3 p-2 rounded-full shadow-md backdrop-blur-md transition-all active:scale-90 z-10",
+                        isFavorited 
+                            ? "bg-red-500 text-white" 
+                            : "bg-white/80 text-gray-600 hover:bg-white hover:text-red-500"
+                    )}
+                >
+                    {isTogglingFav ? (
+                        <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                        <Heart 
+                            size={18} 
+                            fill={isFavorited ? 'white' : 'none'} 
+                            className={cn(isFavorited ? "text-white" : "text-current")}
+                        />
+                    )}
+                </button>
             </div>
+
             <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
                 <div>
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate mb-1">{h.hotelName}</h3>
+                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate mb-1">
+                        {h.hotelName}
+                    </h3>
                     <div className="flex items-center gap-0.5 mb-2">
                         {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} size={14} fill={i < stars ? '#f59e0b' : 'none'} className={i < stars ? 'text-amber-400' : 'text-gray-200'} />
+                            <Star 
+                                key={i} 
+                                size={14} 
+                                fill={i < stars ? '#f59e0b' : 'none'} 
+                                className={i < stars ? 'text-amber-400' : 'text-gray-200'} 
+                            />
                         ))}
                     </div>
                     <div className="flex items-center gap-1 text-sm text-blue-600 mb-3">

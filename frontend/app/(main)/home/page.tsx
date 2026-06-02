@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense  } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -92,6 +92,27 @@ function HomeContent() {
 
     const [isModalOpen, setIsModalOpen] = useState(false)
 
+    const [hotelIdx, setHotelIdx] = useState(0)
+    const VISIBLE_HOTELS = 4
+
+    // Tính toán logic cho nút
+    const canPrevHotel = hotelIdx > 0
+    const canNextHotel = hotelIdx + VISIBLE_HOTELS < featuredHotels.length
+
+    const handleNextHotel = () => {
+        setHotelIdx(prev => {
+            const nextVal = prev + VISIBLE_HOTELS;
+            return nextVal > featuredHotels.length - VISIBLE_HOTELS ? featuredHotels.length - VISIBLE_HOTELS : nextVal;
+        });
+    }
+
+    const handlePrevHotel = () => {
+        setHotelIdx(prev => {
+            const nextVal = prev - VISIBLE_HOTELS;
+            return nextVal < 0 ? 0 : nextVal;
+        });
+    }
+
     return (
 
         <div className="pb-20">
@@ -137,7 +158,7 @@ function HomeContent() {
                 </div>
 
                 {hotelsLoading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-4 gap-4">
                         {[...Array(4)].map((_, i) => (
                             <div key={i} className="h-64 bg-gray-100 animate-pulse rounded-xl" />
                         ))}
@@ -145,46 +166,47 @@ function HomeContent() {
                 ) : featuredHotels.length === 0 ? (
                     <div className="text-center py-12 text-gray-400">Chưa có khách sạn nào</div>
                 ) : (
-                    <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {featuredHotels.map(h => <HotelCard key={h.id} hotel={h} />)}
+                    <div className="relative group/hotel-carousel">
+                        {/* Nút PREV */}
+                        <button
+                            onClick={handlePrevHotel}
+                            disabled={!canPrevHotel}
+                            className={`absolute -left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300
+                    ${canPrevHotel ? 'opacity-100 hover:bg-gray-50 text-gray-800 scale-100' : 'opacity-0 pointer-events-none scale-75'}`}
+                        >
+                            <ChevronLeft size={24} strokeWidth={2.5} />
+                        </button>
+
+                        {/* Container trượt */}
+                        <div className="overflow-hidden rounded-xl">
+                            <div
+                                className="flex gap-4 transition-transform duration-500 ease-out"
+                                style={{
+                                    transform: `translateX(-${(hotelIdx * 100) / VISIBLE_HOTELS}%)`
+                                }}
+                            >
+                                {featuredHotels.map(h => (
+                                    <div
+                                        key={h.id}
+                                        className="shrink-0"
+                                        style={{ width: `calc((100% - ${(VISIBLE_HOTELS - 1) * 1}rem) / ${VISIBLE_HOTELS})` }}
+                                    >
+                                        <HotelCard hotel={h} />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
-                        {hotelsPage && hotelsPage.totalPages > 1 && (
-                            <div className="mt-10 flex items-center justify-center gap-2">
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-                                    disabled={currentPage === 0}
-                                    className="p-2 border rounded-lg disabled:opacity-30 hover:bg-gray-50 transition-colors"
-                                >
-                                    <ChevronLeft size={20} />
-                                </button>
-
-                                <div className="flex items-center gap-1">
-                                    {[...Array(hotelsPage.totalPages)].map((_, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setCurrentPage(i)}
-                                            className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${currentPage === i
-                                                ? 'bg-blue-600 text-white'
-                                                : 'hover:bg-blue-50 text-gray-600'
-                                                }`}
-                                        >
-                                            {i + 1}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(hotelsPage.totalPages - 1, p + 1))}
-                                    disabled={currentPage === hotelsPage.totalPages - 1}
-                                    className="p-2 border rounded-lg disabled:opacity-30 hover:bg-gray-50 transition-colors"
-                                >
-                                    <ChevronRight size={20} />
-                                </button>
-                            </div>
-                        )}
-                    </>
+                        {/* Nút NEXT */}
+                        <button
+                            onClick={handleNextHotel}
+                            disabled={!canNextHotel}
+                            className={`absolute -right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300
+                    ${canNextHotel ? 'opacity-100 hover:bg-gray-50 text-gray-800 scale-100' : 'opacity-0 pointer-events-none scale-75'}`}
+                        >
+                            <ChevronRight size={24} strokeWidth={2.5} />
+                        </button>
+                    </div>
                 )}
             </section>
 
@@ -233,21 +255,38 @@ function DistrictCarousel({
     const canPrev = startIdx > 0
     const canNext = startIdx + VISIBLE < DISTRICTS.length
 
+    const handleNext = () => {
+        setStartIdx(prev => {
+            const nextVal = prev + VISIBLE;
+
+            return nextVal > DISTRICTS.length - VISIBLE ? DISTRICTS.length - VISIBLE : nextVal;
+        });
+    }
+
+    const handlePrev = () => {
+        setStartIdx(prev => {
+            const nextVal = prev - VISIBLE;
+            return nextVal < 0 ? 0 : nextVal;
+        });
+    }
+
     return (
         <div className="relative px-1">
             <button
-                onClick={() => setStartIdx(i => Math.max(0, i - 1))}
+                onClick={handlePrev}
                 disabled={!canPrev}
-                className={`absolute -left-5 top-1/2 -translate-y-6 z-10 w-10 h-10 bg-white border border-gray-200 rounded-full shadow-md flex items-center justify-center transition-all
-          ${canPrev ? 'hover:bg-gray-50 text-gray-700 opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`absolute -left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300
+                    ${canPrev ? 'opacity-100 hover:bg-gray-50 text-gray-800 scale-100' : 'opacity-0 pointer-events-none scale-75'}`}
             >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={24} strokeWidth={2.5} />
             </button>
 
-            <div className="overflow-hidden">
+            <div className="overflow-hidden rounded-xl">
                 <div
-                    className="flex gap-3 transition-transform duration-300 ease-in-out"
-                    style={{ transform: `translateX(calc(-${startIdx} * (20% + 0.6rem)))` }}
+                    className="flex gap-4 transition-transform duration-500 ease-out"
+                    style={{
+                        transform: `translateX(-${(startIdx * 100) / VISIBLE}%)`
+                    }}
                 >
                     {DISTRICTS.map(d => {
                         const count = hotels.filter(h => h.district === d).length
@@ -256,20 +295,22 @@ function DistrictCarousel({
                             <button
                                 key={d}
                                 onClick={() => onSelect(d)}
-                                className="shrink-0 text-left group"
-                                style={{ width: 'calc(20% - 0.6rem)' }}
+                                className="shrink-0 text-left group/item"
+                                style={{ width: `calc((100% - ${(VISIBLE - 1) * 1}rem) / ${VISIBLE})` }}
                             >
-                                <div className="rounded-2xl overflow-hidden aspect-[4/3] mb-2.5 shadow-sm">
+                                <div className="rounded-2xl overflow-hidden aspect-[4/3] mb-3 shadow-sm bg-gray-100">
                                     <img
                                         src={img}
                                         alt={d}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
                                     />
                                 </div>
-                                <div className="font-semibold text-sm text-gray-900 group-hover:text-blue-700 transition-colors truncate">
+                                <div className="font-bold text-base text-gray-900 group-hover/item:text-blue-600 transition-colors truncate">
                                     {d}
                                 </div>
-                                <div className="text-xs text-gray-500 mt-0.5">{count > 0 ? `${count} khách sạn` : 'Khám phá ngay'}</div>
+                                <div className="text-sm text-gray-500 mt-0.5">
+                                    {count > 0 ? `${count} khách sạn` : 'Khám phá ngay'}
+                                </div>
                             </button>
                         )
                     })}
@@ -277,12 +318,12 @@ function DistrictCarousel({
             </div>
 
             <button
-                onClick={() => setStartIdx(i => Math.min(DISTRICTS.length - VISIBLE, i + 1))}
+                onClick={handleNext}
                 disabled={!canNext}
-                className={`absolute -right-5 top-1/2 -translate-y-6 z-10 w-10 h-10 bg-white border border-gray-200 rounded-full shadow-md flex items-center justify-center transition-all
-          ${canNext ? 'hover:bg-gray-50 text-gray-700 opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`absolute -right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300
+                    ${canNext ? 'opacity-100 hover:bg-gray-50 text-gray-800 scale-100' : 'opacity-0 pointer-events-none scale-75'}`}
             >
-                <ChevronRight size={18} />
+                <ChevronRight size={24} strokeWidth={2.5} />
             </button>
         </div>
     )
@@ -387,9 +428,9 @@ function PromotionCard({ promotion }: {
 }
 
 export default function HomePage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
-      <HomeContent />
-    </Suspense>
-  )
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+            <HomeContent />
+        </Suspense>
+    )
 }

@@ -148,7 +148,7 @@ export default function AdminHotelsPage() {
             Hiển thị {filtered.length} / {pageData?.totalElements || 0} khách sạn
           </p>
         </div>
-        {/* 
+        
         <button
           onClick={() => {
             setEditingHotel(null)
@@ -158,7 +158,7 @@ export default function AdminHotelsPage() {
         >
           <Plus size={16} />
           Thêm khách sạn
-        </button> */}
+        </button>
       </div>
 
       {/* Stat cards */}
@@ -173,7 +173,7 @@ export default function AdminHotelsPage() {
 
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between">
           <span className="text-sm text-gray-500">
-            Trang này (Hoạt động)
+            Hoạt động
           </span>
 
           <span className="text-lg font-bold px-2.5 py-0.5 rounded-lg text-green-700 bg-green-50">
@@ -183,7 +183,7 @@ export default function AdminHotelsPage() {
 
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between">
           <span className="text-sm text-gray-500">
-            Trang này (Chờ duyệt)
+            Chờ duyệt
           </span>
 
           <span className="text-lg font-bold px-2.5 py-0.5 rounded-lg text-amber-700 bg-amber-50">
@@ -371,7 +371,7 @@ export default function AdminHotelsPage() {
                     </div>
 
                     <div className="text-xs text-gray-400">
-                      ID: {h.ownerEmail}
+                      {h.ownerEmail}
                     </div>
                   </td>
 
