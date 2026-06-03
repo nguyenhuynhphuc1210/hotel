@@ -7,13 +7,18 @@ import {
   Package,
   Loader2,
   MapPin,
-  Ban
+  Ban, CreditCard
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 import bookingApi from '@/lib/api/booking.api'
 import { BookingStatus } from '@/types/booking.types'
 import Pagination from '@/components/ui/Pagination'
+import paymentApi from '@/lib/api/payment.api'
+
+interface PaymentRetryResponse {
+    paymentUrl: string;
+}
 
 interface ApiError {
   response?: { data?: { message?: string } | string }
@@ -66,6 +71,25 @@ export default function BookingPage() {
     cancelBookingMutation.mutate(id)
     setConfirmCancelId(null)
   }
+
+  const retryPaymentMutation = useMutation({
+    mutationFn: (id: number) => paymentApi.retryPayment(id),
+    onSuccess: (res: { data: PaymentRetryResponse }) => { 
+        if (res.data.paymentUrl) {
+            toast.success('Đang chuyển hướng đến trang thanh toán...');
+            window.location.href = res.data.paymentUrl;
+        }
+    },
+    onError: (err: ApiError) => { 
+        const msg = typeof err.response?.data === 'string' 
+            ? err.response.data 
+            : err.response?.data?.message || 'Không thể khởi tạo lại thanh toán';
+        toast.error(msg);
+    }
+});
+
+const canRetryPayment = (booking: { status: string; paymentMethod: string | null }) => 
+    booking.status === 'PENDING' && (booking.paymentMethod === 'VNPAY' || booking.paymentMethod === 'MOMO');
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('vi-VN', {
@@ -216,6 +240,21 @@ export default function BookingPage() {
                     </div>
 
                     <div className="flex flex-col gap-2 w-full mt-4">
+                      {canRetryPayment(booking) && (
+    <button
+      onClick={() => retryPaymentMutation.mutate(booking.id)}
+      disabled={retryPaymentMutation.isPending}
+      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-md shadow-blue-100"
+    >
+      {retryPaymentMutation.isPending ? (
+        <Loader2 size={13} className="animate-spin" />
+      ) : (
+        <CreditCard size={13} />
+      )}
+      Thanh toán ngay
+    </button>
+  )}
+
                       <button
                         onClick={() =>
                           router.push(`/booking/detail/${booking.id}`)

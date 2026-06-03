@@ -36,6 +36,11 @@ const paymentApi = {
 
   processMomoReturn: (queryString: string) => 
     axiosInstance.get(`${API_CONFIG.ENDPOINTS.MOMO_RETURN}${queryString}`),
+
+  retryPayment: (bookingId: number | string) =>
+    axiosInstance.get<{ paymentUrl: string }>(
+      `${API_CONFIG.ENDPOINTS.PAYMENTS}/retry/${bookingId}`
+    ),
 }
 
 export default paymentApi

@@ -15,6 +15,11 @@ import { Loader2 } from 'lucide-react'
 import axiosInstance from '@/lib/api/axios'
 import toast from 'react-hot-toast'
 import hotelApi from '@/lib/api/hotel.api'
+import paymentApi from '@/lib/api/payment.api'
+
+interface PaymentRetryResponse {
+    paymentUrl: string;
+}
 
 interface ApiError {
     response?: {
@@ -102,6 +107,21 @@ function BookingDetailPage() {
         retry: false,
     })
 
+    const retryMutation = useMutation({
+        mutationFn: () => paymentApi.retryPayment(bookingId),
+        onSuccess: (res: { data: PaymentRetryResponse }) => {
+            if (res.data.paymentUrl) {
+                window.location.href = res.data.paymentUrl;
+            }
+        },
+        onError: (err: ApiError) => {
+            const msg = typeof err.response?.data === 'string'
+                ? err.response.data
+                : err.response?.data?.message || 'Lỗi khởi tạo thanh toán';
+            toast.error(msg);
+        }
+    });
+
     const reviewMutation = useMutation({
         mutationFn: () => {
             const formData = new FormData()
@@ -165,6 +185,8 @@ function BookingDetailPage() {
         setPreviewUrls(prev => prev.filter((_, i) => i !== idx))
     }
 
+    
+
     const getStatusInfo = (status: string) => {
         switch (status) {
             case 'CONFIRMED': return { label: 'Đã xác nhận', color: 'bg-blue-600', icon: <CheckCircle2 size={18} /> }
@@ -222,11 +244,35 @@ function BookingDetailPage() {
                                 <p className="text-xl font-black">{status.label}</p>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Mã đặt phòng</p>
-                            <p className="text-2xl font-black tracking-tighter">#{booking.bookingCode}</p>
-                        </div>
+                        {booking.status === 'PENDING' && (booking.paymentMethod !== 'CASH') ? (
+                            <button
+                                onClick={() => retryMutation.mutate()}
+                                disabled={retryMutation.isPending}
+                                className="bg-white text-blue-600 px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-50 transition-all flex items-center gap-2"
+                            >
+                                {retryMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
+                                Thanh toán ngay
+                            </button>
+                        ) : (
+                            <div className="text-right">
+                                <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Mã đặt phòng</p>
+                                <p className="text-2xl font-black tracking-tighter">#{booking.bookingCode}</p>
+                            </div>
+                        )}
                     </div>
+
+                    {booking.status === 'PENDING' && (
+                        <div className="mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                            <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                            <div>
+                                <p className="text-sm font-bold text-amber-800">Đơn hàng này chưa được thanh toán</p>
+                                <p className="text-xs text-amber-600 mt-1">
+                                    Vui lòng hoàn tất thanh toán để đảm bảo phòng của bạn được giữ chỗ thành công.
+                                    Hệ thống sẽ tự động hủy đơn sau 15 phút nếu không nhận được thanh toán.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="p-8 md:p-12 space-y-12">
 
