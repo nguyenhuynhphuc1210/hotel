@@ -43,15 +43,22 @@ public interface RoomTypeRepository extends JpaRepository<RoomType, Long> {
     List<RoomType> findDeletedRoomTypesByOwner(@Param("email") String email);
 
     @Modifying
-    @Query("UPDATE RoomType rt SET rt.isActive = :isActive WHERE rt.hotel.id = :hotelId")
-    void updateIsActiveByHotelId(@Param("hotelId") Long hotelId, @Param("isActive") boolean isActive);
+    @Query("""
+            UPDATE RoomType rt
+            SET rt.deletedAt = :deletedAt, rt.isActive = :isActive
+            WHERE rt.hotel.id = :hotelId
+            """)
+    void updateDeleteAndActiveStatusByHotelId(@Param("hotelId") Long hotelId,
+            @Param("deletedAt") LocalDateTime deletedAt,
+            @Param("isActive") boolean isActive);
 
     @Modifying
     @Query("""
-                UPDATE RoomType rt
-                SET rt.deletedAt = :deletedAt
-                WHERE rt.hotel.id = :hotelId
-                AND rt.deletedAt IS NULL
+            UPDATE RoomType rt
+            SET rt.isActive = :isActive
+            WHERE rt.hotel.id = :hotelId
+            AND rt.deletedAt IS NULL
             """)
-    void updateDeletedAtByHotelId(@Param("hotelId") Long hotelId, @Param("deletedAt") LocalDateTime deletedAt);
+    void updateIsActiveByHotelIdSafe(@Param("hotelId") Long hotelId,
+            @Param("isActive") boolean isActive);
 }

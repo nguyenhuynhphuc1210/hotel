@@ -190,8 +190,7 @@ public class HotelServiceImpl implements HotelService {
         existing.setDeletedAt(LocalDateTime.now());
         hotelRepository.save(existing);
 
-        roomTypeRepository.updateDeletedAtByHotelId(id, LocalDateTime.now());
-        roomTypeRepository.updateIsActiveByHotelId(id, false);
+        roomTypeRepository.updateDeleteAndActiveStatusByHotelId(id, LocalDateTime.now(), false);
         roomCalendarRepository.updateIsAvailableByHotelId(id, false);
     }
 
@@ -212,7 +211,7 @@ public class HotelServiceImpl implements HotelService {
         hotel.setDeletedAt(null);
         hotel.setStatus(HotelStatus.PENDING);
         hotel.setStatusReason("Khách sạn được khôi phục, chờ duyệt lại");
-        roomTypeRepository.updateDeletedAtByHotelId(id, null);
+        roomTypeRepository.updateDeleteAndActiveStatusByHotelId(id, null, false);
 
         return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
     }
@@ -235,7 +234,7 @@ public class HotelServiceImpl implements HotelService {
         hotel.setStatusReason(null);
         hotelRepository.save(hotel);
 
-        roomTypeRepository.updateIsActiveByHotelId(id, true);
+        roomTypeRepository.updateIsActiveByHotelIdSafe(id, true);
         roomCalendarRepository.updateIsAvailableByHotelId(id, true);
 
         return hotelMapper.toHotelResponse(hotel);
@@ -264,7 +263,7 @@ public class HotelServiceImpl implements HotelService {
         hotel.setStatusReason(reason.trim());
         hotelRepository.save(hotel);
 
-        roomTypeRepository.updateIsActiveByHotelId(id, false);
+        roomTypeRepository.updateIsActiveByHotelIdSafe(id, false);
         roomCalendarRepository.updateIsAvailableByHotelId(id, false);
 
         return hotelMapper.toHotelResponse(hotel);
@@ -292,7 +291,7 @@ public class HotelServiceImpl implements HotelService {
         hotel.setStatusReason(reason.trim());
         hotelRepository.save(hotel);
 
-        roomTypeRepository.updateIsActiveByHotelId(id, false);
+        roomTypeRepository.updateIsActiveByHotelIdSafe(id, false);
         roomCalendarRepository.updateIsAvailableByHotelId(id, false);
 
         return hotelMapper.toHotelResponse(hotel);
@@ -314,7 +313,7 @@ public class HotelServiceImpl implements HotelService {
         hotel.setStatusReason(reason != null ? reason.trim() : "Chủ khách sạn tạm đóng cửa để sửa chữa/nâng cấp.");
         hotelRepository.save(hotel);
 
-        roomTypeRepository.updateIsActiveByHotelId(id, false);
+        roomTypeRepository.updateIsActiveByHotelIdSafe(id, false);
         roomCalendarRepository.updateIsAvailableByHotelId(id, false);
 
         return hotelMapper.toHotelResponse(hotel);
@@ -336,7 +335,7 @@ public class HotelServiceImpl implements HotelService {
         hotel.setStatusReason(null);
         hotelRepository.save(hotel);
 
-        roomTypeRepository.updateIsActiveByHotelId(id, true);
+        roomTypeRepository.updateIsActiveByHotelIdSafe(id, true);
         roomCalendarRepository.updateIsAvailableByHotelId(id, true);
 
         return hotelMapper.toHotelResponse(hotel);
