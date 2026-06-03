@@ -358,6 +358,7 @@ export default function AdminBookingsPage() {
       {detailBooking && (
         <BookingDetailModal
           booking={detailBooking}
+          ownerName={hotels.find(h => h.id === detailBooking.hotelId)?.ownerName ?? '---'}
           onClose={() => setDetailBooking(null)}
           onUpdateStatus={(id, status) => updateStatusMutation.mutate({ id, status })}
           isUpdating={updateStatusMutation.isPending && updateStatusMutation.variables?.id === detailBooking.id}
@@ -367,8 +368,9 @@ export default function AdminBookingsPage() {
   )
 }
 
-function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }: {
+function BookingDetailModal({ booking: b,  ownerName, onClose, onUpdateStatus, isUpdating }: {
   booking: BookingResponse
+  ownerName: string
   onClose: () => void
   onUpdateStatus: (id: number, status: BookingStatus) => void
   isUpdating: boolean
@@ -441,7 +443,7 @@ function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }:
               <div className="text-sm space-y-1">
                 <p className="font-bold text-gray-900">{b.hotelName}</p>
                 <p className="text-gray-500 text-xs">{b.hotelAddress}</p>
-                <p className="text-blue-600 font-medium text-[11px]">Chủ: {b.cancelledBy || '---'}</p>
+                <p className="text-blue-600 font-medium text-[11px]">Chủ: {ownerName || '---'}</p>
               </div>
             </div>
           </div>
