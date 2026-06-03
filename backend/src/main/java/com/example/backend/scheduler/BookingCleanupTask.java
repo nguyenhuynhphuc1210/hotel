@@ -28,8 +28,7 @@ public class BookingCleanupTask {
     private final RoomCalendarRepository roomCalendarRepository;
     private final HotelStatisticService hotelStatisticService;
 
-    // Chạy mỗi 5 phút một lần
-    @Scheduled(fixedRate = 300000)
+    @Scheduled(fixedRate = 1800000) // 30 phút
     @Transactional
     public void cleanupExpiredBookings() {
         LocalDateTime timeoutLimit = LocalDateTime.now().minusMinutes(15);
