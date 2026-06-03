@@ -72,13 +72,16 @@ export default function AdminUsersPage() {
 
   // API
   const { data: pageData, isLoading } = useUsers(
-    currentPage,
-    pageSize,
-    keyword,
-    roleFilter
-  )
+  currentPage,
+  pageSize,
+  keyword,
+  roleFilter
+)
 
-  const users = pageData?.content || []
+const users: UserResponse[] = pageData?.content || []
+
+const { data: allData } = useUsers(0, 9999, '', '')
+const allUsers = allData?.content || []
 
   // Filter status local
   const finalUsers = users.filter(u => {
@@ -93,10 +96,10 @@ export default function AdminUsersPage() {
   const enableMutation = useEnableUser()
 
   // Stats
-  const totalAdmin = users.filter(u => u.roleName === 'ROLE_ADMIN').length
-  const totalOwner = users.filter(u => u.roleName === 'ROLE_HOTEL_OWNER').length
-  const totalUser = users.filter(u => u.roleName === 'ROLE_USER').length
-  const totalLocked = users.filter(u => !u.isActive).length
+  const totalAdmin  = allUsers.filter(u => u.roleName === 'ROLE_ADMIN').length
+const totalOwner  = allUsers.filter(u => u.roleName === 'ROLE_HOTEL_OWNER').length
+const totalUser   = allUsers.filter(u => u.roleName === 'ROLE_USER').length
+const totalLocked = allUsers.filter(u => !u.isActive).length
 
   // Actions
   const handleDelete = (u: UserResponse) => {
@@ -122,8 +125,30 @@ export default function AdminUsersPage() {
     setKeyword('')
     setRoleFilter('')
     setStatusFilter('')
+    setActiveStatFilter('')
     setCurrentPage(0)
   }
+
+  const [activeStatFilter, setActiveStatFilter] = useState<string>('')
+
+  const handleStatClick = (filterType: string) => {
+  if (activeStatFilter === filterType) {
+    // Click lần 2 → bỏ filter
+    setActiveStatFilter('')
+    setRoleFilter('')
+    setStatusFilter('')
+  } else {
+    setActiveStatFilter(filterType)
+    if (filterType === 'locked') {
+      setRoleFilter('')
+      setStatusFilter('inactive')
+    } else {
+      setRoleFilter(filterType)
+      setStatusFilter('')
+    }
+    setCurrentPage(0)
+  }
+}
 
   return (
     <div className="space-y-5">
@@ -141,43 +166,70 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          {
-            label: 'Admin',
-            value: totalAdmin,
-            color: 'text-purple-600 bg-purple-50',
-          },
-          {
-            label: 'Chủ KS',
-            value: totalOwner,
-            color: 'text-blue-600 bg-blue-50',
-          },
-          {
-            label: 'Khách hàng',
-            value: totalUser,
-            color: 'text-gray-600 bg-gray-100',
-          },
-          {
-            label: 'Bị khoá',
-            value: totalLocked,
-            color: 'text-red-600 bg-red-50',
-          },
-        ].map(s => (
-          <div
-            key={s.label}
-            className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between"
-          >
-            <span className="text-sm text-gray-500">{s.label}</span>
-
-            <span
-              className={`text-lg font-bold px-2.5 py-0.5 rounded-lg ${s.color}`}
-            >
-              {s.value}
-            </span>
-          </div>
-        ))}
-      </div>
+<div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  {[
+    {
+      key: 'ROLE_ADMIN',
+      label: 'Admin',
+      value: totalAdmin,
+      icon: Crown,
+      activeClass: 'border-purple-500 bg-purple-50',
+      inactiveClass: 'border-gray-200 bg-white hover:border-gray-300',
+      iconClass: 'text-purple-500',
+      valueColor: 'text-purple-600 bg-purple-50',
+    },
+    {
+      key: 'ROLE_HOTEL_OWNER',
+      label: 'Chủ KS',
+      value: totalOwner,
+      icon: Store,
+      activeClass: 'border-blue-500 bg-blue-50',
+      inactiveClass: 'border-gray-200 bg-white hover:border-gray-300',
+      iconClass: 'text-blue-500',
+      valueColor: 'text-blue-600 bg-blue-50',
+    },
+    {
+      key: 'ROLE_USER',
+      label: 'Khách hàng',
+      value: totalUser,
+      icon: UserIcon,
+      activeClass: 'border-gray-500 bg-gray-50',
+      inactiveClass: 'border-gray-200 bg-white hover:border-gray-300',
+      iconClass: 'text-gray-500',
+      valueColor: 'text-gray-600 bg-gray-100',
+    },
+    {
+      key: 'locked',
+      label: 'Bị khoá',
+      value: totalLocked,
+      icon: XCircle,
+      activeClass: 'border-red-500 bg-red-50',
+      inactiveClass: 'border-gray-200 bg-white hover:border-gray-300',
+      iconClass: 'text-red-400',
+      valueColor: 'text-red-600 bg-red-50',
+    },
+  ].map(s => {
+    const Icon = s.icon
+    const isActive = activeStatFilter === s.key
+    return (
+      <button
+        key={s.key}
+        onClick={() => handleStatClick(s.key)}
+        className={`rounded-xl border-2 px-4 py-3 flex items-center justify-between transition-all text-left ${
+          isActive ? s.activeClass : s.inactiveClass
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Icon size={14} className={isActive ? s.iconClass : 'text-gray-400'} />
+          <span className="text-sm text-gray-500">{s.label}</span>
+        </div>
+        <span className={`text-lg font-bold px-2.5 py-0.5 rounded-lg ${s.valueColor}`}>
+          {s.value}
+        </span>
+      </button>
+    )
+  })}
+</div>
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
