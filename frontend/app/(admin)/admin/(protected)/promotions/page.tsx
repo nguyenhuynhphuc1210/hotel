@@ -227,6 +227,7 @@ export default function AdminPromotionsPage() {
                 const status = getPromoStatus(p, now)
                 const cfg = STATUS_CONFIG[status]
                 const daysLeft = Math.ceil((new Date(p.endDate).getTime() - now.getTime()) / 86400000)
+                const isGlobal = p.hotelId === null
                 return (
                   <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
                     <td className="px-5 py-4">
@@ -280,7 +281,31 @@ export default function AdminPromotionsPage() {
                         <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                         {cfg.label}
                       </span>
-                    </td>                    
+                    </td>
+                    {/* Nút sửa/xoá — chỉ hiện với global promotion */}
+                    <td className="px-5 py-4 w-20">
+                      {isGlobal && (
+                        <div className="flex items-center gap-1 justify-end">
+                          <button
+                            onClick={() => setModalPromo(p)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Chỉnh sửa"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Xoá mã "${p.promoCode}"?`)) deleteMutation.mutate(p.id)
+                            }}
+                            disabled={deleteMutation.isPending}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                            title="Xoá"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 )
               })}

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Star, Search, MessageSquare, Eye, EyeOff, Loader2, FilterX,
-  Flag, ShieldCheck, ShieldX, AlertTriangle, CheckCircle2, Clock,
+  Flag, AlertTriangle, CheckCircle2,
 } from 'lucide-react'
 import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
@@ -22,18 +22,15 @@ export default function AdminReviewsPage() {
   const [ownerFilter, setOwnerFilter] = useState('')
   const [hotelFilter, setHotelFilter] = useState<number | ''>('')
 
-  // State phân trang cho Tab All
   const [pageAll, setPageAll] = useState(0)
   const [sizeAll, setSizeAll] = useState(10)
 
-  // State phân trang cho Tab Reported
   const [pageReported, setPageReported] = useState(0)
   const [sizeReported, setSizeReported] = useState(10)
 
   const toggleVisibility = useToggleReviewVisibility()
   const resolveReport = useResolveReport()
 
-  // 1. Lấy danh sách khách sạn
   const { data: hotels = [] } = useQuery<HotelResponse[]>({
     queryKey: ['admin-hotels-list'],
     queryFn: () => axiosInstance.get(API_CONFIG.ENDPOINTS.HOTELS, {
@@ -41,14 +38,13 @@ export default function AdminReviewsPage() {
     }).then(r => r.data.content),
   })
 
-  // 2. Lấy đánh giá theo khách sạn (Tab All)
   const { data: reviewData, isLoading: isReviewsLoading } = useQuery({
     queryKey: ['admin-reviews', hotelFilter, pageAll, sizeAll],
     queryFn: () => {
       if (!hotelFilter) return { content: [], totalElements: 0, totalPages: 0 }
       return axiosInstance
         .get<{ content: ReviewResponse[], totalElements: number, totalPages: number }>(
-          `/api/reviews/hotel/${hotelFilter}/admin`, 
+          `/api/reviews/hotel/${hotelFilter}/admin`,
           { params: { page: pageAll, size: sizeAll } }
         )
         .then(r => r.data)
@@ -56,10 +52,8 @@ export default function AdminReviewsPage() {
     enabled: !!hotelFilter && activeTab === 'all',
   })
 
-  // 3. Lấy danh sách đánh giá bị báo cáo (Tab Reported)
   const { data: reportedPageData, isLoading: isReportedLoading } = useReportedReviews(pageReported, sizeReported)
 
-  // FIX LỖI: Trích xuất mảng từ đối tượng PageResponse
   const allReviews = reviewData?.content || []
   const reportedReviews = reportedPageData?.content || []
 
@@ -67,7 +61,6 @@ export default function AdminReviewsPage() {
     new Map(hotels.map(h => [h.ownerId, { id: h.ownerId, name: h.ownerName }])).values()
   )
 
-  // Filter client-side (chỉ lọc trên dữ liệu của trang hiện tại)
   const filtered = allReviews.filter((rv: ReviewResponse) => {
     const matchKeyword =
       !keyword ||
@@ -80,11 +73,6 @@ export default function AdminReviewsPage() {
   const avgRating = allReviews.length
     ? (allReviews.reduce((s, r) => s + Number(r.rating), 0) / allReviews.length).toFixed(1)
     : '0'
-
-  const starCounts = [5, 4, 3, 2, 1].map(s => ({
-    star: s,
-    count: allReviews.filter(r => Math.floor(Number(r.rating)) === s).length,
-  }))
 
   const pendingReportedCount = reportedPageData?.totalElements || 0
 
@@ -145,12 +133,10 @@ export default function AdminReviewsPage() {
               <div className="space-y-4">
                 {reportedReviews.map((rv: ReviewResponse) => (
                   <div key={rv.id} className="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden">
-                    <div className="bg-red-50 border-b border-red-100 px-5 py-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Flag size={13} className="text-red-500" />
-                        <span className="text-xs font-bold text-red-700 uppercase tracking-wider">Đánh giá bị báo cáo</span>
-                        <span className="text-[10px] text-red-400">· {rv.hotelName}</span>
-                      </div>
+                    <div className="bg-red-50 border-b border-red-100 px-5 py-2.5 flex items-center gap-2">
+                      <Flag size={13} className="text-red-500" />
+                      <span className="text-xs font-bold text-red-700 uppercase tracking-wider">Đánh giá bị báo cáo</span>
+                      <span className="text-[10px] text-red-400">· {rv.hotelName}</span>
                     </div>
 
                     <div className="p-5">
@@ -178,8 +164,7 @@ export default function AdminReviewsPage() {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
-                        <div className="flex-1" />
+                      <div className="flex items-center gap-3 pt-3 border-t border-gray-100 justify-end">
                         <button
                           onClick={() => resolveReport.mutate({ id: rv.id, isHideApproved: false })}
                           className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200"
@@ -198,7 +183,6 @@ export default function AdminReviewsPage() {
                 ))}
               </div>
 
-              {/* PHÂN TRANG TAB REPORTED */}
               <div className="bg-white p-4 rounded-xl border border-gray-200">
                 <Pagination
                   currentPage={pageReported}
@@ -266,53 +250,108 @@ export default function AdminReviewsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1 space-y-4">
-                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                  <div className="text-center mb-6">
-                    <div className="text-5xl font-extrabold text-gray-900">{avgRating}</div>
-                    <p className="text-xs text-gray-400 mt-2 uppercase">Trung bình đánh giá</p>
-                  </div>
-                  {/* ... Star count progress bars ... */}
+              {/* Sidebar điểm TB */}
+              <div className="lg:col-span-1">
+                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm text-center">
+                  <div className="text-5xl font-extrabold text-gray-900">{avgRating}</div>
+                  <p className="text-xs text-gray-400 mt-2 uppercase tracking-widest">Trung bình đánh giá</p>
                 </div>
               </div>
 
+              {/* Danh sách đánh giá */}
               <div className="lg:col-span-3 space-y-4">
                 {isReviewsLoading ? (
-                  <div className="text-center py-20"><Loader2 className="animate-spin mx-auto text-blue-600" /></div>
+                  <div className="text-center py-20">
+                    <Loader2 className="animate-spin mx-auto text-blue-600" />
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-dashed border-gray-300 py-16 text-center">
+                    <MessageSquare size={36} className="text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-400 text-sm">Không có đánh giá nào</p>
+                  </div>
                 ) : (
                   <>
-                    {filtered.map((rv: ReviewResponse) => (
-                      <div key={rv.id} className={`bg-white rounded-xl border p-5 ${rv.isReported ? 'border-red-200 bg-red-50/20' : 'border-gray-200 shadow-sm'}`}>
-                        {/* Review Item Header */}
-                        <div className="flex items-start justify-between">
-                          <div className="flex gap-4">
-                            <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                              {rv.userName.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-gray-900">{rv.userName}</h3>
-                                {rv.isReported && <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">Đã báo cáo</span>}
-                              </div>
-                              <div className="flex items-center gap-1 mt-1 text-amber-400">
-                                <Star size={14} fill="currentColor" /> <span className="text-sm font-bold text-gray-700">{rv.rating}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => toggleVisibility.mutate(rv.id)}
-                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200"
-                          >
-                            {rv.isPublished ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        </div>
-                        <p className="mt-4 text-sm text-gray-700 italic leading-relaxed bg-gray-50 p-3 rounded-lg">
-                           {rv.comment || 'Không có bình luận'}
-                        </p>
-                      </div>
-                    ))}
+                    {filtered.map((rv: ReviewResponse) => {
+                      // isPublished = true  → đang hiển thị → nút "Ẩn" (EyeOff)
+                      // isPublished = false → đang ẩn       → nút "Bỏ ẩn" (Eye) + card mờ
+                      const isHidden = !rv.isPublished
 
-                    {/* PHÂN TRANG TAB ALL */}
+                      return (
+                        <div
+                          key={rv.id}
+                          className={`bg-white rounded-xl border p-5 transition-all ${
+                            isHidden
+                              ? 'border-gray-200 opacity-60'
+                              : rv.isReported
+                              ? 'border-red-200 bg-red-50/20 shadow-sm'
+                              : 'border-gray-200 shadow-sm'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            {/* Avatar + Info */}
+                            <div className="flex gap-3 flex-1 min-w-0">
+                              <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${isHidden ? 'bg-gray-400' : 'bg-blue-600'}`}>
+                                {rv.userName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className={`font-bold text-sm ${isHidden ? 'text-gray-400' : 'text-gray-900'}`}>
+                                    {rv.userName}
+                                  </h3>
+                                  {rv.isReported && (
+                                    <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+                                      Đã báo cáo
+                                    </span>
+                                  )}
+                                  {/* Badge trạng thái hiển thị */}
+                                  {isHidden ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">
+                                      <EyeOff size={9} /> Đang ẩn
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                                      <Eye size={9} /> Đang hiện
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 mt-1 text-amber-400">
+                                  <Star size={13} fill="currentColor" />
+                                  <span className="text-sm font-bold text-gray-700">{rv.rating}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Nút toggle ẩn/hiện — label + icon rõ ràng */}
+                            <button
+                              onClick={() => toggleVisibility.mutate(rv.id)}
+                              title={isHidden ? 'Bỏ ẩn đánh giá này' : 'Ẩn đánh giá này'}
+                              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
+                                isHidden
+                                  ? 'border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100'    // đang ẩn → bỏ ẩn
+                                  : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-100'       // đang hiện → ẩn
+                              }`}
+                            >
+                              {isHidden ? (
+                                <><Eye size={13} /> Bỏ ẩn</>
+                              ) : (
+                                <><EyeOff size={13} /> Ẩn</>
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Nội dung comment */}
+                          <p className={`mt-4 text-sm italic leading-relaxed p-3 rounded-lg ${
+                            isHidden
+                              ? 'text-gray-400 bg-gray-100/60'
+                              : 'text-gray-700 bg-gray-50'
+                          }`}>
+                            {rv.comment || 'Không có bình luận'}
+                          </p>
+                        </div>
+                      )
+                    })}
+
+                    {/* Phân trang */}
                     <div className="bg-white p-4 rounded-xl border border-gray-200">
                       <Pagination
                         currentPage={pageAll}
