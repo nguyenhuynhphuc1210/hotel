@@ -36,11 +36,18 @@ public class RoomImageServiceImpl implements RoomImageService {
         SecurityUtils.checkOwnerOrAdmin(
                 roomType.getHotel().getOwner().getEmail());
 
-        List<String> uploadedUrls = new ArrayList<>();
         try {
-
-            List<Map<String, Object>> uploadResults = cloudinaryService.uploadMultipleImages(files,
+            List<Map<String, Object>> uploadResults = cloudinaryService.uploadMultipleImages(
+                    files,
                     "room-types/" + roomTypeId);
+
+            boolean hasPrimaryImage = roomImageRepository
+                    .existsByRoomType_IdAndIsPrimaryTrue(roomTypeId);
+
+            List<RoomImage> roomImages = new ArrayList<>();
+            List<String> uploadedUrls = new ArrayList<>();
+
+            boolean setFirstImageAsPrimary = !hasPrimaryImage;
 
             for (Map<String, Object> result : uploadResults) {
                 String imageUrl = (String) result.get("secure_url");
@@ -50,17 +57,22 @@ public class RoomImageServiceImpl implements RoomImageService {
                         .roomType(roomType)
                         .imageUrl(imageUrl)
                         .publicId(publicId)
-                        .isPrimary(false)
+                        .isPrimary(setFirstImageAsPrimary)
                         .build();
 
-                roomImageRepository.save(roomImage);
+                roomImages.add(roomImage);
                 uploadedUrls.add(imageUrl);
+
+                setFirstImageAsPrimary = false;
             }
+
+            roomImageRepository.saveAll(roomImages);
+
+            return uploadedUrls;
+
         } catch (Exception e) {
             throw new IllegalArgumentException("Lỗi trong quá trình upload ảnh phòng: " + e.getMessage());
         }
-
-        return uploadedUrls;
     }
 
     @Override
@@ -73,8 +85,21 @@ public class RoomImageServiceImpl implements RoomImageService {
                 roomImage.getRoomType().getHotel().getOwner().getEmail());
 
         try {
+            Long roomTypeId = roomImage.getRoomType().getId();
+            boolean wasPrimary = Boolean.TRUE.equals(roomImage.getIsPrimary());
+
             cloudinaryService.deleteImage(publicId);
             roomImageRepository.delete(roomImage);
+
+            if (wasPrimary) {
+                roomImageRepository
+                        .findFirstByRoomType_IdOrderByIdAsc(roomTypeId)
+                        .ifPresent(image -> {
+                            image.setIsPrimary(true);
+                            roomImageRepository.save(image);
+                        });
+            }
+
         } catch (Exception e) {
             throw new IllegalArgumentException("Lỗi khi xóa ảnh phòng: " + e.getMessage());
         }

@@ -14,4 +14,8 @@ public interface RoomImageRepository extends JpaRepository<RoomImage, Long> {
     @Modifying
     @Query("UPDATE RoomImage ri SET ri.isPrimary = false WHERE ri.roomType.id = :roomTypeId")
     void resetPrimaryImageForRoomType(@Param("roomTypeId") Long roomTypeId);
+
+    boolean existsByRoomType_IdAndIsPrimaryTrue(Long roomTypeId);
+
+    Optional<RoomImage> findFirstByRoomType_IdOrderByIdAsc(Long roomTypeId);
 }

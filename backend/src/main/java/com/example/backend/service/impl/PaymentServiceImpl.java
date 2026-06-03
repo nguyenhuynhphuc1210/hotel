@@ -16,12 +16,14 @@ import com.example.backend.repository.PaymentRepository;
 import com.example.backend.repository.RoomCalendarRepository;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.MomoService;
+import com.example.backend.service.NotificationService;
 import com.example.backend.service.PaymentService;
 import com.example.backend.service.VNPayService;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
@@ -48,6 +50,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
     @Value("${app.frontend.url}")
@@ -60,6 +63,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final VNPayService vnPayService;
     private final MomoService momoService;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -556,11 +560,32 @@ public class PaymentServiceImpl implements PaymentService {
 
         paymentRepository.save(payment);
         bookingRepository.save(booking);
+
         try {
             eventPublisher.publishEvent(
                     new BookingEmailEvent(booking.getId(), "CONFIRM", null));
         } catch (Exception e) {
             System.err.println("Lỗi gửi email: " + e.getMessage());
+        }
+
+        try {
+            String ownerEmail = booking.getHotel().getOwner().getEmail();
+            String hotelName = booking.getHotel().getHotelName();
+
+            String guestName = booking.getUser() != null ? booking.getUser().getFullName() : booking.getGuestName();
+            
+            String title = "🎉 Đơn đặt phòng mới đã thanh toán!";
+            String message = String.format(
+                "Khách hàng %s vừa thanh toán thành công đơn %s tại khách sạn %s. Số tiền: %,d VND.",
+                guestName,
+                booking.getBookingCode(),
+                hotelName,
+                booking.getTotalAmount().longValue()
+            );
+
+            notificationService.createNotification(ownerEmail, title, message);
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo cho chủ khách sạn (Booking ID: {}): {}", booking.getId(), e.getMessage());
         }
     }
 
@@ -586,5 +611,29 @@ public class PaymentServiceImpl implements PaymentService {
 
         paymentRepository.save(payment);
         bookingRepository.save(booking);
+    }
+
+    @Override
+    @Transactional
+    public String retryPayment(Long bookingId, HttpServletRequest request) {
+        Booking booking = getBooking(bookingId);
+        Payment payment = getPayment(bookingId);
+
+        if (booking.getStatus() != BookingStatus.PENDING || payment.getStatus() != PaymentStatus.PENDING) {
+            throw new IllegalArgumentException("Chỉ có thể thanh toán lại cho đơn đặt phòng đang chờ thanh toán!");
+        }
+
+        String currentUserEmail = SecurityUtils.getCurrentUserEmail();
+        if (booking.getUser() == null || !booking.getUser().getEmail().equals(currentUserEmail)) {
+            throw new AccessDeniedException("Bạn không có quyền thực hiện thanh toán cho đơn này");
+        }
+
+        if (payment.getPaymentMethod() == PaymentMethod.VNPAY) {
+            return vnPayService.createPaymentUrl(booking, request);
+        } else if (payment.getPaymentMethod() == PaymentMethod.MOMO) {
+            return momoService.createPaymentUrl(booking);
+        }
+
+        throw new IllegalArgumentException("Phương thức thanh toán không được hỗ trợ");
     }
 }

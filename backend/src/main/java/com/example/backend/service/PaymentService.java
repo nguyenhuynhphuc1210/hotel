@@ -28,4 +28,6 @@ public interface PaymentService {
     ResponseEntity<?> processVnPayIpn(HttpServletRequest request);
 
     ResponseEntity<?> processMomoIpn(Map<String, Object> requestBody);
+
+    String retryPayment(Long bookingId, HttpServletRequest request);
 }

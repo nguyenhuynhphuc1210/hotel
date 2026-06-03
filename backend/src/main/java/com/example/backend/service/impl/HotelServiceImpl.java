@@ -17,6 +17,7 @@ import com.example.backend.repository.UserRepository;
 import com.example.backend.repository.RoomCalendarRepository;
 import com.example.backend.repository.RoomTypeRepository;
 import com.example.backend.service.HotelService;
+import com.example.backend.service.NotificationService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,7 @@ public class HotelServiceImpl implements HotelService {
     private final HotelMapper hotelMapper;
     private final RoomCalendarRepository roomCalendarRepository;
     private final RoomTypeRepository roomTypeRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -192,6 +194,11 @@ public class HotelServiceImpl implements HotelService {
 
         roomTypeRepository.updateDeleteAndActiveStatusByHotelId(id, LocalDateTime.now(), false);
         roomCalendarRepository.updateIsAvailableByHotelId(id, false);
+
+        String ownerEmail = existing.getOwner().getEmail();
+        String title = "Khách sạn bị xóa";
+        String message = "Khách sạn '" + existing.getHotelName() + "' của bạn đã bị hệ thống xóa.";
+        notificationService.createNotification(ownerEmail, title, message);
     }
 
     @Override
@@ -213,7 +220,15 @@ public class HotelServiceImpl implements HotelService {
         hotel.setStatusReason("Khách sạn được khôi phục, chờ duyệt lại");
         roomTypeRepository.updateDeleteAndActiveStatusByHotelId(id, null, false);
 
-        return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
+        Hotel savedHotel = hotelRepository.save(hotel);
+
+        String ownerEmail = savedHotel.getOwner().getEmail();
+        String title = "Khách sạn được khôi phục";
+        String message = "Khách sạn '" + savedHotel.getHotelName()
+                + "' của bạn đã được khôi phục và đang ở trạng thái chờ duyệt.";
+        notificationService.createNotification(ownerEmail, title, message);
+
+        return hotelMapper.toHotelResponse(savedHotel);
     }
 
     @Override
@@ -232,12 +247,19 @@ public class HotelServiceImpl implements HotelService {
 
         hotel.setStatus(HotelStatus.APPROVED);
         hotel.setStatusReason(null);
-        hotelRepository.save(hotel);
 
         roomTypeRepository.updateIsActiveByHotelIdSafe(id, true);
         roomCalendarRepository.updateIsAvailableByHotelId(id, true);
 
-        return hotelMapper.toHotelResponse(hotel);
+        Hotel savedHotel = hotelRepository.save(hotel);
+
+        String ownerEmail = savedHotel.getOwner().getEmail();
+        String title = "Khách sạn được phê duyệt";
+        String message = "Tuyệt vời! Khách sạn '" + savedHotel.getHotelName()
+                + "' của bạn đã được phê duyệt và bắt đầu hoạt động.";
+        notificationService.createNotification(ownerEmail, title, message);
+
+        return hotelMapper.toHotelResponse(savedHotel);
     }
 
     @Override
@@ -261,12 +283,19 @@ public class HotelServiceImpl implements HotelService {
 
         hotel.setStatus(HotelStatus.DISABLED);
         hotel.setStatusReason(reason.trim());
-        hotelRepository.save(hotel);
 
         roomTypeRepository.updateIsActiveByHotelIdSafe(id, false);
         roomCalendarRepository.updateIsAvailableByHotelId(id, false);
 
-        return hotelMapper.toHotelResponse(hotel);
+        Hotel savedHotel = hotelRepository.save(hotel);
+
+        String ownerEmail = savedHotel.getOwner().getEmail();
+        String title = "Khách sạn bị vô hiệu hóa";
+        String message = "Khách sạn '" + savedHotel.getHotelName() + "' của bạn đã bị vô hiệu hóa. Lý do: "
+                + reason.trim();
+        notificationService.createNotification(ownerEmail, title, message);
+
+        return hotelMapper.toHotelResponse(savedHotel);
     }
 
     @Override
@@ -289,12 +318,19 @@ public class HotelServiceImpl implements HotelService {
 
         hotel.setStatus(HotelStatus.REJECTED);
         hotel.setStatusReason(reason.trim());
-        hotelRepository.save(hotel);
 
         roomTypeRepository.updateIsActiveByHotelIdSafe(id, false);
         roomCalendarRepository.updateIsAvailableByHotelId(id, false);
 
-        return hotelMapper.toHotelResponse(hotel);
+        Hotel savedHotel = hotelRepository.save(hotel);
+
+        String ownerEmail = savedHotel.getOwner().getEmail();
+        String title = "Khách sạn bị từ chối";
+        String message = "Yêu cầu đăng ký khách sạn '" + savedHotel.getHotelName() + "' của bạn đã bị từ chối. Lý do: "
+                + reason.trim();
+        notificationService.createNotification(ownerEmail, title, message);
+
+        return hotelMapper.toHotelResponse(savedHotel);
     }
 
     @Override

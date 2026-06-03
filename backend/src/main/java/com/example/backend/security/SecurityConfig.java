@@ -177,6 +177,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/payments/*").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/payments/booking/*").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/payments/export").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/payments/retry/*").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()

@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
 import java.io.IOException;
 import org.springframework.http.HttpHeaders;
@@ -102,5 +103,18 @@ public class PaymentController {
     @PostMapping("/momo-ipn")
     public ResponseEntity<?> momoIpn(@RequestBody Map<String, Object> requestBody) {
         return paymentService.processMomoIpn(requestBody);
+    }
+
+    @GetMapping("/retry/{bookingId}")
+    public ResponseEntity<Map<String, String>> retryPayment(
+            @PathVariable Long bookingId,
+            HttpServletRequest request) {
+
+        String paymentUrl = paymentService.retryPayment(bookingId, request);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("paymentUrl", paymentUrl);
+
+        return ResponseEntity.ok(response);
     }
 }
