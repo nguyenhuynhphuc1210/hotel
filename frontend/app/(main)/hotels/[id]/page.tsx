@@ -326,6 +326,16 @@ function RoomCard({
                         >
                             {hasFullDates ? 'Đặt ngay' : 'Nhập ngày'}
                         </button>
+
+                        {hasFullDates && !allAvailable && calendarData && (
+                            <p className="text-xs text-red-500 font-medium text-right max-w-[200px] leading-snug">
+                                ⚠️ Phòng đang tạm đóng trong khoảng{' '}
+                                {new Date(checkIn).toLocaleDateString('vi-VN')}
+                                {checkIn !== calCheckOut
+                                    ? ` – ${new Date(calCheckOut).toLocaleDateString('vi-VN')}`
+                                    : ''}
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>

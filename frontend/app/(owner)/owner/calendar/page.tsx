@@ -327,19 +327,21 @@ function UpdateModal({ roomId, selectedDates, calendarData, qc, calYear, calMont
   const firstCal = calendarData.find((c: RoomCalendarResponse) => c.date === startDate)
   const defaultPrice = firstCal ? Number(firstCal.price) : 500000
   const defaultTotalRooms = firstCal ? firstCal.totalRooms : 1
+  const defaultIsAvailable = firstCal ? firstCal.isAvailable : true
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<UpdateForm>({
     resolver: zodResolver(updateSchema) as Resolver<UpdateForm>,
     defaultValues: {
       startDate,
       endDate,
-      price: defaultPrice,           
-      totalRooms: defaultTotalRooms,  
-      isAvailable: true,
+      price: defaultPrice,
+      totalRooms: defaultTotalRooms,
+      isAvailable: defaultIsAvailable,  // ← dùng giá trị thực
     },
   })
 
-  const isAvailable = watch('isAvailable')
+  const isAvailableRaw = watch('isAvailable')
+  const isAvailable = isAvailableRaw === true || (isAvailableRaw as unknown as string) === 'true'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">

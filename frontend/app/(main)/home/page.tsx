@@ -74,8 +74,8 @@ function HomeContent() {
         queryFn: () => hotelApi.search({
             checkIn: defaultCheckIn,
             checkOut: defaultCheckOut,
-            adults: 1,      
-            children: 0,                
+            adults: 1,
+            children: 0,
             page: currentPage,
             size: pageSize,
             sortBy: 'recommended'
@@ -187,7 +187,7 @@ function HomeContent() {
                 ) : featuredHotels.length === 0 ? (
                     <div className="text-center py-12 text-gray-400">Chưa có khách sạn nào</div>
                 ) : (
-                    <div className="relative group/hotel-carousel">
+                    <div className="relative group/hotel-carousel px-6">
                         {/* Nút PREV */}
                         <button
                             onClick={handlePrevHotel}
@@ -199,18 +199,18 @@ function HomeContent() {
                         </button>
 
                         {/* Container trượt */}
-                        <div className="overflow-hidden rounded-xl">
+                        <div className="overflow-hidden rounded-xl mx-1">
                             <div
                                 className="flex gap-4 transition-transform duration-500 ease-out"
                                 style={{
-                                    transform: `translateX(-${(hotelIdx * 100) / VISIBLE_HOTELS}%)`
+                                    transform: `translateX(calc(-${hotelIdx} * (100% / ${VISIBLE_HOTELS} + ${1 / VISIBLE_HOTELS}rem)))`
                                 }}
                             >
                                 {featuredHotels.map(h => (
                                     <div
                                         key={h.id}
-                                        className="shrink-0"
-                                        style={{ width: `calc((100% - ${(VISIBLE_HOTELS - 1) * 1}rem) / ${VISIBLE_HOTELS})` }}
+                                        className="shrink-0 px-0.5"
+                                        style={{ width: `calc(100% / ${VISIBLE_HOTELS} - ${(VISIBLE_HOTELS - 1) / VISIBLE_HOTELS}rem)` }}
                                     >
                                         <HotelCard
                                             hotel={h}
@@ -226,7 +226,7 @@ function HomeContent() {
                         <button
                             onClick={handleNextHotel}
                             disabled={!canNextHotel}
-                            className={`absolute -right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300
+                            className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300
                     ${canNextHotel ? 'opacity-100 hover:bg-gray-50 text-gray-800 scale-100' : 'opacity-0 pointer-events-none scale-75'}`}
                         >
                             <ChevronRight size={24} strokeWidth={2.5} />
