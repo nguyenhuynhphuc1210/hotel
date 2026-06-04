@@ -51,11 +51,12 @@ const BOOKING_STATUS_CONFIG: Record<string, { label: string; colorClass: string 
 }
 
 const PAYMENT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  UNPAID: { label: 'Chưa thanh toán',  color: 'text-gray-400'   },
   PENDING:   { label: 'Chờ TT',   color: 'text-amber-600'  },
   PAID:      { label: 'Đã TT',    color: 'text-emerald-600' },
   FAILED:    { label: 'Thất bại', color: 'text-red-500'    },
   REFUNDED:  { label: 'Hoàn tiền',color: 'text-blue-500'   },
-  CANCELLED: { label: 'Đã huỷ',  color: 'text-gray-400'   },
+  CANCELLED: { label: 'Đã huỷ',  color: 'text-red-400'   },
 }
 
 // ── Helpers ──

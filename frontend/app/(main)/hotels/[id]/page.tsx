@@ -2,13 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { useState, useRef, useMemo, useTransition, Suspense  } from 'react'
+import { useState, useRef, useMemo, useTransition, Suspense, useEffect } from 'react'
 import {
     MapPin, Star, Info,
     CheckCircle2,
     Users, Maximize2, BedDouble, Clock, ShieldCheck, Baby, Dog,
     LogIn, MessageSquare, Send, Loader2, ImagePlus, X, ChevronLeft, ChevronRight,
-    Bot
+    Bot, Tag
 } from 'lucide-react'
 import hotelApi from '@/lib/api/hotel.api'
 import { RoomTypeResponse } from '@/types/room.types'
@@ -33,6 +33,8 @@ import { roomTypeAmenityApi } from '@/lib/api/amenity.api'
 import { RoomTypeAmenityResponse } from '@/types/amenity.types'
 import AIChatWidget from '@/components/chat/AIChatWidget'
 import { cn } from '@/lib/utils'
+import promotionApi from '@/lib/api/promotion.api'
+import { PromotionResponse } from '@/types/promotion.types'
 
 // ── Hook: fetch calendar cho 1 room trong khoảng checkIn/checkOut ──────────
 function useRoomCalendarPricing(
@@ -111,8 +113,6 @@ function RoomCard({
         staleTime: 1000 * 60 * 10,
     })
 
-
-
     const { avgPrice, allAvailable } = useMemo(
         () => calcAvgPrice(calendarData, Number(room.basePrice)),
         [calendarData, room.basePrice]
@@ -123,14 +123,9 @@ function RoomCard({
     const imageCount = room.images?.length || 0
 
     const availableRooms = useMemo(() => {
-        if (!calendarData || calendarData.length === 0) {
-            return room.totalRooms ?? 1
-        }
-
-        return Math.min(
-            ...calendarData.map(c => c.totalRooms - c.bookedRooms)
-        )
-    }, [calendarData, room.totalRooms])
+        if (!calendarData || calendarData.length === 0) return room.totalRooms ?? 1;
+        return Math.min(...calendarData.map(c => c.totalRooms - c.bookedRooms));
+    }, [calendarData, room.totalRooms]);
 
     // Agoda style:
     // 8 khách => có thể chọn tối đa 8 phòng
@@ -139,19 +134,20 @@ function RoomCard({
         adults
     )
 
-    const finalMaxSelectable = Math.max(1, maxSelectable)
+    const finalMaxSelectable = Math.max(1, availableRooms);
 
-    const [quantity, setQuantity] = useState(() => {
-        return Math.max(
-            1,
-            Math.min(defaultRooms, finalMaxSelectable)
-        )
-    })
+    const [quantity, setQuantity] = useState(defaultRooms);
+
+    useEffect(() => {
+        setQuantity(Math.min(defaultRooms, finalMaxSelectable));
+    }, [defaultRooms, finalMaxSelectable]);
 
     const isLowStock = availableRooms > 0 && availableRooms <= 4
 
+    const avgAdultsPerRoom = Math.ceil(adults / defaultRooms);
     const roomMaxAdults = room.maxAdults ?? 0;
-    const isOverCapacity = adults > roomMaxAdults;
+
+    const isOverCapacity = avgAdultsPerRoom > roomMaxAdults;
 
     return (
         <div className="bg-white rounded-[24px] border border-gray-200 overflow-hidden flex shadow-sm hover:shadow-md transition-all group mb-6">
@@ -214,18 +210,12 @@ function RoomCard({
                     <div className="flex items-center gap-2 mb-2">
                         <Users size={16} className={cn("shrink-0", isOverCapacity ? "text-red-500" : "text-blue-500")} />
                         <div className="flex flex-wrap items-center gap-1.5">
-                            {/* Hiển thị số người của loại phòng này */}
-                            <span className={cn(
-                                "text-[13px] font-bold",
-                                isOverCapacity ? "text-red-600" : "text-gray-700"
-                            )}>
-                                {roomMaxAdults} người lớn
+                            <span className={cn("text-[13px] font-bold", isOverCapacity ? "text-red-600" : "text-gray-700")}>
+                                {roomMaxAdults} người lớn / phòng
                             </span>
-
-                            {/* Nếu vượt quá sức chứa thì mới hiện dòng chữ đỏ phía sau */}
                             {isOverCapacity && (
                                 <span className="text-[12px] font-medium text-red-600 flex items-center gap-1">
-                                    Vượt quá sức chứa phòng <Info size={12} fill="currentColor" className="text-red-600 bg-white rounded-full" />
+                                    Vượt quá sức chứa ({avgAdultsPerRoom} khách/phòng) <Info size={12} fill="currentColor" className="text-red-600 bg-white rounded-full" />
                                 </span>
                             )}
                         </div>
@@ -303,6 +293,12 @@ function RoomCard({
                     </div>
 
                     <div className="flex flex-col items-end gap-3">
+
+                        {hasFullDates && allAvailable && isLowStock && (
+                            <p className="text-xs text-red-500 font-bold text-right animate-pulse">
+                                🔥 Chỉ còn {availableRooms} phòng cuối cùng!
+                            </p>
+                        )}
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-gray-500 font-bold">Số phòng:</span>
                             <select
@@ -362,6 +358,7 @@ function HotelDetailContent() {
     const adults = Number(searchParams.get('adults') || 1)
     const rooms = Number(searchParams.get('rooms') || 1)
     const hasFullDates = !!checkIn && !!checkOut
+    const children = Number(searchParams.get('children') || 0)
 
     const [rating, setRating] = useState(5)
     const [comment, setComment] = useState('')
@@ -438,6 +435,24 @@ function HotelDetailContent() {
                 .then(r => r.data),
         enabled: !!hotelId,
     })
+
+    const { data: allPromotions = [] } = useQuery<PromotionResponse[]>({
+        queryKey: ['promotions-active'],
+        queryFn: async () => {
+            const response = await promotionApi.getAll()
+            const data: PromotionResponse[] = response.data
+            const now = new Date()
+            return data.filter((p: PromotionResponse) =>
+                p.isActive &&
+                new Date(p.startDate) <= now &&
+                new Date(p.endDate) >= now
+            )
+        },
+    })
+
+    const hotelPromos = useMemo(() => {
+        return allPromotions.filter(p => p.hotelId === hotelId || !p.hotelId)
+    }, [allPromotions, hotelId])
 
     const reviews = reviewPageData?.content ?? []
     const totalReviewPages = reviewPageData?.totalPages ?? 0
@@ -531,7 +546,7 @@ function HotelDetailContent() {
         if (!hasFullDates) { handleShowPrice(); return }
 
         if (!user) {
-            const currentUrl = `/hotels/${hotelId}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`
+            const currentUrl = `/hotels/${hotelId}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&children=${children}`
             router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`)
             return
         }
@@ -542,6 +557,7 @@ function HotelDetailContent() {
             roomTypeId: roomTypeId.toString(),
             checkIn, checkOut,
             adults: adults.toString(),
+            children: children.toString(),
             price: price.toString(),
             quantity: quantity.toString(),
         })
@@ -599,6 +615,7 @@ function HotelDetailContent() {
                             district: hotel.district,
                             adults,
                             rooms,
+                            children,
                         }}
                         onSearch={(p) => {
                             startSearchTransition(() => {
@@ -626,6 +643,7 @@ function HotelDetailContent() {
                     />
                 )}
 
+                {/* ── Hotel Info + Sidebar ── */}
                 {/* ── Hotel Info + Sidebar ── */}
                 <div className="grid grid-cols-12 gap-6 mb-8">
                     <div className="col-span-12 lg:col-span-8 space-y-6">
@@ -686,23 +704,6 @@ function HotelDetailContent() {
                                 <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{hotel.description}</div>
                             </div>
                         )}
-
-                        {/* Tiện ích */}
-                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                            <h3 className="font-bold text-lg mb-6">Tiện ích tại chỗ nghỉ</h3>
-                            <div className="grid grid-cols-4 gap-4">
-                                {hotelAmenities.map((ha) => (
-                                    <div key={ha.amenityId} className="flex flex-col items-center p-3 rounded-xl bg-gray-50 hover:bg-blue-50 transition-colors">
-                                        <div className="w-8 h-8 flex items-center justify-center text-blue-600 mb-2"><CheckCircle2 size={20} /></div>
-                                        <span className="text-[11px] font-medium text-gray-700 text-center">{ha.amenityName}</span>
-                                        {ha.isFree
-                                            ? <span className="text-[9px] text-emerald-600 font-bold uppercase mt-1">Miễn phí</span>
-                                            : <span className="text-[9px] text-amber-600 font-bold uppercase mt-1">Có phí</span>
-                                        }
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </div>
 
                     {/* Right Sidebar */}
@@ -767,6 +768,70 @@ function HotelDetailContent() {
                     </div>
                 </div>
 
+                {/* ── Tiện ích & Khuyến mãi (Đã đưa ra ngoài Grid Sidebar để chiếm FULL WIDTH bằng phần Chọn phòng) ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mb-8">
+                    {/* Cột trái: Tiện ích (7/12) */}
+                    <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
+                        <h3 className="font-bold text-lg mb-6 flex items-center gap-2 shrink-0">
+                            <CheckCircle2 size={20} className="text-blue-500" /> Tiện ích tại chỗ nghỉ
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
+                            {hotelAmenities.map((ha) => (
+                                <div key={ha.amenityId}
+                                    className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 border border-transparent hover:border-blue-100 hover:bg-blue-50/50 transition-all h-[80px]">
+                                    <div className="text-blue-600 mb-1.5"><CheckCircle2 size={18} /></div>
+                                    <span className="text-[11px] font-bold text-gray-700 text-center leading-tight line-clamp-2 px-1">
+                                        {ha.amenityName}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Cột phải: Khuyến mãi (5/12) */}
+                    <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
+                        <h3 className="font-bold text-lg mb-6 flex items-center gap-2 shrink-0">
+                            <Tag size={20} className="text-red-500" /> Ưu đãi dành cho bạn
+                        </h3>
+                        {hotelPromos.length > 0 ? (
+                            <div className="space-y-3 overflow-y-auto pr-1 flex-1 custom-scrollbar" style={{ maxHeight: '400px' }}>
+                                {hotelPromos.map((p) => (
+                                    <div key={p.id} className="group relative border-2 border-dashed border-red-100 rounded-xl p-4 bg-red-50/30 hover:bg-red-50 transition-colors">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded-full text-white", p.hotelId ? "bg-red-500" : "bg-blue-500")}>
+                                                    {p.hotelId ? 'Mã riêng' : 'Mã sàn'}
+                                                </span>
+                                                <div className="font-mono font-black text-red-600 text-base mt-1 uppercase tracking-tight">{p.promoCode}</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xl font-black text-red-600">-{p.discountPercent}%</div>
+                                                <div className="text-[10px] text-gray-400 font-bold uppercase">Giảm giá</div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1 mb-3">
+                                            <p className="text-[11px] text-gray-600">Giảm tối đa <b>{p.maxDiscountAmount?.toLocaleString('vi-VN')}₫</b></p>
+                                            {p.minOrderValue !== null && p.minOrderValue > 0 && (
+                                                <p className="text-[10px] text-gray-400 italic">*Đơn tối thiểu {p.minOrderValue.toLocaleString('vi-VN')}₫</p>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => { navigator.clipboard.writeText(p.promoCode); toast.success('Đã sao chép mã!'); }}
+                                            className="w-full py-2 bg-white border border-red-200 text-red-600 text-xs font-black rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm active:scale-95">
+                                            SAO CHÉP MÃ
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center flex-1 text-gray-400 italic py-10">
+                                <Tag size={32} className="mb-2 opacity-20" />
+                                <p className="text-sm">Hiện không có mã giảm giá nào</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* ── Chọn phòng — FULL WIDTH ── */}
                 <div id="rooms" className="space-y-4 mb-8">
                     <div className="flex items-center justify-between">
@@ -789,7 +854,7 @@ function HotelDetailContent() {
                             nights={nights}
                             onBook={handleBooking}
                             onOpenGallery={setGalleryRoom}
-                            defaultRooms={Math.min(rooms, room.totalRooms ?? 1)}
+                            defaultRooms={rooms}
                         />
                     ))}
 
@@ -1105,9 +1170,9 @@ function HotelDetailContent() {
 }
 
 export default function HotelDetailPage() {
-  return (
-    <Suspense fallback={<div className="py-20 text-center">Đang tải...</div>}>
-      <HotelDetailContent />
-    </Suspense>
-  )
+    return (
+        <Suspense fallback={<div className="py-20 text-center">Đang tải...</div>}>
+            <HotelDetailContent />
+        </Suspense>
+    )
 }

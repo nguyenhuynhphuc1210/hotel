@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
     MapPin, Star, SlidersHorizontal,
     Search, X, ArrowUpDown, Heart,
-    Loader2, 
+    Loader2, Tag
 } from 'lucide-react'
 import hotelApi, { HotelSummaryResponse, HotelSearchParams } from '@/lib/api/hotel.api'
 import SearchBar from '@/components/common/SearchBar'
@@ -16,6 +16,8 @@ import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 import favoriteApi from '@/lib/api/favorite.api'
 import { cn } from '@/lib/utils'
+import { PromotionResponse } from '@/types/promotion.types'
+import promotionApi from '@/lib/api/promotion.api'
 
 // ── Types ─────────────────────────────────────────────────
 type SortOption = 'recommended' | 'price_asc' | 'price_desc' | 'star_desc'
@@ -119,6 +121,20 @@ function HotelsContent() {
 
         router.push(`/hotels?${p.toString()}`)
     }
+
+    const { data: promotions = [] } = useQuery<PromotionResponse[]>({
+    queryKey: ['promotions-active'],
+    queryFn: async () => {
+        const response = await promotionApi.getAll()
+        const data: PromotionResponse[] = response.data
+        const now = new Date()
+        return data.filter((p: PromotionResponse) =>
+            p.isActive &&
+            new Date(p.startDate) <= now &&
+            new Date(p.endDate) >= now
+        )
+    },
+})
 
     const toggleDistrict = (district: string) => {
         const next = districts.includes(district)
@@ -304,8 +320,9 @@ function HotelsContent() {
                                         key={h.id}
                                         hotel={h}
                                         nights={nights}
+                                        promotions={promotions}
                                         hasFullDates={hasFullDates}
-                                        onCardClick={() => router.push(`/hotels/${h.id}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${rooms}`)}
+                                        onCardClick={() => router.push(`/hotels/${h.id}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${rooms}&children=${children}`)}
                                     />
                                 ))}
                             </div>
@@ -339,6 +356,7 @@ interface HotelCardProps {
     nights: number
     onCardClick: () => void
     hasFullDates: boolean
+    promotions: PromotionResponse[]
 }
 
 interface FavoriteHotelSummary {
@@ -360,7 +378,7 @@ interface FavoritePageResponse {
     size: number
 }
 
-function HotelCard({ hotel: h, nights, onCardClick, hasFullDates }: HotelCardProps) {
+function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: HotelCardProps) {
     const { user } = useAuthStore()
     const router = useRouter()
     const queryClient = useQueryClient()
@@ -403,6 +421,8 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates }: HotelCardPro
             setIsTogglingFav(false)
         }
     }
+
+    const hotelPromo = promotions.find(p => p.hotelId === h.id);
 
     return (
         <div
@@ -463,6 +483,13 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates }: HotelCardPro
                 </div>
                 <div className="flex items-end justify-end mt-4 pt-4 border-t border-gray-100">
                     <div className="text-right">
+                        {/* HIỂN THỊ ƯU ĐÃI TẠI ĐÂY */}
+                        {hotelPromo && (
+                            <div className="flex items-center justify-end gap-1 text-red-600 font-bold text-[10px] animate-pulse mb-1">
+                                <Tag size={10} /> Có ưu đãi
+                            </div>
+                        )}
+
                         {h.minPrice ? (
                             <>
                                 <div className="text-xs text-gray-400">Giá từ</div>

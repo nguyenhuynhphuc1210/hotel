@@ -134,6 +134,25 @@ function HomeContent() {
         });
     }
 
+    const [promoIdx, setPromoIdx] = useState(0)
+    const VISIBLE_PROMOS = 3
+    const canPrevPromo = promoIdx > 0
+    const canNextPromo = promoIdx + VISIBLE_PROMOS < promotions.length
+
+    const handleNextPromo = () => {
+        setPromoIdx(prev => {
+            const nextVal = prev + 1; // Trượt từng cái một cho mượt hoặc đổi thành + VISIBLE_PROMOS nếu muốn trượt cả trang
+            return nextVal > promotions.length - VISIBLE_PROMOS ? promotions.length - VISIBLE_PROMOS : nextVal;
+        });
+    }
+
+    const handlePrevPromo = () => {
+        setPromoIdx(prev => {
+            const nextVal = prev - 1;
+            return nextVal < 0 ? 0 : nextVal;
+        });
+    }
+
     return (
 
         <div className="pb-20">
@@ -216,6 +235,7 @@ function HomeContent() {
                                             hotel={h}
                                             checkIn={defaultCheckIn}
                                             checkOut={defaultCheckOut}
+                                            promotions={promotions}
                                         />
                                     </div>
                                 ))}
@@ -239,12 +259,53 @@ function HomeContent() {
                 <section className="max-w-7xl mx-auto px-4 mt-14">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-xl font-bold text-gray-900">Ưu đãi đang diễn ra</h2>
-                        <span className="text-xs bg-red-50 text-red-600 font-medium px-2.5 py-1 rounded-full">
-                            🔥 {promotions.length} ưu đãi
-                        </span>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs bg-red-50 text-red-600 font-medium px-2.5 py-1 rounded-full">
+                                🔥 {promotions.length} ưu đãi
+                            </span>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {promotions.slice(0, 6).map((p: PromotionResponse) => <PromotionCard key={p.id} promotion={p} />)}
+
+                    <div className="relative group/promo-carousel px-6">
+                        {/* Nút PREV */}
+                        <button
+                            onClick={handlePrevPromo}
+                            disabled={!canPrevPromo}
+                            className={`absolute -left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300
+                ${canPrevPromo ? 'opacity-100 hover:bg-gray-50 text-gray-800 scale-100' : 'opacity-0 pointer-events-none scale-75'}`}
+                        >
+                            <ChevronLeft size={24} strokeWidth={2.5} />
+                        </button>
+
+                        {/* Container trượt */}
+                        <div className="overflow-hidden rounded-xl">
+                            <div
+                                className="flex gap-4 transition-transform duration-500 ease-out"
+                                style={{
+                                    transform: `translateX(calc(-${promoIdx} * (100% / ${VISIBLE_PROMOS} + ${1 / VISIBLE_PROMOS}rem)))`
+                                }}
+                            >
+                                {promotions.map((p: PromotionResponse) => (
+                                    <div
+                                        key={p.id}
+                                        className="shrink-0"
+                                        style={{ width: `calc(100% / ${VISIBLE_PROMOS} - ${(VISIBLE_PROMOS - 1) / VISIBLE_PROMOS}rem)` }}
+                                    >
+                                        <PromotionCard promotion={p} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Nút NEXT */}
+                        <button
+                            onClick={handleNextPromo}
+                            disabled={!canNextPromo}
+                            className={`absolute -right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300
+                ${canNextPromo ? 'opacity-100 hover:bg-gray-50 text-gray-800 scale-100' : 'opacity-0 pointer-events-none scale-75'}`}
+                        >
+                            <ChevronRight size={24} strokeWidth={2.5} />
+                        </button>
                     </div>
                 </section>
             )}
@@ -283,7 +344,6 @@ function DistrictCarousel({
     const handleNext = () => {
         setStartIdx(prev => {
             const nextVal = prev + VISIBLE;
-
             return nextVal > DISTRICTS.length - VISIBLE ? DISTRICTS.length - VISIBLE : nextVal;
         });
     }
@@ -296,19 +356,24 @@ function DistrictCarousel({
     }
 
     return (
-        <div className="relative px-1">
+        <div className="relative group">
             <button
                 onClick={handlePrev}
                 disabled={!canPrev}
-                className={`absolute -left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300
-                    ${canPrev ? 'opacity-100 hover:bg-gray-50 text-gray-800 scale-100' : 'opacity-0 pointer-events-none scale-75'}`}
+                className={`absolute -left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-lg flex items-center justify-center transition-all
+                    ${canPrev ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}
             >
-                <ChevronLeft size={24} strokeWidth={2.5} />
+                <ChevronLeft size={24} />
             </button>
 
-            <div className="overflow-hidden rounded-xl">
+            <div className="overflow-hidden">
+                {/* 
+                   SỬA TẠI ĐÂY: 
+                   1. Bỏ gap-4, thay bằng -mx-2 để bù đắp padding của item con
+                   2. Translate tính thuần theo %
+                */}
                 <div
-                    className="flex gap-4 transition-transform duration-500 ease-out"
+                    className="flex transition-transform duration-500 ease-out -mx-2"
                     style={{
                         transform: `translateX(-${(startIdx * 100) / VISIBLE}%)`
                     }}
@@ -317,26 +382,30 @@ function DistrictCarousel({
                         const count = hotels.filter(h => h.district === d).length
                         const img = DISTRICT_IMAGES[d] ?? FALLBACK
                         return (
-                            <button
+                            <div
                                 key={d}
-                                onClick={() => onSelect(d)}
-                                className="shrink-0 text-left group/item"
-                                style={{ width: `calc((100% - ${(VISIBLE - 1) * 1}rem) / ${VISIBLE})` }}
+                                className="shrink-0 px-2" // Sử dụng px-2 thay cho gap để tạo khoảng cách 16px (2 bên là 16)
+                                style={{ width: `${100 / VISIBLE}%` }} // Chia đều chính xác 20% mỗi item
                             >
-                                <div className="rounded-2xl overflow-hidden aspect-[4/3] mb-3 shadow-sm bg-gray-100">
-                                    <img
-                                        src={img}
-                                        alt={d}
-                                        className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
-                                    />
-                                </div>
-                                <div className="font-bold text-base text-gray-900 group-hover/item:text-blue-600 transition-colors truncate">
-                                    {d}
-                                </div>
-                                <div className="text-sm text-gray-500 mt-0.5">
-                                    {count > 0 ? `${count} khách sạn` : 'Khám phá ngay'}
-                                </div>
-                            </button>
+                                <button
+                                    onClick={() => onSelect(d)}
+                                    className="w-full text-left group/item"
+                                >
+                                    <div className="rounded-2xl overflow-hidden aspect-[4/3] mb-3 shadow-sm bg-gray-100">
+                                        <img
+                                            src={img}
+                                            alt={d}
+                                            className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
+                                        />
+                                    </div>
+                                    <div className="font-bold text-base text-gray-900 group-hover/item:text-blue-600 transition-colors truncate">
+                                        {d}
+                                    </div>
+                                    <div className="text-sm text-gray-500 mt-0.5">
+                                        {count > 0 ? `${count} khách sạn` : 'Khám phá ngay'}
+                                    </div>
+                                </button>
+                            </div>
                         )
                     })}
                 </div>
@@ -345,10 +414,10 @@ function DistrictCarousel({
             <button
                 onClick={handleNext}
                 disabled={!canNext}
-                className={`absolute -right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300
-                    ${canNext ? 'opacity-100 hover:bg-gray-50 text-gray-800 scale-100' : 'opacity-0 pointer-events-none scale-75'}`}
+                className={`absolute -right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-100 rounded-full shadow-lg flex items-center justify-center transition-all
+                    ${canNext ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}
             >
-                <ChevronRight size={24} strokeWidth={2.5} />
+                <ChevronRight size={24} />
             </button>
         </div>
     )
@@ -358,11 +427,13 @@ function DistrictCarousel({
 function HotelCard({
     hotel,
     checkIn,
-    checkOut
+    checkOut,
+    promotions
 }: {
     hotel: HotelSummaryResponse,
     checkIn: string,
     checkOut: string
+    promotions: PromotionResponse[]
 }) {
     const router = useRouter()
 
@@ -373,6 +444,8 @@ function HotelCard({
 
     const displayImage = hotel.thumbnailUrl || hotel.images?.find(i => i.isPrimary)?.imageUrl;
     const stars = Math.round(Number(hotel.starRating ?? 0));
+
+    const hotelPromo = promotions.find(p => p.hotelId === hotel.id);
 
     return (
         <div
@@ -417,8 +490,17 @@ function HotelCard({
                             )}
                         </div>
                     </div>
-                    <div className="text-[11px] bg-blue-600 text-white px-3 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-sm">
-                        Xem chi tiết
+
+                    <div className="flex flex-col items-end gap-1">
+                        {hotelPromo && (
+                            <div className="flex items-center gap-1 text-red-600 font-bold text-[10px] animate-pulse">
+                                <Tag size={10} /> Có ưu đãi
+                            </div>
+                        )}
+
+                        <div className="text-[11px] bg-blue-600 text-white px-3 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-sm">
+                            Xem chi tiết
+                        </div>
                     </div>
                 </div>
             </div>
@@ -427,30 +509,43 @@ function HotelCard({
 }
 
 // ─── Promotion Card ───────────────────────────────────────
-// Đã fix kiểu dữ liệu từ any sang PromotionResponse
 function PromotionCard({ promotion }: {
     promotion: PromotionResponse
 }) {
+    const router = useRouter()
+
+    // Tính số ngày còn lại
     const daysLeft = Math.ceil(
         (new Date(promotion.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
     )
 
+    const handleUseNow = () => {
+        if (promotion.hotelId) {
+            router.push(`/hotels/${promotion.hotelId}`)
+        } else {
+            router.push('/hotels')
+        }
+    }
+
     return (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all h-full flex flex-col">
             <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
                     <Tag size={18} className="text-red-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className="font-mono font-bold text-blue-700 text-sm">{promotion.promoCode}</div>
-                    <div className="text-xs text-gray-500 truncate">Dành cho {promotion.hotelName || 'Tất cả khách sạn'}</div>
+                    <div className="font-mono font-bold text-blue-700 text-sm uppercase">{promotion.promoCode}</div>
+                    <div className="text-xs text-gray-500 truncate">
+                        {promotion.hotelName ? `Dành cho ${promotion.hotelName}` : 'Áp dụng toàn sàn'}
+                    </div>
                 </div>
                 <div className="text-right shrink-0">
                     <div className="text-lg font-bold text-red-500">{promotion.discountPercent}%</div>
-                    <div className="text-xs text-gray-400">giảm</div>
+                    <div className="text-[10px] text-gray-400 uppercase font-bold">Giảm</div>
                 </div>
             </div>
-            <div className="space-y-1.5 text-xs text-gray-500">
+
+            <div className="space-y-1.5 text-xs text-gray-500 flex-1">
                 <div className="flex justify-between">
                     <span>Giảm tối đa</span>
                     <span className="font-medium text-gray-700">{promotion.maxDiscountAmount.toLocaleString('vi-VN')}₫</span>
@@ -462,11 +557,18 @@ function PromotionCard({ promotion }: {
                     </div>
                 )}
             </div>
-            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${daysLeft <= 3 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+
+            <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${daysLeft <= 3 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                    }`}>
                     {daysLeft <= 0 ? 'Hết hạn' : `Còn ${daysLeft} ngày`}
                 </span>
-                <button className="text-xs text-blue-600 font-medium hover:underline">Dùng ngay →</button>
+                <button
+                    onClick={handleUseNow}
+                    className="text-xs text-blue-600 font-bold hover:text-blue-800 transition-colors flex items-center gap-1"
+                >
+                    Dùng ngay <ArrowRight size={12} />
+                </button>
             </div>
         </div>
     )

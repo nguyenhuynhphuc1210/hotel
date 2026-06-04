@@ -387,7 +387,8 @@ function UpdateModal({ roomId, selectedDates, calendarData, qc, calYear, calMont
                 <input
                   {...register('isAvailable')}
                   type="radio"
-                  value="true" // Giá trị là string "true"
+                  value="true" 
+                  checked={isAvailable === true}
                   className="accent-green-600"
                 />
                 <CheckCircle size={16} className={isAvailable ? 'text-green-600' : 'text-gray-300'} />
@@ -399,7 +400,8 @@ function UpdateModal({ roomId, selectedDates, calendarData, qc, calYear, calMont
                 <input
                   {...register('isAvailable')}
                   type="radio"
-                  value="false" // Giá trị là string "false"
+                  value="false" 
+                  checked={isAvailable === false}
                   className="accent-red-500"
                 />
                 <AlertCircle size={16} className={!isAvailable ? 'text-red-500' : 'text-gray-300'} />
