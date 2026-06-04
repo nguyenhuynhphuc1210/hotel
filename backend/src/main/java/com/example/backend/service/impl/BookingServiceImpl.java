@@ -34,6 +34,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -210,12 +211,15 @@ public class BookingServiceImpl implements BookingService {
 
         String customerName = user != null ? user.getFullName() : request.getGuestName();
         String notificationTitle = "Bạn có đơn đặt phòng mới";
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
         String notificationMessage = String.format(
                 "%s đã đặt phòng tại %s từ %s đến %s.",
                 customerName,
                 hotel.getHotelName(),
-                request.getCheckInDate(),
-                request.getCheckOutDate());
+                request.getCheckInDate().format(formatter),
+                request.getCheckOutDate().format(formatter));
 
         try {
             notificationService.createNotification(
