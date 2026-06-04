@@ -259,7 +259,7 @@ function NotificationItem({
         <p className={`text-sm leading-snug ${notif.isRead ? 'text-gray-600' : 'text-gray-900 font-medium'}`}>
           {notif.title}
         </p>
-        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed line-clamp-2">
+        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
           {notif.message}
         </p>
         <p className="text-[11px] text-gray-400 mt-1">
