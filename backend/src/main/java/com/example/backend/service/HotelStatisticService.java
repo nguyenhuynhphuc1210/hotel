@@ -15,7 +15,7 @@ public interface HotelStatisticService {
 
         List<HotelStatisticResponse> getStatistics(HotelStatisticRequest request);
 
-        void recordRealtimeStatistic(Hotel hotel, BigDecimal totalAmount, LocalDate date, BookingStatus status);
+        void recordRealtimeStatistic(Hotel hotel, BigDecimal grossAmount, BigDecimal commissionAmount, BigDecimal netAmount, LocalDate date, BookingStatus status);
 
         byte[] exportRevenueToExcel(
                         Long hotelId,

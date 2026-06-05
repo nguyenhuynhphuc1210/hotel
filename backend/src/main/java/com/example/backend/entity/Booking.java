@@ -74,6 +74,14 @@ public class Booking {
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
 
+    @Builder.Default
+    @Column(name = "commission_percent", precision = 5, scale = 2, nullable = false)
+    private BigDecimal commissionPercent = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "commission_amount", precision = 12, scale = 2, nullable = false)
+    private BigDecimal commissionAmount = BigDecimal.ZERO;
+
     @Column(name = "cancel_reason", columnDefinition = "TEXT")
     private String cancelReason;
 

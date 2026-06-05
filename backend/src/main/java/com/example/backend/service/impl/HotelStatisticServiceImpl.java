@@ -147,8 +147,10 @@ public class HotelStatisticServiceImpl implements HotelStatisticService {
                 totalMoneyStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
                 totalMoneyStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
+                // Cập nhật các cột Excel
                 String[] columns = {
-                                "Hotel Name", "Date", "Completed", "Cancelled", "No Show", "Revenue (VND)"
+                                "Hotel Name", "Date", "Completed", "Cancelled", "No Show", 
+                                "Gross Revenue", "Commission", "Net Revenue"
                 };
 
                 Row headerRow = sheet.createRow(0);
@@ -165,7 +167,9 @@ public class HotelStatisticServiceImpl implements HotelStatisticService {
                 long totalCompleted = 0L;
                 long totalCancelled = 0L;
                 long totalNoShow = 0L;
-                BigDecimal totalRevenue = BigDecimal.ZERO;
+                BigDecimal totalGross = BigDecimal.ZERO;
+                BigDecimal totalCommissionAmount = BigDecimal.ZERO;
+                BigDecimal totalNetAmount = BigDecimal.ZERO;
 
                 for (RevenueExport item : statistics) {
                         Row row = sheet.createRow(rowNum++);
@@ -186,17 +190,27 @@ public class HotelStatisticServiceImpl implements HotelStatisticService {
                         row.createCell(4).setCellValue(item.getTotalNoShow() != null ? item.getTotalNoShow() : 0);
                         row.getCell(4).setCellStyle(centerStyle);
 
+                        // Điền 3 cột doanh thu
                         row.createCell(5).setCellValue(
-                                        item.getTotalRevenue() != null ? item.getTotalRevenue().doubleValue() : 0);
+                                        item.getGrossRevenue() != null ? item.getGrossRevenue().doubleValue() : 0);
                         row.getCell(5).setCellStyle(moneyStyle);
+
+                        row.createCell(6).setCellValue(
+                                        item.getTotalCommission() != null ? item.getTotalCommission().doubleValue() : 0);
+                        row.getCell(6).setCellStyle(moneyStyle);
+
+                        row.createCell(7).setCellValue(
+                                        item.getNetRevenue() != null ? item.getNetRevenue().doubleValue() : 0);
+                        row.getCell(7).setCellStyle(moneyStyle);
 
                         totalCompleted += (item.getCompletedBookings() != null ? item.getCompletedBookings() : 0);
                         totalCancelled += (item.getTotalCancelled() != null ? item.getTotalCancelled() : 0);
                         totalNoShow += (item.getTotalNoShow() != null ? item.getTotalNoShow() : 0);
-                        totalRevenue = totalRevenue
-                                        .add(item.getTotalRevenue() != null ? item.getTotalRevenue() : BigDecimal.ZERO);
+                        
+                        totalGross = totalGross.add(item.getGrossRevenue() != null ? item.getGrossRevenue() : BigDecimal.ZERO);
+                        totalCommissionAmount = totalCommissionAmount.add(item.getTotalCommission() != null ? item.getTotalCommission() : BigDecimal.ZERO);
+                        totalNetAmount = totalNetAmount.add(item.getNetRevenue() != null ? item.getNetRevenue() : BigDecimal.ZERO);
                 }
-
 
                 Row totalRow = sheet.createRow(rowNum);
                 totalRow.setHeightInPoints(20);
@@ -222,9 +236,17 @@ public class HotelStatisticServiceImpl implements HotelStatisticService {
                 totalNoShowCell.setCellValue(totalNoShow);
                 totalNoShowCell.setCellStyle(totalCenterStyle);
 
-                Cell totalValueCell = totalRow.createCell(5);
-                totalValueCell.setCellValue(totalRevenue.doubleValue());
-                totalValueCell.setCellStyle(totalMoneyStyle);
+                Cell totalGrossCell = totalRow.createCell(5);
+                totalGrossCell.setCellValue(totalGross.doubleValue());
+                totalGrossCell.setCellStyle(totalMoneyStyle);
+
+                Cell totalCommissionCell = totalRow.createCell(6);
+                totalCommissionCell.setCellValue(totalCommissionAmount.doubleValue());
+                totalCommissionCell.setCellStyle(totalMoneyStyle);
+
+                Cell totalNetCell = totalRow.createCell(7);
+                totalNetCell.setCellValue(totalNetAmount.doubleValue());
+                totalNetCell.setCellStyle(totalMoneyStyle);
 
                 for (int i = 0; i < columns.length; i++) {
                         sheet.autoSizeColumn(i);
@@ -248,13 +270,12 @@ public class HotelStatisticServiceImpl implements HotelStatisticService {
 
         @Override
         @Transactional
-        public void recordRealtimeStatistic(Hotel hotel, BigDecimal totalAmount, LocalDate date, BookingStatus status) {
+        public void recordRealtimeStatistic(Hotel hotel, BigDecimal grossAmount, BigDecimal commissionAmount, BigDecimal netAmount, LocalDate date, BookingStatus status) {
                 int updatedRows = 0;
 
                 switch (status) {
                         case COMPLETED:
-                                updatedRows = hotelStatisticRepository.incrementSuccessfulBooking(hotel.getId(), date,
-                                                totalAmount);
+                                updatedRows = hotelStatisticRepository.incrementSuccessfulBooking(hotel.getId(), date, grossAmount, commissionAmount, netAmount);
                                 break;
                         case CANCELLED:
                                 updatedRows = hotelStatisticRepository.incrementCancelledBooking(hotel.getId(), date);
@@ -273,8 +294,9 @@ public class HotelStatisticServiceImpl implements HotelStatisticService {
                                                 .hotel(hotel)
                                                 .statDate(date)
                                                 .completedBookings(status == BookingStatus.COMPLETED ? 1 : 0)
-                                                .totalRevenue(status == BookingStatus.COMPLETED ? totalAmount
-                                                                : BigDecimal.ZERO)
+                                                .grossRevenue(status == BookingStatus.COMPLETED ? grossAmount : BigDecimal.ZERO)
+                                                .totalCommission(status == BookingStatus.COMPLETED ? commissionAmount : BigDecimal.ZERO)
+                                                .netRevenue(status == BookingStatus.COMPLETED ? netAmount : BigDecimal.ZERO)
                                                 .totalCancelled(status == BookingStatus.CANCELLED ? 1 : 0)
                                                 .totalNoShow(status == BookingStatus.NO_SHOW ? 1 : 0)
                                                 .build();
@@ -283,7 +305,7 @@ public class HotelStatisticServiceImpl implements HotelStatisticService {
 
                         } catch (DataIntegrityViolationException e) {
                                 log.warn("Phát hiện xung đột luồng khi tạo HotelStatistic, đang thực hiện lại...");
-                                recordRealtimeStatistic(hotel, totalAmount, date, status);
+                                recordRealtimeStatistic(hotel, grossAmount, commissionAmount, netAmount, date, status);
                         }
                 }
         }
@@ -309,21 +331,27 @@ public class HotelStatisticServiceImpl implements HotelStatisticService {
                 long completedBookings = 0L;
                 long totalCancelled = 0L;
                 long totalNoShow = 0L;
-                BigDecimal totalRevenue = BigDecimal.ZERO;
+                BigDecimal totalGross = BigDecimal.ZERO;
+                BigDecimal totalCommission = BigDecimal.ZERO;
+                BigDecimal totalNet = BigDecimal.ZERO;
 
                 for (HotelStatisticSummaryResponse hotel : allHotels) {
                         completedBookings += (hotel.getCompletedBookings() != null ? hotel.getCompletedBookings() : 0);
                         totalCancelled += (hotel.getTotalCancelled() != null ? hotel.getTotalCancelled() : 0);
                         totalNoShow += (hotel.getTotalNoShow() != null ? hotel.getTotalNoShow() : 0);
-                        totalRevenue = totalRevenue.add(
-                                        hotel.getTotalRevenue() != null ? hotel.getTotalRevenue() : BigDecimal.ZERO);
+                        
+                        totalGross = totalGross.add(hotel.getGrossRevenue() != null ? hotel.getGrossRevenue() : BigDecimal.ZERO);
+                        totalCommission = totalCommission.add(hotel.getTotalCommission() != null ? hotel.getTotalCommission() : BigDecimal.ZERO);
+                        totalNet = totalNet.add(hotel.getNetRevenue() != null ? hotel.getNetRevenue() : BigDecimal.ZERO);
                 }
 
                 DashboardSummaryResponse summary = DashboardSummaryResponse.builder()
                                 .completedBookings(completedBookings)
                                 .totalCancelled(totalCancelled)
                                 .totalNoShow(totalNoShow)
-                                .totalRevenue(totalRevenue)
+                                .grossRevenue(totalGross)
+                                .totalCommission(totalCommission)
+                                .netRevenue(totalNet)
                                 .build();
 
                 List<HotelStatisticSummaryResponse> displayHotels;
@@ -338,7 +366,6 @@ public class HotelStatisticServiceImpl implements HotelStatisticService {
                 Long totalBookings = null;
 
                 if (isAdmin) {
-
                         totalHotels = hotelRepository.count();
                         totalUsers = userRepository.count();
                         totalBookings = bookingRepository.count();

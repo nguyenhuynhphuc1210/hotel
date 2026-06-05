@@ -21,12 +21,19 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
     List<HotelStatistic> findByHotel_IdAndStatDateBetweenOrderByStatDateAsc(
             Long hotelId, LocalDate fromDate, LocalDate toDate);
 
+    // 1. Cập nhật hàm tăng doanh thu với 3 trường tài chính chi tiết
     @Modifying
-    @Query("UPDATE HotelStatistic h SET h.completedBookings = h.completedBookings + 1, h.totalRevenue = h.totalRevenue + :totalAmount WHERE h.hotel.id = :hotelId AND h.statDate = :statDate")
+    @Query("UPDATE HotelStatistic h SET h.completedBookings = h.completedBookings + 1, " +
+           "h.grossRevenue = h.grossRevenue + :grossAmount, " +
+           "h.totalCommission = h.totalCommission + :commissionAmount, " +
+           "h.netRevenue = h.netRevenue + :netAmount " +
+           "WHERE h.hotel.id = :hotelId AND h.statDate = :statDate")
     int incrementSuccessfulBooking(
             @Param("hotelId") Long hotelId,
             @Param("statDate") LocalDate statDate,
-            @Param("totalAmount") BigDecimal totalAmount);
+            @Param("grossAmount") BigDecimal grossAmount,
+            @Param("commissionAmount") BigDecimal commissionAmount,
+            @Param("netAmount") BigDecimal netAmount);
 
     @Modifying
     @Query("UPDATE HotelStatistic h SET h.totalCancelled = h.totalCancelled + 1 WHERE h.hotel.id = :hotelId AND h.statDate = :statDate")
@@ -44,32 +51,11 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             SELECT hs
             FROM HotelStatistic hs
             WHERE hs.hotel.id = :hotelId
-
-            AND (
-                CAST(:year AS integer) IS NULL
-                OR YEAR(hs.statDate) = :year
-            )
-
-            AND (
-                CAST(:month AS integer) IS NULL
-                OR MONTH(hs.statDate) = :month
-            )
-
-            AND (
-                CAST(:day AS integer) IS NULL
-                OR DAY(hs.statDate) = :day
-            )
-
-            AND (
-                CAST(:fromDate AS date) IS NULL
-                OR hs.statDate >= :fromDate
-            )
-
-            AND (
-                CAST(:toDate AS date) IS NULL
-                OR hs.statDate <= :toDate
-            )
-
+            AND (CAST(:year AS integer) IS NULL OR YEAR(hs.statDate) = :year)
+            AND (CAST(:month AS integer) IS NULL OR MONTH(hs.statDate) = :month)
+            AND (CAST(:day AS integer) IS NULL OR DAY(hs.statDate) = :day)
+            AND (CAST(:fromDate AS date) IS NULL OR hs.statDate >= :fromDate)
+            AND (CAST(:toDate AS date) IS NULL OR hs.statDate <= :toDate)
             ORDER BY hs.statDate ASC
             """)
     List<HotelStatistic> searchStatistics(
@@ -80,6 +66,7 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
 
+    // 2. Cập nhật constructor Export
     @Query("""
             SELECT new com.example.backend.dto.export.RevenueExport(
                 h.hotelName,
@@ -87,47 +74,20 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
                 hs.completedBookings,
                 hs.totalCancelled,
                 hs.totalNoShow,
-                hs.totalRevenue
+                hs.grossRevenue,
+                hs.totalCommission,
+                hs.netRevenue
             )
             FROM HotelStatistic hs
             JOIN hs.hotel h
             JOIN h.owner o
-
-            WHERE (
-                CAST(:hotelId AS long) IS NULL
-                OR h.id = :hotelId
-            )
-
-            AND (
-                CAST(:ownerId AS long) IS NULL
-                OR o.id = :ownerId
-            )
-
-            AND (
-                CAST(:currentOwnerEmail AS string) IS NULL
-                OR o.email = :currentOwnerEmail
-            )
-
-            AND (
-                CAST(:month AS integer) IS NULL
-                OR MONTH(hs.statDate) = :month
-            )
-
-            AND (
-                CAST(:year AS integer) IS NULL
-                OR YEAR(hs.statDate) = :year
-            )
-
-            AND (
-                CAST(:fromDate AS date) IS NULL
-                OR hs.statDate >= :fromDate
-            )
-
-            AND (
-                CAST(:toDate AS date) IS NULL
-                OR hs.statDate <= :toDate
-            )
-
+            WHERE (CAST(:hotelId AS long) IS NULL OR h.id = :hotelId)
+            AND (CAST(:ownerId AS long) IS NULL OR o.id = :ownerId)
+            AND (CAST(:currentOwnerEmail AS string) IS NULL OR o.email = :currentOwnerEmail)
+            AND (CAST(:month AS integer) IS NULL OR MONTH(hs.statDate) = :month)
+            AND (CAST(:year AS integer) IS NULL OR YEAR(hs.statDate) = :year)
+            AND (CAST(:fromDate AS date) IS NULL OR hs.statDate >= :fromDate)
+            AND (CAST(:toDate AS date) IS NULL OR hs.statDate <= :toDate)
             ORDER BY hs.statDate DESC
             """)
     List<RevenueExport> exportRevenue(
@@ -139,12 +99,15 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
 
+    // 3. Cập nhật System Summary
     @Query("""
             SELECT new com.example.backend.dto.response.SystemStatisticSummary(
                 SUM(hs.completedBookings),
                 SUM(hs.totalCancelled),
                 SUM(hs.totalNoShow),
-                SUM(hs.totalRevenue)
+                SUM(hs.grossRevenue),
+                SUM(hs.totalCommission),
+                SUM(hs.netRevenue)
             )
             FROM HotelStatistic hs
             WHERE (CAST(:month AS integer) IS NULL OR MONTH(hs.statDate) = :month)
@@ -158,6 +121,7 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
 
+    // 4. Cập nhật Top Hotels
     @Query("""
             SELECT new com.example.backend.dto.response.HotelStatisticSummaryResponse(
                 h.id,
@@ -165,7 +129,9 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
                 SUM(hs.completedBookings),
                 SUM(hs.totalCancelled),
                 SUM(hs.totalNoShow),
-                SUM(hs.totalRevenue)
+                SUM(hs.grossRevenue),
+                SUM(hs.totalCommission),
+                SUM(hs.netRevenue)
             )
             FROM HotelStatistic hs
             JOIN hs.hotel h
@@ -178,7 +144,7 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
               AND (CAST(:fromDate AS date) IS NULL OR hs.statDate >= :fromDate)
               AND (CAST(:toDate AS date) IS NULL OR hs.statDate <= :toDate)
             GROUP BY h.id, h.hotelName
-            ORDER BY SUM(hs.totalRevenue) DESC
+            ORDER BY SUM(hs.netRevenue) DESC
             """)
     List<HotelStatisticSummaryResponse> getHotelsSummary(
             @Param("hotelId") Long hotelId,
@@ -189,13 +155,16 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
 
+    // 5. Cập nhật biểu đồ hằng ngày
     @Query("""
             SELECT new com.example.backend.dto.response.DailyStatisticResponse(
                 hs.statDate,
                 SUM(hs.completedBookings),
                 SUM(hs.totalCancelled),
                 SUM(hs.totalNoShow),
-                SUM(hs.totalRevenue)
+                SUM(hs.grossRevenue),
+                SUM(hs.totalCommission),
+                SUM(hs.netRevenue)
             )
             FROM HotelStatistic hs
             JOIN hs.hotel h
@@ -218,5 +187,4 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             @Param("year") Integer year,
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
-
 }

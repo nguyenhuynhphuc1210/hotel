@@ -18,7 +18,9 @@ public class HotelStatisticMapper {
             Hotel hotel,
             LocalDate statDate,
             Integer completedBookings,
-            BigDecimal totalRevenue,
+            BigDecimal grossRevenue,
+            BigDecimal totalCommission,
+            BigDecimal netRevenue,
             Integer totalCancelled,
             Integer totalNoShow) {
 
@@ -29,7 +31,9 @@ public class HotelStatisticMapper {
                 .hotel(hotel)
                 .statDate(statDate)
                 .completedBookings(completedBookings != null ? completedBookings : 0)
-                .totalRevenue(totalRevenue != null ? totalRevenue : BigDecimal.ZERO)
+                .grossRevenue(grossRevenue != null ? grossRevenue : BigDecimal.ZERO)
+                .totalCommission(totalCommission != null ? totalCommission : BigDecimal.ZERO)
+                .netRevenue(netRevenue != null ? netRevenue : BigDecimal.ZERO)
                 .totalCancelled(totalCancelled != null ? totalCancelled : 0)
                 .totalNoShow(totalNoShow != null ? totalNoShow : 0)
                 .build();
@@ -44,7 +48,9 @@ public class HotelStatisticMapper {
                 .hotelId(s.getHotel() != null ? s.getHotel().getId() : null)
                 .statDate(s.getStatDate())
                 .completedBookings(s.getCompletedBookings())
-                .totalRevenue(s.getTotalRevenue())
+                .grossRevenue(s.getGrossRevenue())
+                .totalCommission(s.getTotalCommission())
+                .netRevenue(s.getNetRevenue())
                 .totalCancelled(s.getTotalCancelled())
                 .totalNoShow(s.getTotalNoShow())
                 .build();

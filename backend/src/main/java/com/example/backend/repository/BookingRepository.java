@@ -33,12 +33,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             FROM Booking b
             JOIN b.hotel h
             JOIN h.owner o
-            WHERE 
-            (:keyword IS NULL 
-            OR LOWER(b.bookingCode) LIKE :keyword 
-            OR LOWER(b.guestName) LIKE :keyword 
-            OR LOWER(b.guestEmail) LIKE :keyword 
-            OR LOWER(h.hotelName) LIKE :keyword 
+            WHERE
+            (:keyword IS NULL
+            OR LOWER(b.bookingCode) LIKE :keyword
+            OR LOWER(b.guestName) LIKE :keyword
+            OR LOWER(b.guestEmail) LIKE :keyword
+            OR LOWER(h.hotelName) LIKE :keyword
             )
             AND (:status IS NULL OR b.status = :status)
             AND (:hotelId IS NULL OR h.id = :hotelId)
@@ -54,36 +54,42 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             Pageable pageable);
 
     @Query("""
-                SELECT new com.example.backend.dto.export.BookingExport(
-                    b.bookingCode,
-                    b.guestName,
-                    b.guestEmail,
-                    b.guestPhone,
-                    h.hotelName,
-                    b.checkInDate,
-                    b.checkOutDate,
-                    b.status,
-                    p.paymentMethod,
-                    b.totalAmount,
-                    b.createdAt
-                )
-                FROM Booking b
-                JOIN b.hotel h
-                JOIN h.owner o
-                LEFT JOIN Payment p ON p.booking = b
-                WHERE 
-                (
-                    :keyword IS NULL 
-                    OR LOWER(b.bookingCode) LIKE :keyword 
-                    OR LOWER(b.guestName) LIKE :keyword 
-                    OR LOWER(b.guestEmail) LIKE :keyword 
-                    OR LOWER(h.hotelName) LIKE :keyword 
-                )
-                AND (:status IS NULL OR b.status = :status)
-                AND (:hotelId IS NULL OR h.id = :hotelId)
-                AND (:ownerId IS NULL OR o.id = :ownerId)
-                AND (:currentOwnerEmail IS NULL OR o.email = :currentOwnerEmail)
-                ORDER BY b.createdAt DESC
+            SELECT new com.example.backend.dto.export.BookingExport(
+                b.bookingCode,
+                b.guestName,
+                b.guestEmail,
+                b.guestPhone,
+                h.hotelName,
+                b.checkInDate,
+                b.checkOutDate,
+                b.status,
+                p.paymentMethod,
+                b.subtotal,
+                b.discountAmount,
+                b.totalAmount,
+                b.commissionAmount,
+                prm.id,
+                prm.hotel.id,
+                b.createdAt
+            )
+            FROM Booking b
+            JOIN b.hotel h
+            JOIN h.owner o
+            LEFT JOIN b.payment p
+            LEFT JOIN b.promotion prm
+            WHERE
+            (
+                :keyword IS NULL
+                OR LOWER(b.bookingCode) LIKE :keyword
+                OR LOWER(b.guestName) LIKE :keyword
+                OR LOWER(b.guestEmail) LIKE :keyword
+                OR LOWER(h.hotelName) LIKE :keyword
+            )
+            AND (:status IS NULL OR b.status = :status)
+            AND (:hotelId IS NULL OR h.id = :hotelId)
+            AND (:ownerId IS NULL OR o.id = :ownerId)
+            AND (:currentOwnerEmail IS NULL OR o.email = :currentOwnerEmail)
+            ORDER BY b.createdAt DESC
             """)
     List<BookingExport> exportBookings(
             @Param("keyword") String keyword,

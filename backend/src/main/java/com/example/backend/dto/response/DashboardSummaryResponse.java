@@ -19,6 +19,7 @@ public class DashboardSummaryResponse {
 
     private Long totalNoShow;
 
-    private BigDecimal totalRevenue;
-
+    private BigDecimal grossRevenue;
+    private BigDecimal totalCommission;
+    private BigDecimal netRevenue;
 }

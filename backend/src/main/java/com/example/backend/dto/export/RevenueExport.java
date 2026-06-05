@@ -19,5 +19,8 @@ public class RevenueExport {
     private Integer completedBookings;
     private Integer totalCancelled;
     private Integer totalNoShow;
-    private BigDecimal totalRevenue;
+
+    private BigDecimal grossRevenue;
+    private BigDecimal totalCommission;
+    private BigDecimal netRevenue;
 }

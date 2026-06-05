@@ -10,11 +10,15 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class HotelStatisticResponse {
+    
     private Long id;
     private Long hotelId;
     private LocalDate statDate;
     private Integer completedBookings;
     private Integer totalCancelled;
     private Integer totalNoShow;
-    private BigDecimal totalRevenue;
+
+    private BigDecimal grossRevenue;
+    private BigDecimal totalCommission;
+    private BigDecimal netRevenue;
 }

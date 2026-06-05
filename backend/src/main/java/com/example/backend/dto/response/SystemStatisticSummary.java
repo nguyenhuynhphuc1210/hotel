@@ -9,6 +9,9 @@ public class SystemStatisticSummary {
     private Long completedBookings;
     private Long totalCancelled;
     private Long totalNoShow;
-    private BigDecimal totalRevenue;
+    
+    private BigDecimal grossRevenue;
+    private BigDecimal totalCommission;
+    private BigDecimal netRevenue;
 
 }

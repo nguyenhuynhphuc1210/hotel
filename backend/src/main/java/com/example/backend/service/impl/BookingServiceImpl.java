@@ -23,6 +23,7 @@ import com.example.backend.service.VNPayService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +38,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -52,6 +54,9 @@ import java.io.IOException;
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
+
+    @Value("${app.system.commission-percent}")
+    private BigDecimal systemCommissionPercent;
 
     private final BookingRepository bookingRepository;
     private final HotelRepository hotelRepository;
@@ -71,6 +76,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
+
         if (!request.getCheckInDate().isBefore(request.getCheckOutDate())) {
             throw new IllegalArgumentException("Ngày check-out phải sau ngày check-in ít nhất 1 đêm");
         }
@@ -149,6 +155,7 @@ public class BookingServiceImpl implements BookingService {
 
         booking.setSubtotal(grandTotal);
         BigDecimal discount = BigDecimal.ZERO;
+
         if (request.getPromotionId() != null) {
             Promotion promo = promotionRepository.findById(request.getPromotionId())
                     .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy mã giảm giá"));
@@ -174,6 +181,24 @@ public class BookingServiceImpl implements BookingService {
 
         booking.setDiscountAmount(discount);
         booking.setTotalAmount(grandTotal.subtract(discount));
+        booking.setCommissionPercent(systemCommissionPercent);
+
+        BigDecimal commissionBaseAmount;
+        if (booking.getPromotion() != null) {
+            if (booking.getPromotion().getHotel() == null) {
+                commissionBaseAmount = grandTotal;
+            } else {
+                commissionBaseAmount = booking.getTotalAmount();
+            }
+        } else {
+            commissionBaseAmount = grandTotal;
+        }
+
+        booking.setCommissionAmount(
+                commissionBaseAmount
+                        .multiply(systemCommissionPercent)
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)
+                        .setScale(2, RoundingMode.HALF_UP));
 
         if (request.getPaymentMethod() == PaymentMethod.CASH) {
             booking.setStatus(BookingStatus.CONFIRMED);
@@ -197,7 +222,7 @@ public class BookingServiceImpl implements BookingService {
         savedBooking.setPayment(payment);
         paymentRepository.save(payment);
 
-        BookingResponse response = bookingMapper.toBookingResponse(savedBooking);
+        BookingResponse response = enrichBookingResponse(savedBooking);
 
         if (request.getPaymentMethod() == PaymentMethod.CASH) {
             eventPublisher.publishEvent(new BookingEmailEvent(savedBooking.getId(), "CONFIRM", null));
@@ -211,7 +236,6 @@ public class BookingServiceImpl implements BookingService {
 
         String customerName = user != null ? user.getFullName() : request.getGuestName();
         String notificationTitle = "Bạn có đơn đặt phòng mới";
-
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
         String notificationMessage = String.format(
@@ -320,7 +344,9 @@ public class BookingServiceImpl implements BookingService {
 
         hotelStatisticService.recordRealtimeStatistic(
                 savedBooking.getHotel(),
-                savedBooking.getTotalAmount(),
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
                 LocalDate.now(),
                 BookingStatus.CANCELLED);
 
@@ -372,7 +398,7 @@ public class BookingServiceImpl implements BookingService {
                     ex.getMessage());
         }
 
-        return bookingMapper.toBookingResponse(savedBooking);
+        return enrichBookingResponse(savedBooking);
     }
 
     @Override
@@ -495,14 +521,46 @@ public class BookingServiceImpl implements BookingService {
                         || newStatus == BookingStatus.CANCELLED
                         || newStatus == BookingStatus.NO_SHOW)) {
 
+            BigDecimal hotelGrossAmount = BigDecimal.ZERO;
+            BigDecimal statisticCommission = BigDecimal.ZERO;
+            BigDecimal netAmount = BigDecimal.ZERO;
+
+            if (newStatus == BookingStatus.COMPLETED) {
+
+                boolean isSystemPromotion = savedBooking.getPromotion() != null
+                        && savedBooking.getPromotion().getHotel() == null;
+
+                hotelGrossAmount = isSystemPromotion
+                        ? Optional.ofNullable(savedBooking.getSubtotal())
+                                .orElse(BigDecimal.ZERO)
+                        : Optional.ofNullable(savedBooking.getTotalAmount())
+                                .orElse(BigDecimal.ZERO);
+
+                BigDecimal originalCommission = Optional.ofNullable(savedBooking.getCommissionAmount())
+                        .orElse(BigDecimal.ZERO);
+
+                BigDecimal discountAmount = Optional.ofNullable(savedBooking.getDiscountAmount())
+                        .orElse(BigDecimal.ZERO);
+
+                if (isSystemPromotion) {
+                    statisticCommission = originalCommission.subtract(discountAmount);
+                } else {
+                    statisticCommission = originalCommission;
+                }
+
+                netAmount = hotelGrossAmount.subtract(originalCommission);
+            }
+
             hotelStatisticService.recordRealtimeStatistic(
                     savedBooking.getHotel(),
-                    savedBooking.getTotalAmount(),
+                    hotelGrossAmount,
+                    statisticCommission,
+                    netAmount,
                     LocalDate.now(),
                     newStatus);
         }
 
-        return bookingMapper.toBookingResponse(savedBooking);
+        return enrichBookingResponse(savedBooking);
     }
 
     @Override
@@ -548,51 +606,75 @@ public class BookingServiceImpl implements BookingService {
                         ownerId,
                         currentOwnerEmail,
                         pageable)
-                .map(bookingMapper::toBookingResponse);
+                .map(this::enrichBookingResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<BookingResponse> getMyPersonalBookings(int page, int size) {
+    public Page<BookingResponse> getMyPersonalBookings(
+            int page,
+            int size) {
+
         String userEmail = SecurityUtils.getCurrentUserEmail();
+
         User currentUser = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản người dùng"));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy tài khoản người dùng"));
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        Page<Booking> bookingPage = bookingRepository.findByUser_Id(currentUser.getId(), pageable);
-
-        return bookingPage.map(bookingMapper::toBookingResponse);
+        return bookingRepository
+                .findByUser_Id(currentUser.getId(), pageable)
+                .map(this::enrichBookingResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public BookingResponse getBookingById(Long bookingId) {
+
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy đơn đặt phòng với ID: "
+                                + bookingId));
 
         if (!SecurityUtils.isAdmin()) {
+
             String currentUserEmail = SecurityUtils.getCurrentUserEmail();
 
-            boolean isOwnerOfThisHotel = booking.getHotel().getOwner().getEmail().equals(currentUserEmail);
+            boolean isOwnerOfThisHotel = booking.getHotel()
+                    .getOwner()
+                    .getEmail()
+                    .equals(currentUserEmail);
 
             boolean isGuestOfThisBooking = booking.getUser() != null
-                    && booking.getUser().getEmail().equals(currentUserEmail);
+                    && booking.getUser()
+                            .getEmail()
+                            .equals(currentUserEmail);
 
-            if (!isOwnerOfThisHotel && !isGuestOfThisBooking) {
-                throw new AccessDeniedException("Bạn không có quyền truy cập đơn đặt phòng này.");
+            if (!isOwnerOfThisHotel
+                    && !isGuestOfThisBooking) {
+
+                throw new AccessDeniedException(
+                        "Bạn không có quyền truy cập đơn đặt phòng này.");
             }
         }
 
-        return bookingMapper.toBookingResponse(booking);
+        return enrichBookingResponse(booking);
     }
 
     @Override
     @Transactional(readOnly = true)
     public BookingResponse lookupBooking(String bookingCode) {
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn"));
-        return bookingMapper.toBookingResponse(booking);
+
+        Booking booking = bookingRepository
+                .findByBookingCode(bookingCode)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy đơn"));
+
+        return enrichBookingResponse(booking);
     }
 
     private void restoreRoomInventory(Booking booking) {
@@ -633,6 +715,52 @@ public class BookingServiceImpl implements BookingService {
         };
     }
 
+    private BookingResponse enrichBookingResponse(Booking booking) {
+
+        BookingResponse response = bookingMapper.toBookingResponse(booking);
+
+        BigDecimal commission = Optional.ofNullable(booking.getCommissionAmount())
+                .orElse(BigDecimal.ZERO);
+
+        boolean isSystemPromotion = booking.getPromotion() != null
+                && booking.getPromotion().getHotel() == null;
+
+        BigDecimal hotelGrossAmount = isSystemPromotion
+                ? Optional.ofNullable(booking.getSubtotal()).orElse(BigDecimal.ZERO)
+                : Optional.ofNullable(booking.getTotalAmount()).orElse(BigDecimal.ZERO);
+
+        BigDecimal hotelNetAmount = hotelGrossAmount.subtract(commission);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserEmail = (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName()))
+                ? auth.getName()
+                : null;
+
+        boolean isOwnerOfThisHotel = currentUserEmail != null
+                && booking.getHotel().getOwner().getEmail().equals(currentUserEmail);
+
+        if (SecurityUtils.isAdmin()) {
+
+            BigDecimal discount = Optional.ofNullable(booking.getDiscountAmount()).orElse(BigDecimal.ZERO);
+            response.setActualCommissionAmount(isSystemPromotion ? commission.subtract(discount) : commission);
+            response.setHotelNetAmount(hotelNetAmount);
+
+        } else if (isOwnerOfThisHotel) {
+
+            response.setActualCommissionAmount(null);
+            response.setHotelNetAmount(hotelNetAmount);
+
+        } else {
+
+            response.setCommissionAmount(null);
+            response.setActualCommissionAmount(null);
+            response.setHotelNetAmount(null);
+
+        }
+
+        return response;
+    }
+
     @Override
     @Transactional(readOnly = true)
     public byte[] exportBookingsToExcel(
@@ -641,11 +769,12 @@ public class BookingServiceImpl implements BookingService {
             Long hotelId,
             Long ownerId) throws IOException {
 
+        boolean isAdmin = SecurityUtils.isAdmin();
         String currentOwnerEmail = null;
 
-        if (SecurityUtils.isHotelOwner() && !SecurityUtils.isAdmin()) {
+        if (SecurityUtils.isHotelOwner() && !isAdmin) {
             currentOwnerEmail = SecurityUtils.getCurrentUserEmail();
-        } else if (!SecurityUtils.isAdmin()) {
+        } else if (!isAdmin) {
             throw new AccessDeniedException("Bạn không có quyền export dữ liệu");
         }
 
@@ -656,6 +785,36 @@ public class BookingServiceImpl implements BookingService {
 
         List<BookingExport> bookings = bookingRepository.exportBookings(
                 searchKeyword, status, hotelId, ownerId, currentOwnerEmail);
+
+        BigDecimal totalGrossSum = BigDecimal.ZERO;
+        BigDecimal totalDiscountSum = BigDecimal.ZERO;
+        BigDecimal totalCommissionSum = BigDecimal.ZERO;
+        BigDecimal totalNetSum = BigDecimal.ZERO;
+
+        for (BookingExport b : bookings) {
+            BigDecimal rawCommission = b.getCommissionAmount() != null ? b.getCommissionAmount() : BigDecimal.ZERO;
+            BigDecimal discount = b.getDiscountAmount() != null ? b.getDiscountAmount() : BigDecimal.ZERO;
+
+            boolean isSystemPromotion = b.getPromoId() != null && b.getPromoHotelId() == null;
+
+            BigDecimal hotelGrossAmount = isSystemPromotion
+                    ? (b.getSubtotal() != null ? b.getSubtotal() : BigDecimal.ZERO)
+                    : (b.getTotalAmount() != null ? b.getTotalAmount() : BigDecimal.ZERO);
+
+            BigDecimal hotelNetAmount = hotelGrossAmount.subtract(rawCommission);
+
+            b.setHotelGrossAmount(hotelGrossAmount);
+            b.setHotelNetAmount(hotelNetAmount);
+
+            if (isAdmin) {
+                b.setActualCommission(isSystemPromotion ? rawCommission.subtract(discount) : rawCommission);
+                totalCommissionSum = totalCommissionSum.add(b.getActualCommission());
+            }
+
+            totalGrossSum = totalGrossSum.add(hotelGrossAmount);
+            totalDiscountSum = totalDiscountSum.add(discount);
+            totalNetSum = totalNetSum.add(hotelNetAmount);
+        }
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Bookings Report");
@@ -709,98 +868,129 @@ public class BookingServiceImpl implements BookingService {
         totalMoneyStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
         totalMoneyStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-        String[] columns = {
+        List<String> columns = new java.util.ArrayList<>(java.util.Arrays.asList(
                 "Booking Code", "Guest Name", "Guest Email", "Guest Phone",
                 "Hotel", "Check In", "Check Out", "Status", "Payment Method",
-                "Total Amount (VND)", "Created At"
-        };
+                "Gross Amount", "Discount", "Nguồn KM"));
+        if (isAdmin) {
+            columns.add("System Commission");
+        }
+        columns.add("Hotel Net Amount");
+        columns.add("Created At");
 
         Row headerRow = sheet.createRow(0);
         headerRow.setHeightInPoints(20);
 
-        for (int i = 0; i < columns.length; i++) {
+        for (int i = 0; i < columns.size(); i++) {
             Cell cell = headerRow.createCell(i);
-            cell.setCellValue(columns[i]);
+            cell.setCellValue(columns.get(i));
             cell.setCellStyle(headerStyle);
         }
 
         int rowNum = 1;
-        BigDecimal totalAmount = BigDecimal.ZERO;
-
         for (BookingExport booking : bookings) {
             Row row = sheet.createRow(rowNum++);
+            int colIdx = 0;
 
-            Cell cell0 = row.createCell(0);
+            Cell cell0 = row.createCell(colIdx++);
             cell0.setCellValue(booking.getBookingCode());
             cell0.setCellStyle(textStyle);
-
-            Cell cell1 = row.createCell(1);
+            Cell cell1 = row.createCell(colIdx++);
             cell1.setCellValue(booking.getGuestName());
             cell1.setCellStyle(textStyle);
-
-            Cell cell2 = row.createCell(2);
+            Cell cell2 = row.createCell(colIdx++);
             cell2.setCellValue(booking.getGuestEmail());
             cell2.setCellStyle(textStyle);
-
-            Cell cell3 = row.createCell(3);
+            Cell cell3 = row.createCell(colIdx++);
             cell3.setCellValue(booking.getGuestPhone() != null ? booking.getGuestPhone() : "");
             cell3.setCellStyle(centerStyle);
-
-            Cell cell4 = row.createCell(4);
+            Cell cell4 = row.createCell(colIdx++);
             cell4.setCellValue(booking.getHotelName());
             cell4.setCellStyle(textStyle);
-
-            Cell cell5 = row.createCell(5);
+            Cell cell5 = row.createCell(colIdx++);
             cell5.setCellValue(booking.getCheckInDate() != null ? booking.getCheckInDate().toString() : "");
             cell5.setCellStyle(centerStyle);
-
-            Cell cell6 = row.createCell(6);
+            Cell cell6 = row.createCell(colIdx++);
             cell6.setCellValue(booking.getCheckOutDate() != null ? booking.getCheckOutDate().toString() : "");
             cell6.setCellStyle(centerStyle);
-
-            Cell cell7 = row.createCell(7);
-            cell7.setCellValue(booking.getStatus().name());
+            Cell cell7 = row.createCell(colIdx++);
+            cell7.setCellValue(booking.getStatus() != null ? booking.getStatus().name() : "");
             cell7.setCellStyle(centerStyle);
-
-            Cell cell8 = row.createCell(8);
+            Cell cell8 = row.createCell(colIdx++);
             cell8.setCellValue(booking.getPaymentMethod() != null ? booking.getPaymentMethod().name() : "N/A");
             cell8.setCellStyle(centerStyle);
 
-            Cell cell9 = row.createCell(9);
-            cell9.setCellValue(booking.getTotalAmount().doubleValue());
+            Cell cell9 = row.createCell(colIdx++);
+            cell9.setCellValue(booking.getHotelGrossAmount().doubleValue());
             cell9.setCellStyle(moneyStyle);
+            Cell cell10 = row.createCell(colIdx++);
+            cell10.setCellValue(booking.getDiscountAmount() != null ? booking.getDiscountAmount().doubleValue() : 0);
+            cell10.setCellStyle(moneyStyle);
 
-            totalAmount = totalAmount.add(booking.getTotalAmount());
-
-            Cell cell10 = row.createCell(10);
-            if (booking.getCreatedAt() != null) {
-                cell10.setCellValue(java.sql.Timestamp.valueOf(booking.getCreatedAt()));
+            Cell cellPromoSource = row.createCell(colIdx++);
+            String promoSource = "Không có";
+            if (booking.getPromoId() != null) {
+                promoSource = booking.getPromoHotelId() == null ? "Hệ thống" : "Khách sạn";
             }
-            cell10.setCellStyle(dateStyle);
+            cellPromoSource.setCellValue(promoSource);
+            cellPromoSource.setCellStyle(centerStyle);
+
+            if (isAdmin) {
+                Cell cellComm = row.createCell(colIdx++);
+                cellComm.setCellValue(booking.getActualCommission().doubleValue());
+                cellComm.setCellStyle(moneyStyle);
+            }
+
+            Cell cellNet = row.createCell(colIdx++);
+            cellNet.setCellValue(booking.getHotelNetAmount().doubleValue());
+            cellNet.setCellStyle(moneyStyle);
+
+            Cell cellDate = row.createCell(colIdx++);
+            if (booking.getCreatedAt() != null) {
+                cellDate.setCellValue(java.sql.Timestamp.valueOf(booking.getCreatedAt()));
+            }
+            cellDate.setCellStyle(dateStyle);
         }
 
         Row totalRow = sheet.createRow(rowNum);
         totalRow.setHeightInPoints(20);
 
-        for (int i = 0; i <= 8; i++) {
+        int financeStartCol = 9;
+        for (int i = 0; i < financeStartCol; i++) {
             Cell cell = totalRow.createCell(i);
             cell.setCellStyle(totalLabelStyle);
             if (i == 0)
-                cell.setCellValue("TOTAL AMOUNT:");
+                cell.setCellValue("TOTAL:");
         }
-        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowNum, rowNum, 0, 8));
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowNum, rowNum, 0, financeStartCol - 1));
 
-        Cell totalValueCell = totalRow.createCell(9);
-        totalValueCell.setCellValue(totalAmount.doubleValue());
-        totalValueCell.setCellStyle(totalMoneyStyle);
+        int tColIdx = financeStartCol;
+        Cell tGross = totalRow.createCell(tColIdx++);
+        tGross.setCellValue(totalGrossSum.doubleValue());
+        tGross.setCellStyle(totalMoneyStyle);
+        Cell tDisc = totalRow.createCell(tColIdx++);
+        tDisc.setCellValue(totalDiscountSum.doubleValue());
+        tDisc.setCellStyle(totalMoneyStyle);
 
-        Cell emptyEndCell = totalRow.createCell(10);
-        emptyEndCell.setCellStyle(totalLabelStyle);
+        Cell tEmptyPromo = totalRow.createCell(tColIdx++);
+        tEmptyPromo.setCellStyle(totalLabelStyle);
 
-        for (int i = 0; i < columns.length; i++) {
+        if (isAdmin) {
+            Cell tComm = totalRow.createCell(tColIdx++);
+            tComm.setCellValue(totalCommissionSum.doubleValue());
+            tComm.setCellStyle(totalMoneyStyle);
+        }
+
+        Cell tNet = totalRow.createCell(tColIdx++);
+        tNet.setCellValue(totalNetSum.doubleValue());
+        tNet.setCellStyle(totalMoneyStyle);
+
+        Cell tEmptyDate = totalRow.createCell(tColIdx);
+        tEmptyDate.setCellStyle(totalLabelStyle);
+
+        for (int i = 0; i < columns.size(); i++) {
             sheet.autoSizeColumn(i);
-            int currentWidth = sheet.getColumnWidth(i);
-            sheet.setColumnWidth(i, currentWidth + 1000);
+            sheet.setColumnWidth(i, sheet.getColumnWidth(i) + 1000);
         }
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();

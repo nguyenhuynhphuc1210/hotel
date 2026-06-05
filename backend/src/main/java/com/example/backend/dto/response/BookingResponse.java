@@ -33,6 +33,10 @@ public class BookingResponse {
     private Long promotionId;
     private String promoCode;
     private BigDecimal totalAmount;
+    private BigDecimal commissionPercent;
+    private BigDecimal commissionAmount;
+    private BigDecimal actualCommissionAmount;
+    private BigDecimal hotelNetAmount;
     private String cancelReason;
     private LocalDateTime cancelledAt;
     private String cancelledBy;
