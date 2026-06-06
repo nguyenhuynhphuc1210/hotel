@@ -40,7 +40,7 @@ const STATUS_CONFIG: Record<PaymentStatus, { label: string; dot: string; badge: 
   REFUNDED: { label: 'Hoàn tiền', dot: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200', icon: RefreshCcw, color: 'text-violet-500' },
 }
 
-const PAYMENT_STAT_STATUSES: PaymentStatus[] = ['PENDING', 'PAID', 'CANCELLED', 'FAILED', 'REFUNDED']
+const PAYMENT_STAT_STATUSES: PaymentStatus[] = ['UNPAID', 'PENDING', 'PAID', 'CANCELLED', 'FAILED', 'REFUNDED']
 
 const METHOD_CONFIG: Record<string, { label: string; dot: string }> = {
   VNPAY: { label: 'VNPay', dot: 'bg-blue-500' },
@@ -204,7 +204,7 @@ export default function AdminPaymentsPage() {
       </div>
 
       {/* STATS CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {PAYMENT_STAT_STATUSES.map((status) => {
           const config = STATUS_CONFIG[status]
           const Icon = config.icon

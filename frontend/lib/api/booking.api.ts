@@ -9,6 +9,7 @@ const bookingApi = {
     keyword?: string
     status?: string
     hotelId?: number
+    ownerId?: number
   }) =>
     axiosInstance.get<PageResponse<BookingResponse>>(`${API_CONFIG.ENDPOINTS.BOOKINGS}/admin`, {
       params: { page, size, ...params }

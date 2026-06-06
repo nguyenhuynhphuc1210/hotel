@@ -38,9 +38,14 @@ export interface BookingResponse {
   bookingRooms: BookingRoomResponse[]
   reviewed?: boolean
   review?: BookingReview
-   cancelReason: string | null   
+  cancelReason: string | null   
   cancelledBy: string | null    
   cancelledAt: string | null  
+  commissionPercent: number;
+  commissionAmount: number;
+  actualCommissionAmount: number | null; 
+  hotelNetAmount: number | null;       
+  
 }
 
 export interface BookingRoomRateResponse {

@@ -93,6 +93,16 @@ function RoomCard({
     adults: number
 }) {
 
+    const searchParams = useSearchParams();
+    const childAgesRaw = searchParams.getAll('childAges').map(Number);
+
+    const freeChildren = childAgesRaw.filter(age => age >= 0 && age <= 5).slice(0, 1);
+    const adultChildrenCount = childAgesRaw.filter(age => age >= 6).length;
+
+    const totalEffectiveAdults = adults + adultChildrenCount;
+
+
+
     const calCheckOut = useMemo(() => {
         if (!checkOut) return ''
         const d = new Date(checkOut)
@@ -144,9 +154,8 @@ function RoomCard({
 
     const isLowStock = availableRooms > 0 && availableRooms <= 4
 
-    const avgAdultsPerRoom = Math.ceil(adults / defaultRooms);
-    const roomMaxAdults = room.maxAdults ?? 0;
-
+    const avgAdultsPerRoom = Math.ceil(totalEffectiveAdults / defaultRooms);
+    const roomMaxAdults = room.maxAdults ?? 2;
     const isOverCapacity = avgAdultsPerRoom > roomMaxAdults;
 
     return (
@@ -211,15 +220,38 @@ function RoomCard({
                         <Users size={16} className={cn("shrink-0", isOverCapacity ? "text-red-500" : "text-blue-500")} />
                         <div className="flex flex-wrap items-center gap-1.5">
                             <span className={cn("text-[13px] font-bold", isOverCapacity ? "text-red-600" : "text-gray-700")}>
-                                {roomMaxAdults} người lớn / phòng
+                                {roomMaxAdults} người lớn
+                                {room.maxChildren != null && room.maxChildren > 0 && ` & ${room.maxChildren} trẻ em`}
                             </span>
                             {isOverCapacity && (
-                                <span className="text-[12px] font-medium text-red-600 flex items-center gap-1">
-                                    Vượt quá sức chứa ({avgAdultsPerRoom} khách/phòng) <Info size={12} fill="currentColor" className="text-red-600 bg-white rounded-full" />
+                                <span className="text-[12px] font-medium text-red-600 flex items-center gap-1 bg-red-50 px-2 py-0.5 rounded">
+                                    Vượt quá sức chứa phòng <Info size={12} />
                                 </span>
                             )}
                         </div>
                     </div>
+
+                    {freeChildren.length > 0 && !isOverCapacity && (
+                        <div className="mt-3 space-y-1">
+                            <div className="flex items-center gap-1.5 text-emerald-600 font-semibold text-[13px]">
+                                <span className="text-emerald-500 font-bold">↑</span>
+                                <span>Con của quý khách được ở <span className="font-black">MIỄN PHÍ!</span></span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-emerald-600 font-medium text-[13px]">
+                                <span className="text-emerald-500 font-bold">↑</span>
+                                <span>
+                                    Trẻ em {freeChildren[0] === 0 ? 'dưới 1 tuổi' : `${freeChildren[0]} tuổi`} lưu trú miễn phí với giường có sẵn
+                                </span>
+                            </div>
+
+                            {childAgesRaw.filter(age => age >= 0 && age <= 5).length > 1 && (
+                                <div className="flex items-center gap-1.5 text-amber-600 font-medium text-[12px] mt-1">
+                                    <span>⚠️</span>
+                                    <span>Chỉ miễn phí cho <span className="font-bold">1 trẻ</span> — các trẻ còn lại có thể phát sinh phụ phí</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Mô tả in nghiêng giống ảnh mẫu */}
                     <p className="text-sm text-gray-500 italic leading-relaxed mb-6">
@@ -359,6 +391,10 @@ function HotelDetailContent() {
     const rooms = Number(searchParams.get('rooms') || 1)
     const hasFullDates = !!checkIn && !!checkOut
     const children = Number(searchParams.get('children') || 0)
+    const childAgesRaw = searchParams.getAll('childAges').map(Number);
+    const freeChildren = childAgesRaw.filter(age => age >= 0 && age <= 5).slice(0, 1);
+    const adultChildrenCount = childAgesRaw.filter(age => age >= 6).length;
+    const totalEffectiveAdults = adults + adultChildrenCount;
 
     const [rating, setRating] = useState(5)
     const [comment, setComment] = useState('')
@@ -607,7 +643,7 @@ function HotelDetailContent() {
             <div className="bg-white border-b sticky top-16 z-30 py-3 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4">
                     <SearchBar
-                        key={`search-${hotel.id}`}
+                        key={`search-${hotel.id}-${searchParams.toString()}`}
                         variant="compact"
                         defaultValues={{
                             checkIn, checkOut,

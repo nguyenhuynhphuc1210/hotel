@@ -19,38 +19,45 @@ export interface DashboardParams {
 
 // ── Response types ──────────────────────────────────────
 export interface HotelStatisticResponse {
-  id: number
-  hotelId: number
-  hotelName: string
-  statDate: string
-  completedBookings: number
-  totalRevenue: number
-  totalCancelled: number
-  totalNoShow: number
+  id: number;
+  hotelId: number;
+  statDate: string;
+  completedBookings: number;
+  totalCancelled: number;
+  totalNoShow: number;
+  grossRevenue: number;
+  totalCommission: number;
+  netRevenue: number;
 }
 
 export interface HotelStatisticSummaryResponse {
-  hotelId: number
-  hotelName: string
-  completedBookings: number | null
-  totalRevenue: number | null
-  totalCancelled: number | null
-  totalNoShow: number | null
+  hotelId: number;
+  hotelName: string;
+  completedBookings: number | null;
+  totalCancelled: number | null;
+  totalNoShow: number | null;
+  grossRevenue: number | null;
+  totalCommission: number | null;
+  netRevenue: number | null;
 }
 
 export interface DailyStatisticResponse {
-  statDate: string
-  completedBookings: number | null
-  totalRevenue: number | null
-  totalCancelled: number | null
-  totalNoShow: number | null
+   statDate: string;
+  completedBookings: number | null;
+  totalCancelled: number | null;
+  totalNoShow: number | null;
+  grossRevenue: number | null;
+  totalCommission: number | null;
+  netRevenue: number | null;
 }
 
 export interface DashboardSummaryResponse {
-  completedBookings: number
-  totalCancelled: number
-  totalNoShow: number
-  totalRevenue: number
+  completedBookings: number;
+  totalCancelled: number;
+  totalNoShow: number;
+  grossRevenue: number;
+  totalCommission: number;
+  netRevenue: number;
 }
 
 export interface RecentBookingResponse {

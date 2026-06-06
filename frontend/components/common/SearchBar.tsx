@@ -326,7 +326,7 @@ function GuestPicker({ adults, children, rooms, childAges, setAdults, setChildre
         })
     }
 
-    const allAgesSelected = children === 0 || childAges.slice(0, children).every(a => a >= 0)
+    const allAgesSelected = true
 
     return (
         <div
@@ -424,15 +424,20 @@ function GuestPicker({ adults, children, rooms, childAges, setAdults, setChildre
                                         value={childAges[i] ?? -1}
                                         onChange={e => handleAgeChange(i, Number(e.target.value))}
                                         className={`w-full px-3 py-2.5 pr-8 border rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${(childAges[i] ?? -1) === -1
-                                                ? 'border-blue-400 text-gray-400 bg-blue-50'
-                                                : 'border-gray-200 text-gray-800 bg-white'
+                                            ? 'border-blue-400 text-gray-400 bg-blue-50'
+                                            : 'border-gray-200 text-gray-800 bg-white'
                                             }`}
                                     >
-                                        <option value={-1} disabled>Tuổi của Trẻ {i + 1}</option>
+                                        <option value={-1}>Tuổi của Trẻ {i + 1}</option>
                                         {CHILD_AGE_OPTIONS.map((label, idx) => (
                                             <option key={idx} value={idx}>{label}</option>
                                         ))}
                                     </select>
+                                    {(childAges[i] ?? 8) === -1 || childAges[i] === 8 && (
+                                        <p className="text-[10px] text-amber-500 mt-0.5 ml-1">
+                                            ⚠️ Nhập tuổi chính xác để xem giá đúng
+                                        </p>
+                                    )}
                                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                 </div>
                             ))}
@@ -536,14 +541,17 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
         const val = defaultValues?.checkOut || searchParams.get('checkOut')
         return val ? parseDate(val) : tomorrow
     })
-    
+
     const [adults, setAdults] = useState(Number(searchParams.get('adults')) || defaultValues?.adults || 1)
     const [children, setChildren] = useState(Number(searchParams.get('children')) || defaultValues?.children || 0)
     const [rooms, setRooms] = useState(Number(searchParams.get('rooms')) || defaultValues?.rooms || 1)
     // childAges: mảng số, -1 = chưa chọn
-    const [childAges, setChildAges] = useState<number[]>(() =>
-        Array(Number(searchParams.get('children')) || defaultValues?.children || 0).fill(-1)
-    )
+    const [childAges, setChildAges] = useState<number[]>(() => {
+    const fromUrl = searchParams.getAll('childAges').map(Number)
+    const childCount = Number(searchParams.get('children')) || defaultValues?.children || 0
+    if (fromUrl.length > 0) return fromUrl
+    return Array(childCount).fill(-1)
+})
 
     const [showDate, setShowDate] = useState(searchParams.get('openPicker') === 'true')
     const [pickingEnd, setPickingEnd] = useState(false)
@@ -624,10 +632,9 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
         p.set('adults', String(adults))
         p.set('children', String(children))
         p.set('rooms', String(rooms))
-        // Gửi tuổi trẻ em lên URL nếu cần
         childAges.slice(0, children).forEach(age => {
-            if (age >= 0) p.append('childAges', String(age))
-        })
+            p.append('childAges', String(age >= 0 ? age : 8));
+        });
 
         if (onSearch) onSearch(p)
         else router.push(`/hotels?${p.toString()}`)

@@ -3,84 +3,188 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Hotel,
-  CalendarCheck,
-  Users,
   TrendingUp,
-  XCircle,
-  EyeOff,
-  ArrowUpRight,
-  BarChart3,
-  ShieldAlert,
   Loader2,
   Building2,
   Download,
+  ShieldAlert,
+  ArrowUpRight,
+  CalendarCheck,
+  Users,
+  BadgeDollarSign,
+  Percent,
+  ArrowRight,
 } from 'lucide-react'
 import { exportRevenue } from '@/lib/api/export.api'
 import toast from 'react-hot-toast'
 import {
   AreaChart,
   Area,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Legend,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts'
 import statisticApi from '@/lib/api/statistic.api'
 import hotelApi, { HotelResponse, HotelStatus, PageResponse } from '@/lib/api/hotel.api'
-import { BookingStatus } from '@/types/booking.types'
 import { DashboardParams, RecentBookingResponse } from '@/types/statistic.types'
 
-// ── Constants ──
-const PIE_COLORS = ['#10b981', '#ef4444', '#f59e0b']
-
-const BOOKING_STATUS_CONFIG: Record<string, { label: string; colorClass: string }> = {
-  PENDING:    { label: 'Chờ xác nhận', colorClass: 'text-amber-700 bg-amber-50 border-amber-200' },
-  CONFIRMED:  { label: 'Đã xác nhận',  colorClass: 'text-blue-700 bg-blue-50 border-blue-200'   },
-  CHECKED_IN: { label: 'Nhận phòng',   colorClass: 'text-purple-700 bg-purple-50 border-purple-200' },
-  COMPLETED:  { label: 'Hoàn thành',   colorClass: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-  CANCELLED:  { label: 'Đã huỷ',       colorClass: 'text-red-600 bg-red-50 border-red-200'       },
-  NO_SHOW:    { label: 'No-show',      colorClass: 'text-gray-500 bg-gray-100 border-gray-200'   },
+// ── Constants ──────────────────────────────────────────────────────────────────
+const BOOKING_STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
+  PENDING:    { label: 'Chờ xác nhận', bg: '#FFF7ED', text: '#C2410C' },
+  CONFIRMED:  { label: 'Đã xác nhận',  bg: '#EFF6FF', text: '#1D4ED8' },
+  CHECKED_IN: { label: 'Nhận phòng',   bg: '#F5F3FF', text: '#7C3AED' },
+  COMPLETED:  { label: 'Hoàn thành',   bg: '#ECFDF5', text: '#065F46' },
+  CANCELLED:  { label: 'Đã huỷ',       bg: '#FEF2F2', text: '#B91C1C' },
+  NO_SHOW:    { label: 'No-show',      bg: '#F9FAFB', text: '#6B7280' },
 }
 
-const PAYMENT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  UNPAID: { label: 'Chưa thanh toán',  color: 'text-gray-400'   },
-  PENDING:   { label: 'Chờ TT',   color: 'text-amber-600'  },
-  PAID:      { label: 'Đã TT',    color: 'text-emerald-600' },
-  FAILED:    { label: 'Thất bại', color: 'text-red-500'    },
-  REFUNDED:  { label: 'Hoàn tiền',color: 'text-blue-500'   },
-  CANCELLED: { label: 'Đã huỷ',  color: 'text-red-400'   },
+const PAYMENT_STATUS: Record<string, { label: string; color: string }> = {
+  UNPAID:    { label: 'Chưa TT',    color: '#9CA3AF' },
+  PENDING:   { label: 'Chờ TT',     color: '#D97706' },
+  PAID:      { label: 'Đã TT',      color: '#059669' },
+  FAILED:    { label: 'Thất bại',   color: '#DC2626' },
+  REFUNDED:  { label: 'Hoàn tiền',  color: '#2563EB' },
+  CANCELLED: { label: 'Đã huỷ',    color: '#EF4444' },
 }
 
-// ── Helpers ──
-function formatCurrency(val: number): string {
-  if (val >= 1_000_000_000) return (val / 1_000_000_000).toFixed(2) + ' tỷ ₫'
-  if (val >= 1_000_000) return (val / 1_000_000).toFixed(1) + ' tr ₫'
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function fmt(val: number): string {
+  if (val >= 1_000_000_000) return (val / 1_000_000_000).toFixed(2) + ' tỷ'
+  if (val >= 1_000_000)     return (val / 1_000_000).toFixed(1) + ' tr'
+  return val.toLocaleString('vi-VN')
+}
+
+function fmtFull(val: number): string {
   return val.toLocaleString('vi-VN') + ' ₫'
 }
 
-// ── Sub-components ──
-interface TooltipPayloadItem { name: string; value: number; color: string }
-function RevenueTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayloadItem[]; label?: string }) {
+// ── Stat Card ─────────────────────────────────────────────────────────────────
+function KpiCard({
+  label, value, unit = '₫', sub, accent, icon: Icon, badge,
+}: {
+  label: string; value: string; unit?: string; sub: string
+  accent: string; icon: React.ElementType; badge?: string
+}) {
+  return (
+    <div style={{
+      background: '#fff',
+      border: '1px solid #E5E7EB',
+      borderRadius: 16,
+      padding: '20px 22px',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* accent stripe */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent, borderRadius: '16px 16px 0 0' }} />
+
+      {badge && (
+        <span style={{
+          position: 'absolute', top: 14, right: 14,
+          fontSize: 10, fontWeight: 700,
+          background: '#FEF3C7', color: '#92400E',
+          border: '1px solid #FCD34D',
+          borderRadius: 999, padding: '2px 8px',
+        }}>{badge}</span>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#9CA3AF', textTransform: 'uppercase' }}>{label}</span>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={16} color={accent} />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+        <span style={{ fontSize: 28, fontWeight: 800, color: '#111827', lineHeight: 1, letterSpacing: '-0.02em' }}>{value}</span>
+        <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 500 }}>{unit}</span>
+      </div>
+
+      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 6, fontWeight: 500 }}>{sub}</p>
+    </div>
+  )
+}
+
+// ── Commission breakdown card ─────────────────────────────────────────────────
+function CommissionCard({ gross, commission, net }: { gross: number; commission: number; net: number }) {
+  const pct = gross > 0 ? ((commission / gross) * 100).toFixed(1) : '0.0'
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+      borderRadius: 16, padding: '24px', color: '#fff',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+        <Percent size={15} color="#94A3B8" />
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Phân tích hoa hồng</span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 20 }}>
+        {[
+          { label: 'Doanh thu gộp', val: gross, color: '#94A3B8' },
+          { label: 'Hoa hồng hệ thống', val: commission, color: '#F59E0B' },
+          { label: 'Chủ KS nhận', val: net, color: '#34D399' },
+        ].map(({ label, val, color }) => (
+          <div key={label}>
+            <p style={{ fontSize: 10, color: '#64748B', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+            <p style={{ fontSize: 18, fontWeight: 800, color, letterSpacing: '-0.02em' }}>{fmt(val)}<span style={{ fontSize: 11, fontWeight: 500, marginLeft: 2 }}>₫</span></p>
+          </div>
+        ))}
+      </div>
+
+      {/* progress bar */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontSize: 11, color: '#64748B' }}>Tỷ lệ hoa hồng</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>{pct}%</span>
+        </div>
+        <div style={{ height: 6, background: '#1E3A5F', borderRadius: 999, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #F59E0B, #FBBF24)', borderRadius: 999 }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+          <span style={{ fontSize: 10, color: '#475569' }}>0%</span>
+          <span style={{ fontSize: 10, color: '#475569' }}>Trả chủ KS: {(100 - Number(pct)).toFixed(1)}%</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Custom Tooltip ─────────────────────────────────────────────────────────────
+interface TooltipEntry {
+  name: string
+  value: number
+  color: string
+}
+
+interface ChartTooltipProps {
+  active?: boolean
+  payload?: TooltipEntry[]
+  label?: string
+}
+
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-xl px-4 py-3 text-sm min-w-[180px]">
-      <p className="font-bold text-gray-500 mb-2 text-xs uppercase tracking-wide">{label}</p>
-      {payload.map(p => (
-        <div key={p.name} className="flex items-center justify-between gap-4 mt-1">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
-            <span className="text-gray-500 text-xs">{p.name}</span>
-          </div>
-          <span className="font-bold text-gray-900 text-xs">
-            {p.name === 'Doanh thu' ? Number(p.value).toLocaleString('vi-VN') + '₫' : p.value}
+    <div style={{
+      background: '#fff', border: '1px solid #E5E7EB', borderRadius: 12,
+      padding: '10px 14px', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+    }}>
+      <p style={{ fontWeight: 700, color: '#374151', marginBottom: 6, fontSize: 11 }}>{label}</p>
+      {payload.map((p) => (
+        <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
+          <span style={{ color: '#6B7280', fontSize: 11 }}>{p.name}:</span>
+          <span style={{ fontWeight: 700, color: '#111827', fontSize: 11 }}>
+            {['Doanh thu', 'Hoa hồng', 'Net KS'].includes(p.name)
+              ? Number(p.value).toLocaleString('vi-VN') + '₫'
+              : p.value}
           </span>
         </div>
       ))}
@@ -88,104 +192,48 @@ function RevenueTooltip({ active, payload, label }: { active?: boolean; payload?
   )
 }
 
-interface StatCardProps {
-  icon: React.ElementType
-  label: string
-  value: string
-  sub: string
-  color: 'blue' | 'purple' | 'teal' | 'amber' | 'red' | 'orange'
-  badge?: string
-}
-
-function StatCard({ icon: Icon, label, value, sub, color, badge }: StatCardProps) {
-  const colorMap = {
-    blue:   'bg-blue-50 text-blue-600',
-    purple: 'bg-purple-50 text-purple-600',
-    teal:   'bg-teal-50 text-teal-600',
-    amber:  'bg-amber-50 text-amber-600',
-    red:    'bg-red-50 text-red-500',
-    orange: 'bg-orange-50 text-orange-500',
-  }
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm relative overflow-hidden">
-      {badge && (
-        <span className="absolute top-3 right-3 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200">
-          {badge}
-        </span>
-      )}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</span>
-        <div className={`p-2 rounded-lg ${colorMap[color]}`}><Icon size={16} /></div>
-      </div>
-      <div className="text-2xl font-black text-gray-900">{value}</div>
-      <p className="text-[11px] text-gray-400 mt-1 font-medium">{sub}</p>
-    </div>
-  )
-}
-
-function EmptyChart({ small = false }: { small?: boolean }) {
-  return (
-    <div className={`flex items-center justify-center text-gray-300 italic text-xs ${small ? 'h-[180px]' : 'h-40'}`}>
-      Không có dữ liệu
-    </div>
-  )
-}
-
+// ── Status Badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
-  const cfg = BOOKING_STATUS_CONFIG[status] ?? { label: status, colorClass: 'text-gray-500 bg-gray-100 border-gray-200' }
+  const cfg = BOOKING_STATUS_CONFIG[status] ?? { label: status, bg: '#F9FAFB', text: '#6B7280' }
   return (
-    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.colorClass}`}>
-      {cfg.label}
-    </span>
+    <span style={{
+      fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999,
+      background: cfg.bg, color: cfg.text,
+    }}>{cfg.label}</span>
   )
 }
 
-// ── Main Page ──
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function AdminDashboardPage() {
-  // Filter state
   const [filterMode, setFilterMode] = useState<'month' | 'range'>('month')
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1)
   const [filterYear, setFilterYear] = useState(new Date().getFullYear())
-  const [fromDate, setFromDate] = useState(() => {
-    const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]
-  })
+  const [fromDate, setFromDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0] })
   const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0])
-
-  const dashboardParams = useMemo((): DashboardParams => {
-    if (filterMode === 'month') return { month: filterMonth, year: filterYear }
-    return { fromDate, toDate }
-  }, [filterMode, filterMonth, filterYear, fromDate, toDate])
-
-  const filterKey = useMemo(
-    () => filterMode === 'month' ? `${filterMonth}-${filterYear}` : `${fromDate}_${toDate}`,
-    [filterMode, filterMonth, filterYear, fromDate, toDate]
-  )
-
-  // ── Export ──
   const [isExporting, setIsExporting] = useState(false)
+
+  const dashboardParams = useMemo((): DashboardParams => (
+    filterMode === 'month' ? { month: filterMonth, year: filterYear } : { fromDate, toDate }
+  ), [filterMode, filterMonth, filterYear, fromDate, toDate])
+
+  const filterKey = useMemo(() =>
+    filterMode === 'month' ? `${filterMonth}-${filterYear}` : `${fromDate}_${toDate}`,
+    [filterMode, filterMonth, filterYear, fromDate, toDate])
+
   const handleExport = async () => {
     setIsExporting(true)
     try {
-      await exportRevenue(
-        filterMode === 'month'
-          ? { month: filterMonth, year: filterYear }
-          : { fromDate, toDate }
-      )
+      await exportRevenue(filterMode === 'month' ? { month: filterMonth, year: filterYear } : { fromDate, toDate })
       toast.success('Xuất file thành công!')
-    } catch {
-      toast.error('Xuất file thất bại, vui lòng thử lại.')
-    } finally {
-      setIsExporting(false)
-    }
+    } catch { toast.error('Xuất file thất bại.') }
+    finally { setIsExporting(false) }
   }
 
-  // ── Single API call ──
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ['admin-dashboard', filterKey],
     queryFn: () => statisticApi.getDashboard(dashboardParams).then(r => r.data),
   })
 
-  // Pending hotels — cần call riêng vì getDashboard không trả về status breakdown
   const { data: hotelsData } = useQuery({
     queryKey: ['admin-hotels-pending'],
     queryFn: () => hotelApi.getAll(0, 100).then(r => r.data),
@@ -194,336 +242,299 @@ export default function AdminDashboardPage() {
 
   const pendingHotelsCount = useMemo(() => {
     if (!hotelsData) return 0
-    const list = (hotelsData as PageResponse<HotelResponse>).content || []
-    return list.filter(h => h.status === HotelStatus.PENDING).length
+    return ((hotelsData as PageResponse<HotelResponse>).content || []).filter(h => h.status === HotelStatus.PENDING).length
   }, [hotelsData])
 
-  // Chart data
-  const areaChartData = useMemo(() =>
+  // Chart data — now includes commission lanes
+  const areaData = useMemo(() =>
     (dashboard?.chartData ?? []).map(d => ({
       date: new Date(d.statDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
-      'Doanh thu': Number(d.totalRevenue ?? 0),
-      'Lượt đặt': d.completedBookings ?? 0,
-      'Huỷ': d.totalCancelled ?? 0,
+      'Doanh thu': Number(d.grossRevenue ?? 0),
+      'Hoa hồng':  Number(d.totalCommission ?? 0),
+      'Net KS':    Number(d.netRevenue ?? 0),
+      'Lượt đặt':  d.completedBookings ?? 0,
+      'Huỷ':       d.totalCancelled ?? 0,
     })),
   [dashboard])
 
-  const statusPieData = useMemo(() => {
+  const pieData = useMemo(() => {
     const s = dashboard?.summary
     if (!s) return []
     return [
-      { name: 'Hoàn thành', value: s.completedBookings },
-      { name: 'Đã huỷ',    value: s.totalCancelled   },
-      { name: 'No-show',   value: s.totalNoShow       },
+      { name: 'Hoàn thành', value: s.completedBookings,  fill: '#10B981' },
+      { name: 'Đã huỷ',    value: s.totalCancelled,    fill: '#EF4444' },
+      { name: 'No-show',   value: s.totalNoShow,        fill: '#F59E0B' },
     ].filter(d => d.value > 0)
   }, [dashboard])
 
   const topHotels = dashboard?.topHotels ?? []
-  const maxRevenue = Math.max(...topHotels.map(h => Number(h.totalRevenue ?? 0)), 1)
+  const maxRev = Math.max(...topHotels.map(h => Number(h.grossRevenue ?? 0)), 1)
   const recentBookings: RecentBookingResponse[] = dashboard?.recentBookings ?? []
   const summary = dashboard?.summary
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-400 gap-3">
-        <Loader2 className="animate-spin" size={32} />
-        <p className="text-sm">Đang tải dữ liệu hệ thống...</p>
+  if (isLoading) return (
+    <>
+      <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, gap: 12, color: '#9CA3AF' }}>
+        <Loader2 style={{ animation: 'spin 1s linear infinite' }} size={28} />
+        <p style={{ fontSize: 13 }}>Đang tải dữ liệu...</p>
       </div>
-    )
-  }
+    </>
+  )
 
   return (
-    <div className="space-y-6 pb-10">
-      {/* ── Header + Filter ── */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
+    <div style={{ padding: '24px 28px', background: '#F8FAFC', minHeight: '100vh' }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard Quản trị</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Hệ thống ghi nhận{' '}
-            <span className="font-semibold text-gray-700">
-              {(dashboard?.totalBookings ?? 0).toLocaleString()}
-            </span>{' '}
-            giao dịch
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', margin: 0 }}>Dashboard</h1>
+          <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
+            {filterMode === 'month' ? `Tháng ${filterMonth}/${filterYear}` : `${fromDate} → ${toDate}`}
+            {' · '}
+            <span style={{ fontWeight: 700, color: '#374151' }}>{(dashboard?.totalBookings ?? 0).toLocaleString()}</span> giao dịch
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <button
-            onClick={handleExport}
-            disabled={isExporting}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-          >
-            {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-            {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
-          </button>
-          <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs font-semibold shadow-sm">
-            <button
-              onClick={() => setFilterMode('month')}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
-                filterMode === 'month' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              Theo tháng
-            </button>
-            <button
-              onClick={() => setFilterMode('range')}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
-                filterMode === 'range' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              Khoảng ngày
-            </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* filter mode toggle */}
+          <div style={{ display: 'flex', background: '#E2E8F0', borderRadius: 10, padding: 3 }}>
+            {(['month', 'range'] as const).map(m => (
+              <button key={m} onClick={() => setFilterMode(m)} style={{
+                padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all .15s',
+                background: filterMode === m ? '#fff' : 'transparent',
+                color: filterMode === m ? '#1E40AF' : '#64748B',
+                boxShadow: filterMode === m ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+              }}>
+                {m === 'month' ? 'Theo tháng' : 'Khoảng ngày'}
+              </button>
+            ))}
           </div>
 
-          {filterMode === 'month' ? (
-            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm">
-              <select
-                value={filterMonth}
-                onChange={e => setFilterMonth(Number(e.target.value))}
-                className="text-sm text-gray-700 outline-none cursor-pointer bg-transparent"
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                  <option key={m} value={m}>Tháng {m}</option>
-                ))}
-              </select>
-              <span className="text-gray-300">/</span>
-              <select
-                value={filterYear}
-                onChange={e => setFilterYear(Number(e.target.value))}
-                className="text-sm text-gray-700 outline-none cursor-pointer bg-transparent"
-              >
-                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm">
-              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-                className="text-sm text-gray-700 outline-none cursor-pointer" />
-              <span className="text-gray-400 text-sm">→</span>
-              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-                className="text-sm text-gray-700 outline-none cursor-pointer" />
-            </div>
-          )}
+          {/* filter inputs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '6px 12px' }}>
+            {filterMode === 'month' ? (
+              <>
+                <select value={filterMonth} onChange={e => setFilterMonth(+e.target.value)}
+                  style={{ border: 'none', outline: 'none', fontSize: 13, color: '#374151', cursor: 'pointer', background: 'transparent' }}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
+                </select>
+                <span style={{ color: '#CBD5E1' }}>/</span>
+                <select value={filterYear} onChange={e => setFilterYear(+e.target.value)}
+                  style={{ border: 'none', outline: 'none', fontSize: 13, color: '#374151', cursor: 'pointer', background: 'transparent' }}>
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </>
+            ) : (
+              <>
+                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
+                  style={{ border: 'none', outline: 'none', fontSize: 13, color: '#374151', cursor: 'pointer', background: 'transparent' }} />
+                <ArrowRight size={12} color="#9CA3AF" />
+                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
+                  style={{ border: 'none', outline: 'none', fontSize: 13, color: '#374151', cursor: 'pointer', background: 'transparent' }} />
+              </>
+            )}
+          </div>
+
+          <button onClick={handleExport} disabled={isExporting} style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
+            background: '#059669', color: '#fff', border: 'none', borderRadius: 10,
+            fontSize: 13, fontWeight: 600, cursor: isExporting ? 'not-allowed' : 'pointer',
+            opacity: isExporting ? 0.7 : 1,
+          }}>
+            {isExporting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} />}
+            {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
+          </button>
         </div>
       </div>
 
       {/* ── Pending alert ── */}
       {pendingHotelsCount > 0 && (
-        <a
-          href="/admin/hotels"
-          className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 hover:bg-amber-100 transition-colors"
-        >
-          <ShieldAlert size={18} className="text-amber-600 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <span className="text-sm font-bold text-amber-800">
-              {pendingHotelsCount} khách sạn đang chờ duyệt
-            </span>
-            <p className="text-xs text-amber-600 mt-0.5">Nhấn để xem và xét duyệt</p>
+        <a href="/admin/hotels" style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 12,
+          padding: '12px 16px', marginBottom: 20, textDecoration: 'none', color: 'inherit',
+        }}>
+          <ShieldAlert size={16} color="#D97706" />
+          <div style={{ flex: 1 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>{pendingHotelsCount} khách sạn đang chờ duyệt</span>
+            <p style={{ fontSize: 11, color: '#B45309', marginTop: 2 }}>Nhấn để xem và xét duyệt</p>
           </div>
-          <ArrowUpRight size={14} className="text-amber-600" />
+          <ArrowUpRight size={13} color="#D97706" />
         </a>
       )}
 
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          icon={Building2} label="Khách sạn" color="blue"
-          value={(dashboard?.totalHotels ?? 0).toLocaleString()}
-          sub="Tổng cơ sở đăng ký"
-          badge={pendingHotelsCount > 0 ? `${pendingHotelsCount} chờ duyệt` : undefined}
-        />
-        <StatCard
-          icon={CalendarCheck} label="Đặt phòng" color="purple"
-          value={(dashboard?.totalBookings ?? 0).toLocaleString()}
-          sub={`${summary?.completedBookings ?? 0} đã hoàn thành`}
-        />
-        <StatCard
-          icon={Users} label="Người dùng" color="teal"
-          value={(dashboard?.totalUsers ?? 0).toLocaleString()}
-          sub="Khách hàng & chủ sở hữu"
-        />
-        <StatCard
-          icon={TrendingUp} label="Doanh thu" color="amber"
-          value={formatCurrency(Number(summary?.totalRevenue ?? 0))}
-          sub="Tổng doanh thu thực nhận"
+      {/* ── KPI Row ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 20 }}>
+        <KpiCard icon={Building2} label="Khách sạn" value={(dashboard?.totalHotels ?? 0).toLocaleString()} unit="" sub="Tổng cơ sở" accent="#3B82F6"
+          badge={pendingHotelsCount > 0 ? `${pendingHotelsCount} chờ duyệt` : undefined} />
+        <KpiCard icon={CalendarCheck} label="Đặt phòng" value={(dashboard?.totalBookings ?? 0).toLocaleString()} unit="" sub={`${summary?.completedBookings ?? 0} hoàn thành`} accent="#8B5CF6" />
+        <KpiCard icon={Users} label="Người dùng" value={(dashboard?.totalUsers ?? 0).toLocaleString()} unit="" sub="Khách & chủ sở hữu" accent="#0EA5E9" />
+        <KpiCard icon={TrendingUp} label="Doanh thu gộp" value={fmt(Number(summary?.grossRevenue ?? 0))} sub="Trước hoa hồng" accent="#F59E0B" />
+        <KpiCard icon={Percent} label="Hoa hồng" value={fmt(Number(summary?.totalCommission ?? 0))} sub="Thu của hệ thống" accent="#EF4444" />
+        <KpiCard icon={BadgeDollarSign} label="Net KS nhận" value={fmt(Number(summary?.netRevenue ?? 0))} sub="Sau trừ hoa hồng" accent="#10B981" />
+      </div>
+
+      {/* ── Commission dark card ── */}
+      <div style={{ marginBottom: 20 }}>
+        <CommissionCard
+          gross={Number(summary?.grossRevenue ?? 0)}
+          commission={Number(summary?.totalCommission ?? 0)}
+          net={Number(summary?.netRevenue ?? 0)}
         />
       </div>
 
       {/* ── Area chart ── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-        <div className="flex items-center gap-2 mb-5">
-          <BarChart3 size={15} className="text-blue-500" />
-          <h2 className="text-sm font-bold text-gray-900">Biến động doanh thu & giao dịch</h2>
+      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+          <div style={{ width: 4, height: 18, background: '#3B82F6', borderRadius: 999 }} />
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: 0 }}>Biến động doanh thu & hoa hồng</h2>
         </div>
-        {areaChartData.length === 0 ? <EmptyChart /> : (
-          <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={areaChartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gBooking" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} />
-              <YAxis yAxisId="rev" orientation="left" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false}
-                tickFormatter={v => v >= 1_000_000 ? (v / 1_000_000).toFixed(0) + 'M' : String(v)} />
-              <YAxis yAxisId="bk" orientation="right" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip content={<RevenueTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-              <Area yAxisId="rev" type="monotone" dataKey="Doanh thu" stroke="#3b82f6" strokeWidth={2} fill="url(#gRevenue)" dot={false} />
-              <Area yAxisId="bk" type="monotone" dataKey="Lượt đặt" stroke="#10b981" strokeWidth={2} fill="url(#gBooking)" dot={false} />
-              <Area yAxisId="bk" type="monotone" dataKey="Huỷ" stroke="#ef4444" strokeWidth={1.5} fill="none" dot={false} strokeDasharray="4 2" />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
+        {areaData.length === 0
+          ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 220, color: '#CBD5E1', fontSize: 13 }}>Không có dữ liệu</div>
+          : (
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={areaData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <defs>
+                  {[
+                    { id: 'gGross', color: '#3B82F6' },
+                    { id: 'gComm', color: '#F59E0B' },
+                    { id: 'gNet', color: '#10B981' },
+                  ].map(({ id, color }) => (
+                    <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={color} stopOpacity={0.12} />
+                      <stop offset="95%" stopColor={color} stopOpacity={0} />
+                    </linearGradient>
+                  ))}
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false}
+                  tickFormatter={v => v >= 1_000_000 ? (v / 1_000_000).toFixed(0) + 'M' : String(v)} />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                <Area type="monotone" dataKey="Doanh thu" stroke="#3B82F6" strokeWidth={2} fill="url(#gGross)" dot={false} />
+                <Area type="monotone" dataKey="Hoa hồng"  stroke="#F59E0B" strokeWidth={1.5} fill="url(#gComm)" dot={false} strokeDasharray="5 3" />
+                <Area type="monotone" dataKey="Net KS"    stroke="#10B981" strokeWidth={2} fill="url(#gNet)" dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
       </div>
 
       {/* ── Pie + Top Hotels ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
         {/* Pie */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <h2 className="text-sm font-bold text-gray-900 mb-1">Tỷ lệ trạng thái đơn hàng</h2>
-          <p className="text-xs text-gray-400 mb-4">Dựa trên kỳ lọc hiện tại</p>
-          {statusPieData.length === 0 ? <EmptyChart small /> : (
-            <>
-              <div className="flex gap-4 mb-3 flex-wrap">
-                {statusPieData.map((d, i) => (
-                  <div key={d.name} className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: PIE_COLORS[i] }} />
-                    {d.name}: <span className="font-bold text-gray-700">{d.value}</span>
-                  </div>
-                ))}
-              </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={statusPieData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value" paddingAngle={4}>
-                    {statusPieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v) => [v, '']} />
-                </PieChart>
-              </ResponsiveContainer>
-            </>
-          )}
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24 }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: '0 0 4px' }}>Tỷ lệ trạng thái đơn</h2>
+          <p style={{ fontSize: 11, color: '#9CA3AF', margin: '0 0 16px' }}>Dựa trên kỳ lọc hiện tại</p>
+          {pieData.length === 0
+            ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 180, color: '#E5E7EB', fontSize: 12 }}>Không có dữ liệu</div>
+            : (
+              <>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                  {pieData.map(d => (
+                    <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#6B7280' }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 3, background: d.fill, flexShrink: 0 }} />
+                      {d.name}: <strong style={{ color: '#111827' }}>{d.value}</strong>
+                    </div>
+                  ))}
+                </div>
+                <ResponsiveContainer width="100%" height={190}>
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={4}>
+                      {pieData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                    </Pie>
+                    <Tooltip formatter={(v) => [v, '']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </>
+            )}
         </div>
 
-        {/* Top Hotels */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <h2 className="text-sm font-bold text-gray-900 mb-4">Khách sạn tiêu biểu</h2>
-          {topHotels.length === 0 ? <EmptyChart small /> : (
-            <div className="space-y-4">
-              {topHotels.map((h, i) => {
-                const revenue = Number(h.totalRevenue ?? 0)
-                const pct = (revenue / maxRevenue) * 100
-                return (
-                  <div key={h.hotelId}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-[10px] font-black text-gray-300 w-4 flex-shrink-0">#{i + 1}</span>
-                        <p className="text-sm font-bold text-gray-800 truncate">{h.hotelName}</p>
+        {/* Top Hotels with commission breakdown */}
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24 }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: '0 0 16px' }}>Top khách sạn — doanh thu</h2>
+          {topHotels.length === 0
+            ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 180, color: '#E5E7EB', fontSize: 12 }}>Không có dữ liệu</div>
+            : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {topHotels.map((h, i) => {
+                  const gross = Number(h.grossRevenue ?? 0)
+                  const comm  = Number(h.totalCommission ?? 0)
+                  const net   = Number(h.netRevenue ?? 0)
+                  const pct   = (gross / maxRev) * 100
+                  return (
+                    <div key={h.hotelId}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: '#CBD5E1', flexShrink: 0 }}>#{i + 1}</span>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: '#1E293B', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.hotelName}</p>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+                          <p style={{ fontSize: 13, fontWeight: 800, color: '#059669', margin: 0 }}>{fmt(gross)} ₫</p>
+                          <p style={{ fontSize: 10, color: '#F59E0B', margin: '1px 0 0', fontWeight: 600 }}>HC: {fmt(comm)} ₫</p>
+                        </div>
                       </div>
-                      <div className="text-right flex-shrink-0 ml-3">
-                        <p className="text-sm font-bold text-emerald-600">{formatCurrency(revenue)}</p>
-                        <p className="text-[10px] text-gray-400">
-                          {h.completedBookings} đặt · {h.totalCancelled} huỷ · {h.totalNoShow} no-show
-                        </p>
+                      <div style={{ height: 5, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #3B82F6, #6366F1)', borderRadius: 999 }} />
                       </div>
+                      <p style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>{h.completedBookings} đặt · Net: {fmt(net)} ₫</p>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                  )
+                })}
+              </div>
+            )}
         </div>
       </div>
 
-      {/* ── Recent Bookings ── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-900">Giao dịch gần đây</h2>
-          <a href="/admin/bookings" className="text-xs font-bold text-blue-600 flex items-center gap-1 hover:text-blue-700">
+      {/* ── Recent Bookings table ── */}
+      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #F1F5F9' }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: 0 }}>Giao dịch gần đây</h2>
+          <a href="/admin/bookings" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: '#3B82F6', textDecoration: 'none' }}>
             Xem tất cả <ArrowUpRight size={12} />
           </a>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-400 uppercase tracking-wide">
-              <tr>
-                <th className="text-left px-5 py-3">Mã</th>
-                <th className="text-left px-5 py-3">Khách hàng</th>
-                <th className="text-left px-5 py-3 hidden md:table-cell">Khách sạn</th>
-                <th className="text-left px-5 py-3 hidden lg:table-cell">Check-in</th>
-                <th className="text-left px-5 py-3 hidden lg:table-cell">Check-out</th>
-                <th className="text-right px-5 py-3">Giá trị</th>
-                <th className="text-center px-5 py-3">Trạng thái</th>
-                <th className="text-center px-5 py-3 hidden sm:table-cell">Thanh toán</th>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: '#F8FAFC' }}>
+                {['Mã', 'Khách hàng', 'Khách sạn', 'Check-in', 'Doanh thu', 'Hoa hồng', 'Net KS', 'Trạng thái', 'Thanh toán'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody>
               {recentBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-12 text-gray-400 italic text-sm">
-                    Không có giao dịch nào
+                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '48px 0', color: '#CBD5E1', fontSize: 13 }}>Không có giao dịch</td></tr>
+              ) : recentBookings.map(b => (
+                <tr key={b.bookingId} style={{ borderTop: '1px solid #F8FAFC' }}>
+                  <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: '#3B82F6', whiteSpace: 'nowrap' }}>#{b.bookingCode}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <p style={{ fontWeight: 600, color: '#111827', margin: 0, fontSize: 12 }}>{b.guestName}</p>
+                    <p style={{ color: '#94A3B8', margin: '2px 0 0', fontSize: 10 }}>{new Date(b.createdAt).toLocaleDateString('vi-VN')}</p>
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#475569', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.hotelName}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 11, color: '#6B7280', whiteSpace: 'nowrap' }}>{new Date(b.checkInDate).toLocaleDateString('vi-VN')}</td>
+                  <td style={{ padding: '12px 16px', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', fontSize: 12 }}>{Number(b.totalAmount).toLocaleString('vi-VN')}₫</td>
+                  {/* Commission columns - not in RecentBookingResponse so show dash */}
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#F59E0B', fontWeight: 600 }}>—</td>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#059669', fontWeight: 600 }}>—</td>
+                  <td style={{ padding: '12px 16px' }}><StatusBadge status={b.status} /></td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: PAYMENT_STATUS[b.paymentStatus]?.color ?? '#9CA3AF' }}>
+                      {PAYMENT_STATUS[b.paymentStatus]?.label ?? b.paymentStatus}
+                    </span>
                   </td>
                 </tr>
-              ) : (
-                recentBookings.map(b => (
-                  <tr key={b.bookingId} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-5 py-3 font-mono text-xs font-bold text-blue-600 whitespace-nowrap">
-                      #{b.bookingCode}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="font-semibold text-gray-900 text-xs">{b.guestName}</div>
-                      <div className="text-[10px] text-gray-400">
-                        {new Date(b.createdAt).toLocaleString('vi-VN', {
-                          day: '2-digit', month: '2-digit', year: 'numeric',
-                          hour: '2-digit', minute: '2-digit',
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 hidden md:table-cell text-xs text-gray-500 max-w-[160px] truncate">
-                      {b.hotelName}
-                    </td>
-                    <td className="px-5 py-3 hidden lg:table-cell text-xs text-gray-600 whitespace-nowrap">
-                      {new Date(b.checkInDate).toLocaleDateString('vi-VN', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                      })}
-                    </td>
-                    <td className="px-5 py-3 hidden lg:table-cell text-xs text-gray-600 whitespace-nowrap">
-                      {new Date(b.checkOutDate).toLocaleDateString('vi-VN', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                      })}
-                    </td>
-                    <td className="px-5 py-3 text-right font-bold text-gray-900 whitespace-nowrap text-xs">
-                      {Number(b.totalAmount).toLocaleString('vi-VN')}₫
-                    </td>
-                    <td className="px-5 py-3 text-center">
-                      <StatusBadge status={b.status} />
-                    </td>
-                    <td className="px-5 py-3 text-center hidden sm:table-cell">
-                      <span className={`text-xs font-semibold ${PAYMENT_STATUS_CONFIG[b.paymentStatus]?.color ?? 'text-gray-400'}`}>
-                        {PAYMENT_STATUS_CONFIG[b.paymentStatus]?.label ?? b.paymentStatus}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 }

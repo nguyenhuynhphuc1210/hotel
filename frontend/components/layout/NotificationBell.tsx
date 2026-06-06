@@ -94,10 +94,13 @@ export default function NotificationBell() {
 
   // ───── WebSocket: push new notification into list
   const handleNewNotification = useCallback((notif: NotificationResponse) => {
-    setNotifications(prev => [notif, ...prev])
-    setUnreadCount(prev => prev + 1)
-  }, [])
-
+  const withTs: NotificationResponse = {
+    ...notif,
+    createdAt: notif.createdAt || new Date().toISOString(),
+  }
+  setNotifications(prev => [withTs, ...prev])
+  setUnreadCount(prev => prev + 1)
+}, [])
   useNotificationSocket(user?.email ?? null, handleNewNotification)
 
   // ───── Mark one as read
@@ -242,6 +245,13 @@ function NotificationItem({
   notif: NotificationResponse
   onMarkRead: (id: number) => void
 }) {
+  // Tick mỗi 30s để timeAgo tự cập nhật
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
   return (
     <div
       className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group cursor-default ${!notif.isRead ? 'bg-blue-50/40' : ''}`}
@@ -262,6 +272,7 @@ function NotificationItem({
         <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
           {notif.message}
         </p>
+        {/* tick làm dependency để re-render timeAgo */}
         <p className="text-[11px] text-gray-400 mt-1">
           {timeAgo(notif.createdAt)}
         </p>

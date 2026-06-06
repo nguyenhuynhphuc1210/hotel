@@ -162,7 +162,7 @@ const METHOD_CONFIG: Record<string, { label: string; badge: string }> = {
   CASH: { label: 'Tiền mặt', badge: 'text-orange-600 bg-orange-50 ring-1 ring-orange-200' }
 }
 
-const STAT_STATUS_LIST: PaymentStatus[] = ['PENDING', 'PAID', 'CANCELLED', 'FAILED']
+const STAT_STATUS_LIST: PaymentStatus[] = ['UNPAID', 'PENDING', 'PAID', 'CANCELLED', 'FAILED', 'REFUNDED']
 
 // ─────────────────────────────────────────────────────────
 // DRAWER
@@ -354,7 +354,7 @@ export default function OwnerPaymentsPage() {
       )}
 
       {/* STATS CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
 
         {STAT_STATUS_LIST.map((status) => {
           const config = STATUS_CONFIG[status]
