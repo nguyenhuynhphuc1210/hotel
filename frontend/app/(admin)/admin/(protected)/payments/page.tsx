@@ -2,64 +2,119 @@
 
 import { useState, useMemo } from 'react'
 import { usePayments } from '@/hooks/usePayment'
-import { PaymentStatus, PaymentResponse, PaymentMethod } from '@/types/payment.types' // Thêm PaymentMethod vào import
+import { useQueries, useQuery } from '@tanstack/react-query'
+import { useDebounce } from 'use-debounce'
+import { PaymentStatus, PaymentResponse, PaymentMethod } from '@/types/payment.types'
+import paymentApi from '@/lib/api/payment.api'
 import {
-  Search,
-  Download,
-  Eye,
-  Loader2,
-  RotateCcw,
-  Building2,
-  User,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  RefreshCcw, 
-  LucideIcon,
-  X,
-  CreditCard, // Thêm icon cho phương thức thanh toán
+  Search, Download, Eye, Loader2, RotateCcw, Building2, User,
+  Clock, CheckCircle2, XCircle, AlertCircle, RefreshCcw, X,
+  CreditCard, TrendingUp, Percent, BadgeDollarSign,
 } from 'lucide-react'
-
+import type { LucideIcon } from 'lucide-react'
 import Pagination from '@/components/ui/Pagination'
-import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
 import { HotelResponse } from '@/lib/api/hotel.api'
 import { exportPayments } from '@/lib/api/export.api'
+import statisticApi from '@/lib/api/statistic.api'
 import toast from 'react-hot-toast'
-import { useDebounce } from 'use-debounce'
+import { cn } from '@/lib/utils'
 
-// --- CONFIGS ---
+// ── Configs ────────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<PaymentStatus, { label: string; dot: string; badge: string; icon: LucideIcon; color: string }> = {
-  PENDING: { label: 'Chờ xử lý', dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200', icon: Clock, color: 'text-amber-500' },
-  PAID: { label: 'Đã thanh toán', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', icon: CheckCircle2, color: 'text-emerald-500' },
-  CANCELLED: { label: 'Đã hủy', dot: 'bg-gray-400', badge: 'bg-gray-50 text-gray-600 ring-1 ring-gray-200', icon: XCircle, color: 'text-gray-400' },
-  FAILED: { label: 'Thất bại', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 ring-1 ring-red-200', icon: AlertCircle, color: 'text-red-500' },
-  UNPAID: { label: 'Chưa thanh toán', dot: 'bg-slate-400', badge: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200', icon: Clock, color: 'text-slate-400' },
-  REFUNDED: { label: 'Hoàn tiền', dot: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200', icon: RefreshCcw, color: 'text-violet-500' },
+  PENDING:   { label: 'Chờ xử lý',       dot: 'bg-amber-400',   badge: 'bg-amber-50   text-amber-700   ring-1 ring-amber-200',   icon: Clock,        color: 'text-amber-500'   },
+  PAID:      { label: 'Đã thanh toán',   dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', icon: CheckCircle2, color: 'text-emerald-500' },
+  CANCELLED: { label: 'Đã hủy',         dot: 'bg-gray-400',    badge: 'bg-gray-50    text-gray-600    ring-1 ring-gray-200',    icon: XCircle,      color: 'text-gray-400'    },
+  FAILED:    { label: 'Thất bại',        dot: 'bg-red-500',     badge: 'bg-red-50     text-red-700     ring-1 ring-red-200',     icon: AlertCircle,  color: 'text-red-500'     },
+  UNPAID:    { label: 'Chưa thanh toán', dot: 'bg-slate-400',   badge: 'bg-slate-50   text-slate-600   ring-1 ring-slate-200',   icon: Clock,        color: 'text-slate-400'   },
+  REFUNDED:  { label: 'Hoàn tiền',       dot: 'bg-violet-500',  badge: 'bg-violet-50  text-violet-700  ring-1 ring-violet-200',  icon: RefreshCcw,   color: 'text-violet-500'  },
 }
 
-const PAYMENT_STAT_STATUSES: PaymentStatus[] = ['UNPAID', 'PENDING', 'PAID', 'CANCELLED', 'FAILED', 'REFUNDED']
-
-const METHOD_CONFIG: Record<string, { label: string; dot: string }> = {
-  VNPAY: { label: 'VNPay', dot: 'bg-blue-500' },
-  MOMO: { label: 'MoMo', dot: 'bg-pink-500' },
-  ZALOPAY: { label: 'ZaloPay', dot: 'bg-cyan-500' },
-  CREDIT_CARD: { label: 'Thẻ tín dụng', dot: 'bg-indigo-500' },
-  BANK_TRANSFER: { label: 'Chuyển khoản', dot: 'bg-teal-500' },
-  CASH: { label: 'Tiền mặt', dot: 'bg-orange-500' },
+const METHOD_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
+  VNPAY:         { label: 'VNPay',        dot: 'bg-blue-500',   badge: 'text-blue-600   bg-blue-50   ring-1 ring-blue-200'   },
+  MOMO:          { label: 'MoMo',         dot: 'bg-pink-500',   badge: 'text-pink-600   bg-pink-50   ring-1 ring-pink-200'   },
+  ZALOPAY:       { label: 'ZaloPay',      dot: 'bg-cyan-500',   badge: 'text-cyan-600   bg-cyan-50   ring-1 ring-cyan-200'   },
+  CREDIT_CARD:   { label: 'Thẻ tín dụng',dot: 'bg-indigo-500', badge: 'text-indigo-600 bg-indigo-50 ring-1 ring-indigo-200' },
+  BANK_TRANSFER: { label: 'Chuyển khoản', dot: 'bg-teal-500',   badge: 'text-teal-600   bg-teal-50   ring-1 ring-teal-200'   },
+  CASH:          { label: 'Tiền mặt',     dot: 'bg-orange-500', badge: 'text-orange-600 bg-orange-50 ring-1 ring-orange-200' },
 }
 
-// --- Detail Drawer ---
-function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | null; onClose: () => void }) {
+const STAT_STATUSES: PaymentStatus[] = ['UNPAID', 'PENDING', 'PAID', 'CANCELLED', 'FAILED', 'REFUNDED']
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function fmt(v: number) {
+  if (v >= 1_000_000_000) return (v / 1_000_000_000).toFixed(2) + 'B'
+  if (v >= 1_000_000)     return (v / 1_000_000).toFixed(1) + 'M'
+  return v.toLocaleString('vi-VN')
+}
+
+// ── Commission Strip ───────────────────────────────────────────────────────────
+function CommissionStrip({ hotelId, ownerId }: { hotelId?: number | null; ownerId?: number | null }) {
+  const { data } = useQuery({
+    queryKey: ['admin-payment-revenue', hotelId, ownerId],
+    queryFn:  () => statisticApi.getDashboard({
+      hotelId:  hotelId  ?? undefined,
+      ownerId:  ownerId  ?? undefined,
+    }).then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const gross      = Number(data?.summary?.grossRevenue    ?? 0)
+  const commission = Number(data?.summary?.totalCommission ?? 0)
+  const net        = Number(data?.summary?.netRevenue      ?? 0)
+  const pct        = gross > 0 ? ((commission / gross) * 100).toFixed(1) : '0.0'
+
+  return (
+    <div className="grid grid-cols-4 gap-3">
+      {([
+        { label: 'Doanh thu gộp',     val: gross,      color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100',    icon: TrendingUp      },
+        { label: 'Hoa hồng hệ thống', val: commission, color: 'text-amber-600',  bg: 'bg-amber-50  border-amber-100',     icon: Percent         },
+        { label: 'Net KS nhận',       val: net,        color: 'text-emerald-600',bg: 'bg-emerald-50 border-emerald-100',  icon: BadgeDollarSign  },
+      ] as const).map(({ label, val, color, bg, icon: Icon }) => (
+        <div key={label} className={cn('rounded-2xl border p-5', bg)}>
+          <div className="flex items-center gap-2 mb-3">
+            <Icon size={14} className={color} />
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
+          </div>
+          <p className={cn('text-xl font-black leading-none', color)}>
+            {fmt(val)}<span className="text-xs font-medium ml-0.5 text-gray-400">₫</span>
+          </p>
+        </div>
+      ))}
+
+      <div className="bg-slate-900 rounded-2xl p-5 flex flex-col justify-between">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tỷ lệ hoa hồng</span>
+        <div>
+          <p className="text-3xl font-black text-amber-400 leading-none">{pct}%</p>
+          <div className="mt-2">
+            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
+            </div>
+            <p className="text-[10px] text-slate-600 mt-1">Hoa hồng / doanh thu gộp</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Detail Drawer ──────────────────────────────────────────────────────────────
+function PaymentDetailDrawer({ payment, hotels, onClose }: {
+  payment: PaymentResponse | null
+  hotels: HotelResponse[]
+  onClose: () => void
+}) {
   if (!payment) return null
-  const cfg = STATUS_CONFIG[payment.status]
+  const cfg    = STATUS_CONFIG[payment.status]
+  const method = METHOD_CONFIG[payment.paymentMethod]
+  const hotel  = hotels.find(h => h.id === payment.hotelId)
+
   return (
     <>
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={onClose} />
       <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col overflow-y-auto border-l border-slate-200">
-        <div className="p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white">
+        <div className="p-6 bg-gradient-to-br from-blue-700 to-indigo-700 text-white">
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-blue-200 text-xs font-medium uppercase tracking-widest mb-1">Chi tiết giao dịch</p>
@@ -69,14 +124,17 @@ function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | 
               <X size={20} />
             </button>
           </div>
-          <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-bold ${cfg.badge} bg-white/90`}>
-              <span className={`inline-block w-1.5 h-1.5 rounded-full ${cfg.dot} mr-1.5`} />
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className={cn('px-3 py-1 rounded-full text-xs font-bold bg-white/90', cfg.badge)}>
+              <span className={cn('inline-block w-1.5 h-1.5 rounded-full mr-1.5', cfg.dot)} />
               {cfg.label}
             </span>
-            <span className="text-blue-200 text-xs">{METHOD_CONFIG[payment.paymentMethod]?.label ?? payment.paymentMethod}</span>
+            {method && (
+              <span className="text-blue-200 text-xs font-medium">{method.label}</span>
+            )}
           </div>
         </div>
+
         <div className="p-6 border-b border-slate-100 bg-slate-50">
           <p className="text-xs text-slate-500 mb-1">Số tiền</p>
           <p className="text-3xl font-black text-blue-700 tracking-tight">
@@ -84,202 +142,192 @@ function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | 
             <span className="text-lg font-semibold text-blue-400 ml-1">₫</span>
           </p>
         </div>
+
         <div className="p-6 space-y-4 flex-1">
           {[
-            { label: 'Mã đặt phòng', value: payment.bookingCode, mono: true, accent: true },
-            { label: 'Booking ID', value: `#${payment.bookingId}`, mono: true },
-            { label: 'Phương thức', value: METHOD_CONFIG[payment.paymentMethod]?.label ?? payment.paymentMethod },
-            { label: 'Trạng thái', value: cfg.label },
-            { label: 'Ngày thanh toán', value: payment.paymentDate ? new Date(payment.paymentDate).toLocaleString('vi-VN') : '---' },
-            { label: 'Ngày tạo', value: new Date(payment.createdAt).toLocaleString('vi-VN') },
-          ].map((item) => (
-            <div key={item.label} className="flex justify-between items-start">
-              <span className="text-xs text-slate-500 pt-0.5">{item.label}</span>
-              <span className={`text-sm font-semibold text-right max-w-[60%] break-all ${item.mono ? 'font-mono' : ''} ${item.accent ? 'text-blue-600' : 'text-slate-800'}`}>
-                {item.value}
-              </span>
+            { label: 'Mã đặt phòng',    value: payment.bookingCode,   mono: true,  accent: true  },
+            { label: 'Booking ID',       value: `#${payment.bookingId}`,mono: true,  accent: false },
+            { label: 'Khách sạn',        value: hotel?.hotelName ?? '—',             accent: false },
+            { label: 'Chủ sở hữu',       value: hotel?.ownerName ?? '—',             accent: false },
+            { label: 'Phương thức',      value: method?.label ?? payment.paymentMethod, accent: false },
+            { label: 'Trạng thái',       value: cfg.label,                           accent: false },
+            { label: 'Ngày thanh toán',  value: payment.paymentDate ? new Date(payment.paymentDate).toLocaleString('vi-VN') : '---', accent: false },
+            { label: 'Ngày tạo',         value: new Date(payment.createdAt).toLocaleString('vi-VN'), accent: false },
+          ].map(item => (
+            <div key={item.label} className="flex justify-between items-start gap-4">
+              <span className="text-xs text-slate-500 shrink-0 pt-0.5">{item.label}</span>
+              <span className={cn(
+                'text-sm font-semibold text-right break-all',
+                item.mono    ? 'font-mono'   : '',
+                item.accent  ? 'text-blue-600' : 'text-slate-800',
+              )}>{item.value}</span>
             </div>
           ))}
         </div>
+
         <div className="p-6 border-t border-slate-100">
-          <button onClick={onClose} className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors">Đóng</button>
+          <button onClick={onClose}
+            className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors">
+            Đóng
+          </button>
         </div>
       </div>
     </>
   )
 }
 
+// ── Main Page ──────────────────────────────────────────────────────────────────
 export default function AdminPaymentsPage() {
-  const [currentPage, setCurrentPage] = useState(0)
-  const [pageSize, setPageSize] = useState(10)
-  const [searchInput, setSearchInput] = useState('')
-  const [debouncedSearch] = useDebounce(searchInput, 400)
-  const [statusFilter, setStatusFilter] = useState<PaymentStatus | ''>('')
-  const [methodFilter, setMethodFilter] = useState<PaymentMethod | ''>('') // Thêm State cho Method
+  const [currentPage,     setCurrentPage]     = useState(0)
+  const [pageSize,        setPageSize]        = useState(10)
+  const [searchInput,     setSearchInput]     = useState('')
+  const [statusFilter,    setStatusFilter]    = useState<PaymentStatus | ''>('')
+  const [methodFilter,    setMethodFilter]    = useState<PaymentMethod | ''>('')
   const [selectedHotelId, setSelectedHotelId] = useState<number | null>(null)
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<PaymentResponse | null>(null)
-  const [isExporting, setIsExporting] = useState(false)
+  const [isExporting,     setIsExporting]     = useState(false)
 
+  const [debouncedSearch] = useDebounce(searchInput, 400)
+
+  // Hotels for filter dropdowns
   const { data: hotels = [] } = useQuery<HotelResponse[]>({
     queryKey: ['admin-hotels-list'],
-    queryFn: () => axiosInstance.get(API_CONFIG.ENDPOINTS.HOTELS, { params: { page: 0, size: 1000 } }).then(r => r.data.content),
+    queryFn:  () => axiosInstance.get(API_CONFIG.ENDPOINTS.HOTELS, { params: { page: 0, size: 1000 } }).then(r => r.data.content),
   })
 
-  const owners = useMemo(() => {
-    return Array.from(new Map(hotels.map(h => [h.ownerId, { id: h.ownerId, name: h.ownerName }])).values())
-  }, [hotels])
+  const owners = useMemo(() =>
+    Array.from(new Map(hotels.map(h => [h.ownerId, { id: h.ownerId, name: h.ownerName }])).values()),
+    [hotels]
+  )
 
-  // Cập nhật hook usePayments để truyền thêm methodFilter
+  // Main table data
   const { data: pageData, isLoading: isLoadingPayments } = usePayments(currentPage, pageSize, {
-    search: debouncedSearch,
-    status: statusFilter,
-    method: methodFilter, // Truyền vào BE
-    hotelId: selectedHotelId,
-    ownerId: selectedOwnerId
-  })
-  const payments = pageData?.content || []
-
-  // Stats filter (tùy chọn: có thể filter stats theo phương thức nếu muốn)
-  const { data: allStatsPage } = usePayments(0, 10000, {
+    search:  debouncedSearch,
+    status:  statusFilter,
+    method:  methodFilter,
     hotelId: selectedHotelId,
     ownerId: selectedOwnerId,
-    method: methodFilter // Filter stats theo method
   })
-  const statsPayments = allStatsPage?.content || []
 
-  const statsCounts = useMemo(() => {
-    return PAYMENT_STAT_STATUSES.reduce((acc, status) => {
-      acc[status] = statsPayments.filter(p => p.status === status).length
-      return acc
-    }, {} as Record<PaymentStatus, number>)
-  }, [statsPayments])
+  // ── Status counts: 1 query nhỏ per status thay cho fetch 10000 records ──
+  const statusQueries = useQueries({
+    queries: STAT_STATUSES.map(s => ({
+      queryKey: ['admin-payment-count', s, selectedHotelId, selectedOwnerId, methodFilter],
+      queryFn:  () => paymentApi.getAll(0, 1, undefined, s, methodFilter || undefined, selectedHotelId ?? undefined)
+        .then(r => r.data.totalElements ?? 0),
+      staleTime: 30_000,
+    })),
+  })
+
+  const statsCounts = Object.fromEntries(
+    STAT_STATUSES.map((s, i) => [s, statusQueries[i].data ?? 0])
+  ) as Record<PaymentStatus, number>
+
+  const payments = pageData?.content ?? []
 
   const handleClearFilters = () => {
-    setSearchInput('')
-    setStatusFilter('')
-    setMethodFilter('') // Reset method
-    setSelectedHotelId(null)
-    setSelectedOwnerId(null)
-    setCurrentPage(0)
+    setSearchInput(''); setStatusFilter(''); setMethodFilter('')
+    setSelectedHotelId(null); setSelectedOwnerId(null); setCurrentPage(0)
   }
 
   const handleExport = async () => {
     setIsExporting(true)
     try {
       await exportPayments({
-        keyword: debouncedSearch || undefined,
-        status: statusFilter || undefined,
-        method: methodFilter || undefined, // Thêm method vào export
-        hotelId: selectedHotelId || undefined,
-        ownerId: selectedOwnerId || undefined,
+        keyword: debouncedSearch  || undefined,
+        status:  statusFilter     || undefined,
+        method:  methodFilter     || undefined,
+        hotelId: selectedHotelId  || undefined,
+        ownerId: selectedOwnerId  || undefined,
+        includeCommission: true,   // admin → có cột hoa hồng
       })
       toast.success('Xuất file thành công!')
-    } catch {
-      toast.error('Xuất file thất bại.')
-    } finally {
-      setIsExporting(false)
-    }
+    } catch { toast.error('Xuất file thất bại.') }
+    finally   { setIsExporting(false) }
   }
 
+  const hasFilter = !!(debouncedSearch || statusFilter || methodFilter || selectedHotelId || selectedOwnerId)
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-10">
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quản lý giao dịch</h1>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Quản lý giao dịch</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Hệ thống Admin · Tổng {pageData?.totalElements || 0} giao dịch
+            Hệ thống Admin · Tổng <strong className="text-gray-700">{pageData?.totalElements?.toLocaleString() ?? 0}</strong> giao dịch
           </p>
         </div>
-
-        <button
-          onClick={handleExport}
-          disabled={isExporting}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
-        >
-          {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+        <button onClick={handleExport} disabled={isExporting}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm shrink-0">
+          {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
           {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
         </button>
       </div>
 
-      {/* STATS CARDS */}
+      {/* Status chips */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {PAYMENT_STAT_STATUSES.map((status) => {
-          const config = STATUS_CONFIG[status]
-          const Icon = config.icon
-          const isActive = statusFilter === status
+        {STAT_STATUSES.map(status => {
+          const cfg    = STATUS_CONFIG[status]
+          const Icon   = cfg.icon
+          const active = statusFilter === status
           return (
-            <button
-              key={status}
-              onClick={() => { setStatusFilter(isActive ? '' : status); setCurrentPage(0) }}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-100 bg-white hover:border-gray-200'
-              }`}
-            >
+            <button key={status} onClick={() => { setStatusFilter(active ? '' : status); setCurrentPage(0) }}
+              className={cn(
+                'p-4 rounded-2xl border-2 text-left transition-all bg-white',
+                active ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-gray-200',
+              )}>
               <div className="flex items-center gap-2 mb-2">
-                <div className={`p-1.5 rounded-lg ${isActive ? 'bg-blue-100' : 'bg-gray-50'}`}>
-                  <Icon size={16} className={config.color} />
+                <div className={cn('p-1.5 rounded-lg', active ? 'bg-blue-100' : 'bg-gray-50')}>
+                  <Icon size={15} className={cfg.color} />
                 </div>
-                <span className="text-xs font-medium text-gray-500">{config.label}</span>
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{cfg.label}</span>
               </div>
-              <div className="text-xl font-bold text-gray-900">{statsCounts[status] || 0}</div>
+              <p className="text-2xl font-black text-gray-900">{statsCounts[status] ?? 0}</p>
             </button>
           )
         })}
       </div>
 
-      {/* FILTERS */}
-      <div className="flex flex-wrap gap-3 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+      {/* Commission strip — scoped to current hotel/owner filter */}
+      <CommissionStrip hotelId={selectedHotelId} ownerId={selectedOwnerId} />
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
         <div className="relative flex-1 min-w-[250px]">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Mã booking, mã giao dịch..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            value={searchInput}
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" placeholder="Mã booking, mã giao dịch..." value={searchInput}
             onChange={e => { setSearchInput(e.target.value); setCurrentPage(0) }}
-          />
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
         </div>
 
-        {/* BỘ LỌC PHƯƠNG THỨC THANH TOÁN (MỚI) */}
-        <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 bg-white">
-          <CreditCard size={16} className="text-gray-400" />
-          <select
-            className="py-2 bg-transparent text-sm outline-none min-w-[160px]"
-            value={methodFilter}
-            onChange={e => { setMethodFilter(e.target.value as PaymentMethod | ''); setCurrentPage(0) }}
-          >
+        {/* Method */}
+        <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 bg-white">
+          <CreditCard size={14} className="text-gray-400 shrink-0" />
+          <select value={methodFilter} onChange={e => { setMethodFilter(e.target.value as PaymentMethod | ''); setCurrentPage(0) }}
+            className="py-2.5 bg-transparent text-sm outline-none min-w-[150px]">
             <option value="">Tất cả phương thức</option>
-            {Object.entries(METHOD_CONFIG).map(([v, c]) => (
-              <option key={v} value={v}>{c.label}</option>
-            ))}
+            {Object.entries(METHOD_CONFIG).map(([v, c]) => <option key={v} value={v}>{c.label}</option>)}
           </select>
         </div>
 
-        <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 bg-white">
-          <User size={16} className="text-gray-400" />
-          <select
-            className="py-2 bg-transparent text-sm outline-none min-w-[150px]"
-            value={selectedOwnerId || ''}
-            onChange={e => { 
-              setSelectedOwnerId(Number(e.target.value) || null)
-              setSelectedHotelId(null)
-              setCurrentPage(0) 
-            }}
-          >
+        {/* Owner */}
+        <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 bg-white">
+          <User size={14} className="text-gray-400 shrink-0" />
+          <select value={selectedOwnerId ?? ''} onChange={e => { setSelectedOwnerId(Number(e.target.value) || null); setSelectedHotelId(null); setCurrentPage(0) }}
+            className="py-2.5 bg-transparent text-sm outline-none min-w-[150px]">
             <option value="">Tất cả chủ KS</option>
             {owners.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         </div>
 
-        <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 bg-white">
-          <Building2 size={16} className="text-gray-400" />
-          <select
-            className="py-2 bg-transparent text-sm outline-none min-w-[180px]"
-            value={selectedHotelId || ''}
-            onChange={e => { setSelectedHotelId(Number(e.target.value) || null); setCurrentPage(0) }}
-          >
+        {/* Hotel */}
+        <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 bg-white">
+          <Building2 size={14} className="text-gray-400 shrink-0" />
+          <select value={selectedHotelId ?? ''} onChange={e => { setSelectedHotelId(Number(e.target.value) || null); setCurrentPage(0) }}
+            className="py-2.5 bg-transparent text-sm outline-none min-w-[180px]">
             <option value="">Tất cả khách sạn</option>
             {hotels
               .filter(h => !selectedOwnerId || h.ownerId === selectedOwnerId)
@@ -287,72 +335,79 @@ export default function AdminPaymentsPage() {
           </select>
         </div>
 
-        <button onClick={handleClearFilters} className="p-2 border border-gray-200 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
-          <RotateCcw size={18} />
+        <button onClick={handleClearFilters}
+          className="p-2.5 border border-gray-200 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Xoá lọc">
+          <RotateCcw size={16} />
         </button>
       </div>
 
-      {/* HIỂN THỊ DÒNG THÔNG BÁO XUẤT FILE */}
-      {(debouncedSearch || statusFilter || methodFilter || selectedHotelId || selectedOwnerId) && (
-        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-          📌 File Excel sẽ được xuất theo bộ lọc đang áp dụng.
+      {hasFilter && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+          📌 File Excel sẽ được xuất theo bộ lọc đang áp dụng (bao gồm cột hoa hồng).
         </p>
       )}
 
-      {/* TABLE */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      {/* Table */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-500 uppercase text-[11px] font-bold tracking-wider border-b">
+            <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-4">Mã giao dịch</th>
-                <th className="px-6 py-4">Mã Booking</th>
-                <th className="px-6 py-4">Chủ KS / Khách sạn</th>
-                <th className="px-6 py-4">Số tiền</th>
-                <th className="px-6 py-4">Phương thức</th>
-                <th className="px-6 py-4">Ngày thanh toán</th>
-                <th className="px-6 py-4">Trạng thái</th>
-                <th className="px-6 py-4 text-right"></th>
+                {['Mã giao dịch', 'Mã Booking', 'Chủ KS / Khách sạn', 'Số tiền', 'Phương thức', 'Ngày thanh toán', 'Trạng thái', ''].map(h => (
+                  <th key={h} className="px-5 py-3.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-50">
               {isLoadingPayments ? (
-                <tr><td colSpan={8} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" /></td></tr>
+                <tr><td colSpan={8} className="py-20 text-center">
+                  <Loader2 className="animate-spin mx-auto text-blue-500" size={24} />
+                </td></tr>
               ) : payments.length === 0 ? (
-                <tr><td colSpan={8} className="py-20 text-center text-gray-400">Không có dữ liệu</td></tr>
-              ) : (
-                payments.map(p => {
-                  const hotel = hotels.find(h => h.id === p.hotelId)
-                  return (
-                    <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
-                       <td className="px-6 py-4 font-mono text-xs text-gray-400">{p.transactionId || '---'}</td>
-                      <td className="px-6 py-4 font-bold text-blue-600">{p.bookingCode}</td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-semibold text-gray-800">{hotel?.ownerName || '---'}</div>
-                        <div className="text-xs text-gray-400">{hotel?.hotelName || ''}</div>
-                      </td>
-                      <td className="px-6 py-4 font-bold text-gray-900">{p.amount.toLocaleString('vi-VN')} ₫</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${METHOD_CONFIG[p.paymentMethod]?.dot ?? 'bg-gray-400'}`} />
-                          {METHOD_CONFIG[p.paymentMethod]?.label ?? p.paymentMethod}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-500">{p.paymentDate ? new Date(p.paymentDate).toLocaleString('vi-VN') : '---'}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${STATUS_CONFIG[p.status].badge}`}>
-                          {STATUS_CONFIG[p.status].label}
+                <tr><td colSpan={8} className="py-20 text-center text-gray-400 text-sm">Không có dữ liệu</td></tr>
+              ) : payments.map(p => {
+                const cfg    = STATUS_CONFIG[p.status]
+                const method = METHOD_CONFIG[p.paymentMethod]
+                const hotel  = hotels.find(h => h.id === p.hotelId)
+                return (
+                  <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="px-5 py-3.5 font-mono text-xs text-gray-400">{p.transactionId || '—'}</td>
+                    <td className="px-5 py-3.5 font-bold text-blue-600">{p.bookingCode}</td>
+                    <td className="px-5 py-3.5">
+                      <p className="text-sm font-semibold text-gray-800">{hotel?.ownerName ?? '—'}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{hotel?.hotelName ?? ''}</p>
+                    </td>
+                    <td className="px-5 py-3.5 font-bold text-gray-900 whitespace-nowrap">
+                      {p.amount.toLocaleString('vi-VN')} ₫
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {method ? (
+                        <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold', method.badge)}>
+                          <span className={cn('w-1.5 h-1.5 rounded-full', method.dot)} />
+                          {method.label}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button onClick={() => setSelectedPayment(p)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-                          <Eye size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
+                      ) : (
+                        <span className="text-gray-400 text-xs">{p.paymentMethod}</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">
+                      {p.paymentDate ? new Date(p.paymentDate).toLocaleString('vi-VN') : '—'}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold', cfg.badge)}>
+                        <span className={cn('w-1.5 h-1.5 rounded-full', cfg.dot)} />
+                        {cfg.label}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <button onClick={() => setSelectedPayment(p)}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                        <Eye size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -360,18 +415,19 @@ export default function AdminPaymentsPage() {
         {pageData && pageData.totalPages > 1 && (
           <div className="p-4 border-t border-gray-100">
             <Pagination
-              currentPage={currentPage}
-              pageSize={pageSize}
-              totalPages={pageData.totalPages}
-              totalElements={pageData.totalElements}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={setPageSize}
+              currentPage={currentPage} pageSize={pageSize}
+              totalPages={pageData.totalPages} totalElements={pageData.totalElements}
+              onPageChange={setCurrentPage} onPageSizeChange={setPageSize}
             />
           </div>
         )}
       </div>
 
-      <PaymentDetailDrawer payment={selectedPayment} onClose={() => setSelectedPayment(null)} />
+      <PaymentDetailDrawer
+        payment={selectedPayment}
+        hotels={hotels}
+        onClose={() => setSelectedPayment(null)}
+      />
     </div>
   )
 }
