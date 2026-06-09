@@ -721,6 +721,9 @@ public class BookingServiceImpl implements BookingService {
 
         BigDecimal commission = Optional.ofNullable(booking.getCommissionAmount())
                 .orElse(BigDecimal.ZERO);
+                
+        BigDecimal discount = Optional.ofNullable(booking.getDiscountAmount())
+                .orElse(BigDecimal.ZERO);
 
         boolean isSystemPromotion = booking.getPromotion() != null
                 && booking.getPromotion().getHotel() == null;
@@ -730,6 +733,8 @@ public class BookingServiceImpl implements BookingService {
                 : Optional.ofNullable(booking.getTotalAmount()).orElse(BigDecimal.ZERO);
 
         BigDecimal hotelNetAmount = hotelGrossAmount.subtract(commission);
+
+        BigDecimal actualCommission = isSystemPromotion ? commission.subtract(discount) : commission;
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserEmail = (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName()))
@@ -741,13 +746,12 @@ public class BookingServiceImpl implements BookingService {
 
         if (SecurityUtils.isAdmin()) {
 
-            BigDecimal discount = Optional.ofNullable(booking.getDiscountAmount()).orElse(BigDecimal.ZERO);
-            response.setActualCommissionAmount(isSystemPromotion ? commission.subtract(discount) : commission);
+            response.setActualCommissionAmount(actualCommission);
             response.setHotelNetAmount(hotelNetAmount);
 
         } else if (isOwnerOfThisHotel) {
 
-            response.setActualCommissionAmount(null);
+            response.setActualCommissionAmount(actualCommission); 
             response.setHotelNetAmount(hotelNetAmount);
 
         } else {
