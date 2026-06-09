@@ -38,21 +38,21 @@ import { DashboardParams, RecentBookingResponse } from '@/types/statistic.types'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const BOOKING_STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  PENDING:    { label: 'Chờ xác nhận', bg: '#FFF7ED', text: '#C2410C' },
-  CONFIRMED:  { label: 'Đã xác nhận',  bg: '#EFF6FF', text: '#1D4ED8' },
-  CHECKED_IN: { label: 'Nhận phòng',   bg: '#F5F3FF', text: '#7C3AED' },
-  COMPLETED:  { label: 'Hoàn thành',   bg: '#ECFDF5', text: '#065F46' },
-  CANCELLED:  { label: 'Đã huỷ',       bg: '#FEF2F2', text: '#B91C1C' },
-  NO_SHOW:    { label: 'No-show',      bg: '#F9FAFB', text: '#6B7280' },
+  PENDING: { label: 'Chờ xác nhận', bg: '#FFF7ED', text: '#C2410C' },
+  CONFIRMED: { label: 'Đã xác nhận', bg: '#EFF6FF', text: '#1D4ED8' },
+  CHECKED_IN: { label: 'Nhận phòng', bg: '#F5F3FF', text: '#7C3AED' },
+  COMPLETED: { label: 'Hoàn thành', bg: '#ECFDF5', text: '#065F46' },
+  CANCELLED: { label: 'Đã huỷ', bg: '#FEF2F2', text: '#B91C1C' },
+  NO_SHOW: { label: 'No-show', bg: '#F9FAFB', text: '#6B7280' },
 }
 
 const PAYMENT_STATUS: Record<string, { label: string; color: string }> = {
-  UNPAID:    { label: 'Chưa TT',    color: '#9CA3AF' },
-  PENDING:   { label: 'Chờ TT',     color: '#D97706' },
-  PAID:      { label: 'Đã TT',      color: '#059669' },
-  FAILED:    { label: 'Thất bại',   color: '#DC2626' },
-  REFUNDED:  { label: 'Hoàn tiền',  color: '#2563EB' },
-  CANCELLED: { label: 'Đã huỷ',    color: '#EF4444' },
+  UNPAID: { label: 'Chưa TT', color: '#9CA3AF' },
+  PENDING: { label: 'Chờ TT', color: '#D97706' },
+  PAID: { label: 'Đã TT', color: '#059669' },
+  FAILED: { label: 'Thất bại', color: '#DC2626' },
+  REFUNDED: { label: 'Hoàn tiền', color: '#2563EB' },
+  CANCELLED: { label: 'Đã huỷ', color: '#EF4444' },
 }
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
@@ -195,20 +195,20 @@ export default function AdminDashboardPage() {
     (dashboard?.chartData ?? []).map(d => ({
       date: new Date(d.statDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
       'Doanh thu': Number(d.grossRevenue ?? 0),
-      'Hoa hồng':  Number(d.totalCommission ?? 0),
-      'Net KS':    Number(d.netRevenue ?? 0),
-      'Lượt đặt':  d.completedBookings ?? 0,
-      'Huỷ':       d.totalCancelled ?? 0,
+      'Hoa hồng': Number(d.totalCommission ?? 0),
+      'Net KS': Number(d.netRevenue ?? 0),
+      'Lượt đặt': d.completedBookings ?? 0,
+      'Huỷ': d.totalCancelled ?? 0,
     })),
-  [dashboard])
+    [dashboard])
 
   const pieData = useMemo(() => {
     const s = dashboard?.summary
     if (!s) return []
     return [
-      { name: 'Hoàn thành', value: s.completedBookings,  fill: '#10B981' },
-      { name: 'Đã huỷ',    value: s.totalCancelled,    fill: '#EF4444' },
-      { name: 'No-show',   value: s.totalNoShow,        fill: '#F59E0B' },
+      { name: 'Hoàn thành', value: s.completedBookings, fill: '#10B981' },
+      { name: 'Đã huỷ', value: s.totalCancelled, fill: '#EF4444' },
+      { name: 'No-show', value: s.totalNoShow, fill: '#F59E0B' },
     ].filter(d => d.value > 0)
   }, [dashboard])
 
@@ -317,18 +317,22 @@ export default function AdminDashboardPage() {
         <KpiCard icon={Users} label="Người dùng" value={(dashboard?.totalUsers ?? 0).toLocaleString()} unit="" sub="Khách & chủ sở hữu" accent="#0EA5E9" />
         <KpiCard icon={TrendingUp} label="Doanh thu gộp"
           value={Number(summary?.grossRevenue ?? 0).toLocaleString('vi-VN')}
-  unit="₫" sub="Trước hoa hồng" accent="#F59E0B" />
+          unit="₫" sub="Trước hoa hồng" accent="#F59E0B" />
 
-<KpiCard icon={Percent} label="Hoa hồng"
-  value={Number(summary?.totalCommission ?? 0).toLocaleString('vi-VN')}
-  unit="₫" sub="Thu của hệ thống" accent="#EF4444" />
+        <KpiCard icon={Percent} label="Hoa hồng"
+          value={Number(summary?.totalCommission ?? 0).toLocaleString('vi-VN')}
+          unit="₫" sub="Thu của hệ thống" accent="#EF4444" />
 
-<KpiCard icon={BadgeDollarSign} label="Net KS nhận"
-  value={Number(summary?.netRevenue ?? 0).toLocaleString('vi-VN')}
-  unit="₫" sub="Sau trừ hoa hồng" accent="#10B981" />
+        <KpiCard icon={BadgeDollarSign} label="Tài trợ hệ thống"
+          value={Number(summary?.systemSponsorAmount ?? 0).toLocaleString('vi-VN')}
+          unit="₫" sub="Platform bù cho KS" accent="#10B981" />
+
+        <KpiCard icon={TrendingUp} label="Lợi nhuận ròng"
+          value={Number(summary?.platformNetProfit ?? 0).toLocaleString('vi-VN')}
+          unit="₫" sub="Hoa hồng – Tài trợ" accent="#6366F1" />
       </div>
 
-  
+
 
       {/* ── Area chart ── */}
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24, marginBottom: 20 }}>
@@ -360,8 +364,8 @@ export default function AdminDashboardPage() {
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                 <Area type="monotone" dataKey="Doanh thu" stroke="#3B82F6" strokeWidth={2} fill="url(#gGross)" dot={false} />
-                <Area type="monotone" dataKey="Hoa hồng"  stroke="#F59E0B" strokeWidth={1.5} fill="url(#gComm)" dot={false} strokeDasharray="5 3" />
-                <Area type="monotone" dataKey="Net KS"    stroke="#10B981" strokeWidth={2} fill="url(#gNet)" dot={false} />
+                <Area type="monotone" dataKey="Hoa hồng" stroke="#F59E0B" strokeWidth={1.5} fill="url(#gComm)" dot={false} strokeDasharray="5 3" />
+                <Area type="monotone" dataKey="Net KS" stroke="#10B981" strokeWidth={2} fill="url(#gNet)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -406,9 +410,9 @@ export default function AdminDashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {topHotels.map((h, i) => {
                   const gross = Number(h.grossRevenue ?? 0)
-                  const comm  = Number(h.totalCommission ?? 0)
-                  const net   = Number(h.netRevenue ?? 0)
-                  const pct   = (gross / maxRev) * 100
+                  const comm = Number(h.totalCommission ?? 0)
+                  const net = Number(h.netRevenue ?? 0)
+                  const pct = (gross / maxRev) * 100
                   return (
                     <div key={h.hotelId}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
@@ -418,19 +422,19 @@ export default function AdminDashboardPage() {
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
                           <p style={{ fontSize: 13, fontWeight: 800, color: '#059669', margin: 0 }}>
-  {gross.toLocaleString('vi-VN')} ₫
-</p>
-<p style={{ fontSize: 10, color: '#F59E0B', margin: '1px 0 0', fontWeight: 600 }}>
-  HC: {comm.toLocaleString('vi-VN')} ₫
-</p>
+                            {gross.toLocaleString('vi-VN')} ₫
+                          </p>
+                          <p style={{ fontSize: 10, color: '#F59E0B', margin: '1px 0 0', fontWeight: 600 }}>
+                            HC: {comm.toLocaleString('vi-VN')} ₫
+                          </p>
                         </div>
                       </div>
                       <div style={{ height: 5, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #3B82F6, #6366F1)', borderRadius: 999 }} />
                       </div>
                       <p style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>
-  {h.completedBookings} đặt · Net: {net.toLocaleString('vi-VN')} ₫
-</p>
+                        {h.completedBookings} đặt · Net: {net.toLocaleString('vi-VN')} ₫
+                      </p>
                     </div>
                   )
                 })}
@@ -452,7 +456,7 @@ export default function AdminDashboardPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#F8FAFC' }}>
-                {['Mã', 'Khách hàng', 'Khách sạn', 'Check-in', 'Doanh thu', 'Hoa hồng', 'Net KS', 'Trạng thái', 'Thanh toán'].map(h => (
+                {['Mã', 'Khách hàng', 'Khách sạn', 'Check-in', 'Doanh thu', 'Hoa hồng', 'Tài trợ', 'Trạng thái', 'Thanh toán'].map(h => (
                   <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -471,8 +475,12 @@ export default function AdminDashboardPage() {
                   <td style={{ padding: '12px 16px', fontSize: 11, color: '#6B7280', whiteSpace: 'nowrap' }}>{new Date(b.checkInDate).toLocaleDateString('vi-VN')}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', fontSize: 12 }}>{Number(b.totalAmount).toLocaleString('vi-VN')}₫</td>
                   {/* Commission columns - not in RecentBookingResponse so show dash */}
-                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#F59E0B', fontWeight: 600 }}>—</td>
-                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#059669', fontWeight: 600 }}>—</td>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#F59E0B', fontWeight: 600 }}>
+                    {b.commissionAmount != null ? `${Number(b.commissionAmount).toLocaleString('vi-VN')}₫` : '—'}
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#059669', fontWeight: 600 }}>
+                    {b.netAmount != null ? `${Number(b.netAmount).toLocaleString('vi-VN')}₫` : '—'}
+                  </td>
                   <td style={{ padding: '12px 16px' }}><StatusBadge status={b.status} /></td>
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: PAYMENT_STATUS[b.paymentStatus]?.color ?? '#9CA3AF' }}>

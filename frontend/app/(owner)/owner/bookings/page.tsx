@@ -20,6 +20,8 @@ import {
 } from '@/config/booking-status.config'
 import { exportBookings } from '@/lib/api/export.api'
 import { cn } from '@/lib/utils'
+import promotionApi from '@/lib/api/promotion.api'
+import { PromotionResponse } from '@/types/promotion.types'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function calcNights(checkIn: string, checkOut: string): number {
@@ -41,6 +43,13 @@ export default function OwnerBookingsPage() {
 
   const handleKeywordChange = (val: string) => { setKeyword(val); setCurrentPage(0) }
   const handleStatusChange = (val: BookingStatus | '') => { setStatusFilter(val); setCurrentPage(0) }
+
+const { data: allPromos = [] } = useQuery({
+  queryKey: ['owner-promotions-lookup', activeHotelId],
+  queryFn: () => promotionApi.getAll().then(r => r.data),
+  enabled: !!activeHotelId,
+  staleTime: 5 * 60 * 1000,
+})
 
   // ── Main table data ──
   const { data: bookingsPage, isLoading: isBookingsLoading } = useQuery({
@@ -99,7 +108,7 @@ export default function OwnerBookingsPage() {
 
   if (!activeHotel && !isHotelLoading) {
     return <div className="py-20 text-center text-gray-400">Chưa chọn khách sạn</div>
-  }
+  }  
 
   return (
     <div className="space-y-5 pb-10">
@@ -344,6 +353,7 @@ export default function OwnerBookingsPage() {
       {detailBooking && (
         <BookingDetailModal
           booking={detailBooking}
+          promotions={allPromos}
           onClose={() => setDetailBooking(null)}
           onUpdateStatus={(id, status) => updateStatusMutation.mutate({ id, status })}
           isUpdating={updateStatusMutation.isPending}
@@ -356,12 +366,13 @@ export default function OwnerBookingsPage() {
 // ── Detail Modal ───────────────────────────────────────────────────────────────
 interface BookingDetailModalProps {
   booking: BookingResponse
+  promotions: PromotionResponse[]
   onClose: () => void
   onUpdateStatus: (id: number, status: BookingStatus) => void
   isUpdating: boolean
 }
 
-function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }: BookingDetailModalProps) {
+function BookingDetailModal({ booking: b, promotions, onClose, onUpdateStatus, isUpdating }: BookingDetailModalProps) {
   const s = BOOKING_STATUS_CONFIG[b.status]
   const Icon = s.icon
   const nights = calcNights(b.checkInDate, b.checkOutDate)
@@ -377,6 +388,9 @@ function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }:
   const actual = Number(b.actualCommissionAmount ?? comm)
   const net = Number(b.hotelNetAmount ?? (gross - actual))
   const pct = b.commissionPercent ?? 0
+
+  const appliedPromo = promotions?.find((p: PromotionResponse) => p.id === b.promotionId);
+  const isGlobal = b.promotionId ? (appliedPromo ? appliedPromo.hotelId === null : true) : false;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -490,11 +504,19 @@ function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }:
                   <span>{Number(b.subtotal).toLocaleString('vi-VN')}₫</span>
                 </div>
                 {b.promoCode && (
-                  <div className="flex justify-between text-xs text-emerald-600 font-medium">
-                    <span>Mã giảm ({b.promoCode})</span>
-                    <span>-{Number(b.discountAmount ?? 0).toLocaleString('vi-VN')}₫</span>
-                  </div>
-                )}
+      <div className="flex justify-between text-xs text-emerald-600 font-medium">
+        <span className="flex items-center gap-1.5">
+          Mã giảm ({b.promoCode})
+          <span className={cn(
+            'text-[9px] font-black px-1.5 py-0.5 rounded-full',
+            isGlobal ? 'bg-violet-100 text-violet-700' : 'bg-red-100 text-red-700'
+          )}>
+            {isGlobal ? 'Toàn sàn' : 'Của KS'}
+          </span>
+        </span>
+        <span>-{Number(b.discountAmount ?? 0).toLocaleString('vi-VN')}₫</span>
+      </div>
+    )}
                 <div className="flex justify-between items-baseline pt-2 border-t border-gray-200">
                   <span className="font-bold text-gray-900 text-sm">Tổng khách trả</span>
                   <span className="text-xl font-black text-blue-600">{gross.toLocaleString('vi-VN')}₫</span>

@@ -22,6 +22,7 @@ import {
 } from '@/config/booking-status.config'
 import { exportBookings } from '@/lib/api/export.api'
 import bookingApi from '@/lib/api/booking.api'
+import promotionApi from '@/lib/api/promotion.api'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function calcNights(checkIn: string, checkOut: string): number {
@@ -331,6 +332,17 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
     <p style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>{title}</p>
   )
 
+  const { data: allPromotions = [] } = useQuery({
+    queryKey: ['all-promotions-lookup'],
+    queryFn: () => promotionApi.getAll().then(r => r.data),
+    staleTime: 5 * 60 * 1000, 
+    enabled: !!b.promotionId, 
+  })
+
+  const appliedPromo = allPromotions.find(p => p.id === b.promotionId)
+
+  const isGlobal = appliedPromo ? appliedPromo.hotelId === null : false
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 50,
@@ -412,11 +424,25 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
               <span>{Number(b.subtotal).toLocaleString('vi-VN')}₫</span>
             </div>
             {b.discountAmount && Number(b.discountAmount) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: '#10B981' }}>
-                <span>Khuyến mãi {b.promoCode ? `(${b.promoCode})` : ''}</span>
-                <span>-{Number(b.discountAmount).toLocaleString('vi-VN')}₫</span>
-              </div>
-            )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: '#10B981' }}>
+        <span className="flex items-center gap-1.5 flex-wrap">
+          Khuyến mãi
+          {b.promoCode && (
+            <>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>({b.promoCode})</span>
+              <span style={{
+                fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 999,
+                background: isGlobal ? '#EDE9FE' : '#FEE2E2', 
+                color: isGlobal ? '#6D28D9' : '#B91C1C',
+              }}>
+                {isGlobal ? 'Toàn sàn' : 'Của KS'}
+              </span>
+            </>
+          )}
+        </span>
+        <span>-{Number(b.discountAmount).toLocaleString('vi-VN')}₫</span>
+      </div>
+    )}
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid #E5E7EB', fontSize: 15, fontWeight: 800, color: '#1E40AF' }}>
               <span>Tổng tiền</span>
               <span>{gross.toLocaleString('vi-VN')}₫</span>
