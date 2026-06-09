@@ -22,5 +22,8 @@ public class RevenueExport {
 
     private BigDecimal grossRevenue;
     private BigDecimal totalCommission;
+    private BigDecimal systemSponsorAmount;
+
+    private BigDecimal platformNetProfit;
     private BigDecimal netRevenue;
 }

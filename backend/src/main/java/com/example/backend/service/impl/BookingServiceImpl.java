@@ -347,6 +347,7 @@ public class BookingServiceImpl implements BookingService {
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
+                BigDecimal.ZERO,
                 LocalDate.now(),
                 BookingStatus.CANCELLED);
 
@@ -522,7 +523,8 @@ public class BookingServiceImpl implements BookingService {
                         || newStatus == BookingStatus.NO_SHOW)) {
 
             BigDecimal hotelGrossAmount = BigDecimal.ZERO;
-            BigDecimal statisticCommission = BigDecimal.ZERO;
+            BigDecimal contractCommission = BigDecimal.ZERO;
+            BigDecimal systemSponsorAmount = BigDecimal.ZERO;
             BigDecimal netAmount = BigDecimal.ZERO;
 
             if (newStatus == BookingStatus.COMPLETED) {
@@ -530,7 +532,7 @@ public class BookingServiceImpl implements BookingService {
                 boolean isSystemPromotion = savedBooking.getPromotion() != null
                         && savedBooking.getPromotion().getHotel() == null;
 
-                BigDecimal originalCommission = Optional.ofNullable(savedBooking.getCommissionAmount())
+                contractCommission = Optional.ofNullable(savedBooking.getCommissionAmount())
                         .orElse(BigDecimal.ZERO);
 
                 BigDecimal discountAmount = Optional.ofNullable(savedBooking.getDiscountAmount())
@@ -539,20 +541,21 @@ public class BookingServiceImpl implements BookingService {
                 if (isSystemPromotion) {
                     hotelGrossAmount = Optional.ofNullable(savedBooking.getSubtotal())
                             .orElse(BigDecimal.ZERO);
-                    statisticCommission = originalCommission.subtract(discountAmount);
+                    systemSponsorAmount = discountAmount;
                 } else {
                     hotelGrossAmount = Optional.ofNullable(savedBooking.getTotalAmount())
                             .orElse(BigDecimal.ZERO);
-                    statisticCommission = originalCommission;
+                    systemSponsorAmount = BigDecimal.ZERO;
                 }
 
-                netAmount = hotelGrossAmount.subtract(originalCommission);
+                netAmount = hotelGrossAmount.subtract(contractCommission);
             }
 
             hotelStatisticService.recordRealtimeStatistic(
                     savedBooking.getHotel(),
                     hotelGrossAmount,
-                    statisticCommission,
+                    contractCommission,
+                    systemSponsorAmount,
                     netAmount,
                     LocalDate.now(),
                     newStatus);
@@ -871,14 +874,16 @@ public class BookingServiceImpl implements BookingService {
         totalMoneyStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
         List<String> columns = new java.util.ArrayList<>(java.util.Arrays.asList(
-                "Booking Code", "Guest Name", "Guest Email", "Guest Phone",
-                "Hotel", "Check In", "Check Out", "Status", "Payment Method",
-                "Gross Amount", "Discount", "Nguồn KM"));
+                "Mã đặt phòng", "Tên khách hàng", "Email khách hàng", "SĐT khách hàng",
+                "Khách sạn", "Ngày nhận phòng", "Ngày trả phòng", "Trạng thái", "Phương thức thanh toán",
+                "Tổng tiền", "Giảm giá", "Nguồn khuyến mãi"));
+
         if (isAdmin) {
-            columns.add("System Commission");
+            columns.add("Hoa hồng hệ thống");
         }
-        columns.add("Hotel Net Amount");
-        columns.add("Created At");
+
+        columns.add("Thực thu khách sạn");
+        columns.add("Ngày tạo");
 
         Row headerRow = sheet.createRow(0);
         headerRow.setHeightInPoints(20);
@@ -962,7 +967,7 @@ public class BookingServiceImpl implements BookingService {
             Cell cell = totalRow.createCell(i);
             cell.setCellStyle(totalLabelStyle);
             if (i == 0)
-                cell.setCellValue("TOTAL:");
+                cell.setCellValue("Tổng:");
         }
         sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowNum, rowNum, 0, financeStartCol - 1));
 

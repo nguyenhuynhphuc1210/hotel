@@ -22,4 +22,6 @@ public class DashboardSummaryResponse {
     private BigDecimal grossRevenue;
     private BigDecimal totalCommission;
     private BigDecimal netRevenue;
+    private BigDecimal systemSponsorAmount;
+    private BigDecimal platformNetProfit;
 }

@@ -188,8 +188,8 @@ public class PaymentServiceImpl implements PaymentService {
         totalMoneyStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
         String[] columns = {
-                "Booking Code", "Hotel", "Guest Name", "Payment Method",
-                "Transaction ID", "Amount (VND)", "Status", "Payment Date", "Created At"
+                "Mã đặt phòng", "Khách sạn", "Tên khách hàng", "Phương thức thanh toán",
+                "Mã giao dịch", "Số tiền (VND)", "Trạng thái", "Ngày thanh toán", "Ngày tạo"
         };
 
         Row headerRow = sheet.createRow(0);
@@ -259,7 +259,7 @@ public class PaymentServiceImpl implements PaymentService {
             Cell cell = totalRow.createCell(i);
             cell.setCellStyle(totalLabelStyle);
             if (i == 0)
-                cell.setCellValue("TOTAL AMOUNT:");
+                cell.setCellValue("Tổng:");
         }
         sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rowNum, rowNum, 0, 4));
 

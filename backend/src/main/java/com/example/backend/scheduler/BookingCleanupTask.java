@@ -73,6 +73,7 @@ public class BookingCleanupTask {
                     BigDecimal.ZERO,
                     BigDecimal.ZERO,
                     BigDecimal.ZERO,
+                    BigDecimal.ZERO,
                     LocalDate.now(),
                     BookingStatus.CANCELLED);
         }

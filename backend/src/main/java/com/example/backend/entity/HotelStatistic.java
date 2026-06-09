@@ -7,16 +7,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-    name = "hotel_statistics", 
-    indexes = {
+@Table(name = "hotel_statistics", indexes = {
         @Index(name = "idx_hs_hotel_date", columnList = "hotel_id, stat_date"),
         @Index(name = "idx_hs_date", columnList = "stat_date")
-    },
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_hotel_stat_date", columnNames = {"hotel_id", "stat_date"})
-    }
-)
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "uk_hotel_stat_date", columnNames = { "hotel_id", "stat_date" })
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -54,6 +50,10 @@ public class HotelStatistic {
     @Builder.Default
     @Column(name = "total_commission", precision = 12, scale = 2)
     private BigDecimal totalCommission = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "system_sponsor_amount", precision = 12, scale = 2)
+    private BigDecimal systemSponsorAmount = BigDecimal.ZERO;
 
     @Builder.Default
     @Column(name = "net_revenue", precision = 12, scale = 2)

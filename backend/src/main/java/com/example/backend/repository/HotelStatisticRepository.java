@@ -21,11 +21,11 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
     List<HotelStatistic> findByHotel_IdAndStatDateBetweenOrderByStatDateAsc(
             Long hotelId, LocalDate fromDate, LocalDate toDate);
 
-    // 1. Cập nhật hàm tăng doanh thu với 3 trường tài chính chi tiết
     @Modifying
     @Query("UPDATE HotelStatistic h SET h.completedBookings = h.completedBookings + 1, " +
            "h.grossRevenue = h.grossRevenue + :grossAmount, " +
            "h.totalCommission = h.totalCommission + :commissionAmount, " +
+           "h.systemSponsorAmount = h.systemSponsorAmount + :systemSponsorAmount, " +
            "h.netRevenue = h.netRevenue + :netAmount " +
            "WHERE h.hotel.id = :hotelId AND h.statDate = :statDate")
     int incrementSuccessfulBooking(
@@ -33,6 +33,7 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             @Param("statDate") LocalDate statDate,
             @Param("grossAmount") BigDecimal grossAmount,
             @Param("commissionAmount") BigDecimal commissionAmount,
+            @Param("systemSponsorAmount") BigDecimal systemSponsorAmount,
             @Param("netAmount") BigDecimal netAmount);
 
     @Modifying
@@ -66,7 +67,6 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
 
-    // 2. Cập nhật constructor Export
     @Query("""
             SELECT new com.example.backend.dto.export.RevenueExport(
                 h.hotelName,
@@ -76,6 +76,8 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
                 hs.totalNoShow,
                 hs.grossRevenue,
                 hs.totalCommission,
+                hs.systemSponsorAmount,
+                (hs.totalCommission - hs.systemSponsorAmount), 
                 hs.netRevenue
             )
             FROM HotelStatistic hs
@@ -99,7 +101,6 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
 
-    // 3. Cập nhật System Summary
     @Query("""
             SELECT new com.example.backend.dto.response.SystemStatisticSummary(
                 SUM(hs.completedBookings),
@@ -107,6 +108,8 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
                 SUM(hs.totalNoShow),
                 SUM(hs.grossRevenue),
                 SUM(hs.totalCommission),
+                SUM(hs.systemSponsorAmount),
+                (SUM(hs.totalCommission) - SUM(hs.systemSponsorAmount)),
                 SUM(hs.netRevenue)
             )
             FROM HotelStatistic hs
@@ -121,7 +124,6 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
 
-    // 4. Cập nhật Top Hotels
     @Query("""
             SELECT new com.example.backend.dto.response.HotelStatisticSummaryResponse(
                 h.id,
@@ -131,6 +133,8 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
                 SUM(hs.totalNoShow),
                 SUM(hs.grossRevenue),
                 SUM(hs.totalCommission),
+                SUM(hs.systemSponsorAmount),
+                (SUM(hs.totalCommission) - SUM(hs.systemSponsorAmount)),
                 SUM(hs.netRevenue)
             )
             FROM HotelStatistic hs
@@ -155,7 +159,6 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
 
-    // 5. Cập nhật biểu đồ hằng ngày
     @Query("""
             SELECT new com.example.backend.dto.response.DailyStatisticResponse(
                 hs.statDate,
@@ -164,6 +167,8 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
                 SUM(hs.totalNoShow),
                 SUM(hs.grossRevenue),
                 SUM(hs.totalCommission),
+                SUM(hs.systemSponsorAmount),
+                (SUM(hs.totalCommission) - SUM(hs.systemSponsorAmount)),
                 SUM(hs.netRevenue)
             )
             FROM HotelStatistic hs

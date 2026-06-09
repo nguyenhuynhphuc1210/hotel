@@ -7,14 +7,15 @@ import java.math.BigDecimal;
 @Data
 @AllArgsConstructor
 public class HotelStatisticSummaryResponse {
-    
+
     private Long hotelId;
     private String hotelName;
     private Long completedBookings;
     private Long totalCancelled;
     private Long totalNoShow;
-
     private BigDecimal grossRevenue;
     private BigDecimal totalCommission;
+    private BigDecimal systemSponsorAmount;
+    private BigDecimal platformNetProfit;
     private BigDecimal netRevenue;
 }
