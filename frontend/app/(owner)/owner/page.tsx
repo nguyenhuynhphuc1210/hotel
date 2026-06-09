@@ -285,16 +285,16 @@ export default function OwnerDashboardPage() {
 
   // Area chart — now has 3 revenue lanes
   const areaChartData = useMemo<ChartDataPoint[]>(() =>
-    (localData?.chartData ?? []).map((s: DailyStatisticResponse) => ({
-      date:       new Date(s.statDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
-      gross:      Number(s.grossRevenue    ?? 0),
-      commission: Number(s.totalCommission ?? 0),
-      net:        Number(s.netRevenue      ?? 0),
-      bookings:   Number(s.completedBookings ?? 0),
-      cancelled:  Number(s.totalCancelled    ?? 0),
-    })),
-    [localData]
-  )
+  (localData?.chartData ?? []).map((s: DailyStatisticResponse) => ({
+    date:       new Date(s.statDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+    gross:      Number(s.grossRevenue    ?? 0),
+    commission: Number(s.totalCommission ?? 0),
+    net:        Number(s.grossRevenue ?? 0) - Number(s.totalCommission ?? 0),  
+    bookings:   Number(s.completedBookings ?? 0),
+    cancelled:  Number(s.totalCancelled    ?? 0),
+  })),
+  [localData]
+)
 
   const cancelRateData = useMemo(() =>
     areaChartData.map(d => ({
@@ -401,7 +401,7 @@ export default function OwnerDashboardPage() {
                           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
                           <span className="text-gray-600 truncate">{d.name}</span>
                         </div>
-                        <span className="font-bold text-gray-800 shrink-0 ml-2">{fmtMoney(d.value)}₫</span>
+                        <span className="font-bold text-gray-800 shrink-0 ml-2">{d.value.toLocaleString('vi-VN')} ₫</span>
                       </div>
                     ))}
                   </div>

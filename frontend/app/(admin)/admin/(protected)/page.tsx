@@ -127,7 +127,7 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
           <span style={{ color: '#6B7280', fontSize: 11 }}>{p.name}:</span>
           <span style={{ fontWeight: 700, color: '#111827', fontSize: 11 }}>
-            {['Doanh thu', 'Hoa hồng', 'Net KS'].includes(p.name)
+            {['Doanh thu', 'Hoa hồng', 'Lợi nhuận', 'Tài trợ'].includes(p.name)
               ? Number(p.value).toLocaleString('vi-VN') + '₫'
               : p.value}
           </span>
@@ -192,15 +192,16 @@ export default function AdminDashboardPage() {
 
   // Chart data — now includes commission lanes
   const areaData = useMemo(() =>
-    (dashboard?.chartData ?? []).map(d => ({
-      date: new Date(d.statDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
-      'Doanh thu': Number(d.grossRevenue ?? 0),
-      'Hoa hồng': Number(d.totalCommission ?? 0),
-      'Net KS': Number(d.netRevenue ?? 0),
-      'Lượt đặt': d.completedBookings ?? 0,
-      'Huỷ': d.totalCancelled ?? 0,
-    })),
-    [dashboard])
+  (dashboard?.chartData ?? []).map(d => ({
+    date: new Date(d.statDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+    'Doanh thu': Number(d.grossRevenue ?? 0),
+    'Hoa hồng':  Number(d.totalCommission ?? 0),
+    'Tài trợ':   Number(d.systemSponsorAmount ?? 0),
+    'Lợi nhuận': Number(d.totalCommission ?? 0) - Number(d.systemSponsorAmount ?? 0),
+    'Lượt đặt':  d.completedBookings ?? 0,
+    'Huỷ':       d.totalCancelled ?? 0,
+  })),
+  [dashboard])
 
   const pieData = useMemo(() => {
     const s = dashboard?.summary
@@ -310,7 +311,7 @@ export default function AdminDashboardPage() {
       )}
 
       {/* ── KPI Row ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 20 }}>
         <KpiCard icon={Building2} label="Khách sạn" value={(dashboard?.totalHotels ?? 0).toLocaleString()} unit="" sub="Tổng cơ sở" accent="#3B82F6"
           badge={pendingHotelsCount > 0 ? `${pendingHotelsCount} chờ duyệt` : undefined} />
         <KpiCard icon={CalendarCheck} label="Đặt phòng" value={(dashboard?.totalBookings ?? 0).toLocaleString()} unit="" sub={`${summary?.completedBookings ?? 0} hoàn thành`} accent="#8B5CF6" />
@@ -363,9 +364,29 @@ export default function AdminDashboardPage() {
                   tickFormatter={v => v >= 1_000_000 ? (v / 1_000_000).toFixed(0) + 'M' : String(v)} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                <Area type="monotone" dataKey="Doanh thu" stroke="#3B82F6" strokeWidth={2} fill="url(#gGross)" dot={false} />
-                <Area type="monotone" dataKey="Hoa hồng" stroke="#F59E0B" strokeWidth={1.5} fill="url(#gComm)" dot={false} strokeDasharray="5 3" />
-                <Area type="monotone" dataKey="Net KS" stroke="#10B981" strokeWidth={2} fill="url(#gNet)" dot={false} />
+                <Area 
+  type="monotone" dataKey="Doanh thu" 
+  stroke="#3B82F6" strokeWidth={2} 
+  fill="url(#gGross)" 
+  dot={{ r: 4, fill: '#3B82F6', strokeWidth: 0 }}
+  activeDot={{ r: 6 }}
+/>
+<Area 
+  type="monotone" dataKey="Hoa hồng"  
+  stroke="#F59E0B" strokeWidth={1.5} 
+  fill="url(#gComm)" 
+  dot={{ r: 4, fill: '#F59E0B', strokeWidth: 0 }}
+  activeDot={{ r: 6 }}
+  strokeDasharray="5 3" 
+/>
+<Area 
+  type="monotone" dataKey="Lợi nhuận"    
+  stroke="#10B981" strokeWidth={2} 
+  fill="url(#gNet)" 
+  dot={{ r: 4, fill: '#10B981', strokeWidth: 0 }}
+  activeDot={{ r: 6 }}
+/>
+
               </AreaChart>
             </ResponsiveContainer>
           )}
