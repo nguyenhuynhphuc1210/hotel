@@ -401,7 +401,7 @@ public class BookingServiceImpl implements BookingService {
         return enrichBookingResponse(savedBooking);
     }
 
-@Override
+    @Override
     @Transactional
     public BookingResponse updateBookingStatus(
             Long bookingId,
@@ -527,21 +527,22 @@ public class BookingServiceImpl implements BookingService {
 
             if (newStatus == BookingStatus.COMPLETED) {
 
-                hotelGrossAmount = Optional.ofNullable(savedBooking.getTotalAmount())
-                        .orElse(BigDecimal.ZERO);
+                boolean isSystemPromotion = savedBooking.getPromotion() != null
+                        && savedBooking.getPromotion().getHotel() == null;
 
                 BigDecimal originalCommission = Optional.ofNullable(savedBooking.getCommissionAmount())
                         .orElse(BigDecimal.ZERO);
-
-                boolean isSystemPromotion = savedBooking.getPromotion() != null
-                        && savedBooking.getPromotion().getHotel() == null;
 
                 BigDecimal discountAmount = Optional.ofNullable(savedBooking.getDiscountAmount())
                         .orElse(BigDecimal.ZERO);
 
                 if (isSystemPromotion) {
+                    hotelGrossAmount = Optional.ofNullable(savedBooking.getSubtotal())
+                            .orElse(BigDecimal.ZERO);
                     statisticCommission = originalCommission.subtract(discountAmount);
                 } else {
+                    hotelGrossAmount = Optional.ofNullable(savedBooking.getTotalAmount())
+                            .orElse(BigDecimal.ZERO);
                     statisticCommission = originalCommission;
                 }
 
@@ -718,7 +719,7 @@ public class BookingServiceImpl implements BookingService {
 
         BigDecimal commission = Optional.ofNullable(booking.getCommissionAmount())
                 .orElse(BigDecimal.ZERO);
-                
+
         BigDecimal discount = Optional.ofNullable(booking.getDiscountAmount())
                 .orElse(BigDecimal.ZERO);
 
@@ -748,7 +749,7 @@ public class BookingServiceImpl implements BookingService {
 
         } else if (isOwnerOfThisHotel) {
 
-            response.setActualCommissionAmount(actualCommission); 
+            response.setActualCommissionAmount(actualCommission);
             response.setHotelNetAmount(hotelNetAmount);
 
         } else {
