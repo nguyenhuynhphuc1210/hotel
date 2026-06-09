@@ -401,7 +401,7 @@ public class BookingServiceImpl implements BookingService {
         return enrichBookingResponse(savedBooking);
     }
 
-    @Override
+@Override
     @Transactional
     public BookingResponse updateBookingStatus(
             Long bookingId,
@@ -527,17 +527,14 @@ public class BookingServiceImpl implements BookingService {
 
             if (newStatus == BookingStatus.COMPLETED) {
 
-                boolean isSystemPromotion = savedBooking.getPromotion() != null
-                        && savedBooking.getPromotion().getHotel() == null;
-
-                hotelGrossAmount = isSystemPromotion
-                        ? Optional.ofNullable(savedBooking.getSubtotal())
-                                .orElse(BigDecimal.ZERO)
-                        : Optional.ofNullable(savedBooking.getTotalAmount())
-                                .orElse(BigDecimal.ZERO);
+                hotelGrossAmount = Optional.ofNullable(savedBooking.getTotalAmount())
+                        .orElse(BigDecimal.ZERO);
 
                 BigDecimal originalCommission = Optional.ofNullable(savedBooking.getCommissionAmount())
                         .orElse(BigDecimal.ZERO);
+
+                boolean isSystemPromotion = savedBooking.getPromotion() != null
+                        && savedBooking.getPromotion().getHotel() == null;
 
                 BigDecimal discountAmount = Optional.ofNullable(savedBooking.getDiscountAmount())
                         .orElse(BigDecimal.ZERO);
