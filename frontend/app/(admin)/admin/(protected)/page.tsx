@@ -101,39 +101,6 @@ function KpiCard({
   )
 }
 
-// ── Commission breakdown card ─────────────────────────────────────────────────
-function CommissionCard({ gross, commission, net }: { gross: number; commission: number; net: number }) {
-  const pct = gross > 0 ? ((commission / gross) * 100).toFixed(1) : '0.0'
-  return (
-    <div style={{
-      background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-      borderRadius: 16, padding: '24px', color: '#fff',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-        <Percent size={15} color="#94A3B8" />
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Phân tích hoa hồng</span>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 20 }}>
-        {[
-          { label: 'Doanh thu gộp', val: gross, color: '#94A3B8' },
-          { label: 'Hoa hồng hệ thống', val: commission, color: '#F59E0B' },
-          { label: 'Chủ KS nhận', val: net, color: '#34D399' },
-        ].map(({ label, val, color }) => (
-          <div key={label}>
-            <p style={{ fontSize: 10, color: '#64748B', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
-            <p style={{ fontSize: 18, fontWeight: 800, color, letterSpacing: '-0.02em' }}>
-  {val.toLocaleString('vi-VN')}
-  <span style={{ fontSize: 11, fontWeight: 500, marginLeft: 2 }}>₫</span>
-</p>
-          </div>
-        ))}
-      </div>
-      
-    </div>
-  )
-}
-
 // ── Custom Tooltip ─────────────────────────────────────────────────────────────
 interface TooltipEntry {
   name: string
@@ -361,14 +328,7 @@ export default function AdminDashboardPage() {
   unit="₫" sub="Sau trừ hoa hồng" accent="#10B981" />
       </div>
 
-      {/* ── Commission dark card ── */}
-      <div style={{ marginBottom: 20 }}>
-        <CommissionCard
-          gross={Number(summary?.grossRevenue ?? 0)}
-          commission={Number(summary?.totalCommission ?? 0)}
-          net={Number(summary?.netRevenue ?? 0)}
-        />
-      </div>
+  
 
       {/* ── Area chart ── */}
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24, marginBottom: 20 }}>

@@ -132,35 +132,6 @@ function StatCard({ icon: Icon, label, value, sub, color }: StatCardProps) {
   )
 }
 
-// ── Commission Block (dark card) ───────────────────────────────────────────────
-function CommissionBlock({ gross, commission, net, label }: {
-  gross: number; commission: number; net: number; label: string
-}) {
-  const pct = gross > 0 ? ((commission / gross) * 100).toFixed(1) : '0.0'
-  return (
-    <div className="bg-slate-900 rounded-2xl p-6 text-white">
-      <div className="flex items-center gap-2 mb-5">
-        <Percent size={14} className="text-slate-400" />
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{label}</span>
-      </div>
-      <div className="grid grid-cols-3 gap-4 mb-5">
-        {([
-          { l: 'Doanh thu gộp',      v: gross,      c: '#94A3B8' },
-          { l: 'Hoa hồng hệ thống',  v: commission, c: '#F59E0B' },
-          { l: 'Chủ KS nhận',        v: net,        c: '#34D399' },
-        ] as const).map(({ l, v, c }) => (
-          <div key={l}>
-            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1.5">{l}</p>
-            <p className="text-lg font-black leading-none" style={{ color: c }}>
-              {fmtMoney(v)}<span className="text-xs font-medium ml-0.5">₫</span>
-            </p>
-          </div>
-        ))}
-      </div>      
-    </div>
-  )
-}
-
 // ── Recent Booking Card ────────────────────────────────────────────────────────
 function RecentBookingCard({ booking: b }: { booking: RecentBookingResponse }) {
   return (
@@ -377,13 +348,7 @@ export default function OwnerDashboardPage() {
           <StatCard icon={EyeOff}          color="orange" label="No-show"           value={String(gs?.totalNoShow       ?? 0)}         sub="Tất cả KS" />
         </div>
 
-        {/* Commission breakdown dark block */}
-        <CommissionBlock
-          gross={Number(gs?.grossRevenue ?? 0)}
-          commission={Number(gs?.totalCommission ?? 0)}
-          net={Number(gs?.netRevenue ?? 0)}
-          label="Phân tích hoa hồng — toàn hệ thống"
-        />
+        
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Bar chart: so sánh KS — gross vs net */}
@@ -464,13 +429,7 @@ export default function OwnerDashboardPage() {
               <StatCard icon={EyeOff}          color="orange" label="No-show"          value={String(ls.totalNoShow       ?? 0)}          sub="Không đến" />
             </div>
 
-            {/* Local commission block */}
-            <CommissionBlock
-              gross={Number(ls.grossRevenue ?? 0)}
-              commission={Number(ls.totalCommission ?? 0)}
-              net={Number(ls.netRevenue ?? 0)}
-              label={`Phân tích hoa hồng — ${activeHotel?.hotelName ?? 'KS đang chọn'}`}
-            />
+            
           </>
         )}
 

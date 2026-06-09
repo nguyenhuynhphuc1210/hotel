@@ -27,39 +27,6 @@ function calcNights(checkIn: string, checkOut: string): number {
   return Math.ceil(ms / 86_400_000)
 }
 
-// ── Commission Summary Strip ───────────────────────────────────────────────────
-function CommissionStrip({ bookings }: { bookings: BookingResponse[] }) {
-  const completed = bookings.filter(b => b.status === 'COMPLETED')
-  const totalGross = completed.reduce((s, b) => s + Number(b.totalAmount), 0)
-  const totalComm = completed.reduce((s, b) => s + Number(b.commissionAmount ?? 0), 0)
-  const totalNet = completed.reduce((s, b) => s + Number(b.hotelNetAmount ?? 0), 0)
-  const avgPct = completed.length > 0
-    ? (completed.reduce((s, b) => s + Number(b.commissionPercent ?? 0), 0) / completed.length).toFixed(1)
-    : '0.0'
-
-  return (
-    <div className="grid grid-cols-4 gap-3">
-      {([
-        { label: 'Doanh thu gộp', val: totalGross, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100', icon: TrendingUp },
-        { label: 'Hoa hồng hệ thống', val: totalComm, color: 'text-amber-600', bg: 'bg-amber-50  border-amber-100', icon: Percent },
-        { label: 'Net chủ KS nhận', val: totalNet, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: BadgeDollarSign },
-      ] as const).map(({ label, val, color, bg, icon: Icon }) => (
-        <div key={label} className={cn('rounded-2xl border p-5 relative overflow-hidden', bg)}>
-          <div className="flex items-center gap-2 mb-3">
-            <Icon size={14} className={color} />
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
-          </div>
-          <p className={cn('text-xl font-black leading-none', color)}>
-            {val.toLocaleString('vi-VN')}<span className="text-xs font-medium ml-0.5 text-gray-400">₫</span>
-          </p>
-          <p className="text-[10px] text-gray-400 mt-1.5">{completed.length} đơn hoàn thành (trang này)</p>
-        </div>
-      ))}
-
-    </div>
-  )
-}
-
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function OwnerBookingsPage() {
   const [keyword, setKeyword] = useState('')
@@ -173,9 +140,6 @@ export default function OwnerBookingsPage() {
           )
         })}
       </div>
-
-      {/* ── Commission strip (current page) ── */}
-      <CommissionStrip bookings={bookings} />
 
       {/* ── Filters ── */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -499,40 +463,6 @@ function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }:
               <p className="text-sm font-black text-blue-900">
                 {new Date(b.checkOutDate + 'T00:00:00').toLocaleDateString('vi-VN')}
               </p>
-            </div>
-          </div>
-
-          {/* Commission dark block */}
-          <div className="bg-slate-900 rounded-2xl p-5">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-4">Phân tích hoa hồng</p>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              {([
-                { l: 'Doanh thu gộp', v: gross, c: '#94A3B8' },
-                { l: 'Hoa hồng hệ thống', v: actual, c: '#F59E0B' },
-                { l: 'Chủ KS nhận', v: net, c: '#34D399' },
-              ] as const).map(({ l, v, c }) => (
-                <div key={l}>
-                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1">{l}</p>
-                  <p className="text-base font-black leading-none" style={{ color: c }}>
-                    {v.toLocaleString('vi-VN')}<span className="text-[10px] font-medium ml-0.5">₫</span>
-                  </p>
-                </div>
-              ))}
-            </div>
-            <div>
-              <div className="flex justify-between mb-1.5">
-                <span className="text-[10px] text-slate-500">Tỷ lệ hoa hồng</span>
-                <span className="text-xs font-bold text-amber-400">{pct}%</span>
-              </div>
-              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-400 rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
-              </div>
-              {b.commissionAmount !== b.actualCommissionAmount && b.actualCommissionAmount != null && (
-                <p className="text-[10px] text-slate-500 mt-2">
-                  Dự kiến: {comm.toLocaleString('vi-VN')}₫ · Thực thu:{' '}
-                  <span className="text-emerald-400 font-bold">{actual.toLocaleString('vi-VN')}₫</span>
-                </p>
-              )}
             </div>
           </div>
 

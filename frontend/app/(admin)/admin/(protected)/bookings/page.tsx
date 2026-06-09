@@ -29,41 +29,6 @@ function calcNights(checkIn: string, checkOut: string): number {
   return Math.ceil(ms / 86_400_000)
 }
 
-// ── Commission Summary Strip ───────────────────────────────────────────────────
-function CommissionStrip({ bookings }: { bookings: BookingResponse[] }) {
-  const completed = bookings.filter(b => b.status === 'COMPLETED')
-  const totalGross = completed.reduce((s, b) => s + Number(b.totalAmount), 0)
-  const totalComm  = completed.reduce((s, b) => s + Number(b.commissionAmount ?? 0), 0)
-  const totalNet   = completed.reduce((s, b) => s + Number(b.hotelNetAmount ?? 0), 0)
-  const avgPct     = completed.length > 0
-    ? (completed.reduce((s, b) => s + Number(b.commissionPercent ?? 0), 0) / completed.length).toFixed(1)
-    : '0.0'
-
-  const items = [
-    { label: 'Doanh thu gộp (trang hiện tại)', val: totalGross, color: '#6366F1', icon: TrendingDown },
-    { label: 'Tổng hoa hồng hệ thống',         val: totalComm,  color: '#F59E0B', icon: Percent },
-    { label: 'Net chủ KS nhận',                val: totalNet,   color: '#10B981', icon: BadgeDollarSign },
-  ]
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr) auto', gap: 12, marginBottom: 20 }}>
-      {items.map(({ label, val, color, icon: Icon }) => (
-        <div key={label} style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 14, padding: '16px 18px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: color, borderRadius: '14px 14px 0 0' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            <Icon size={13} color={color} />
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
-          </div>
-          <p style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-            {val.toLocaleString('vi-VN')} <span style={{ fontSize: 11, fontWeight: 500, color: '#9CA3AF' }}>₫</span>
-          </p>
-          <p style={{ fontSize: 10, color: '#CBD5E1', marginTop: 4 }}>Đơn hoàn thành · {completed.length} đơn</p>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function AdminBookingsPage() {
   const [keyword, setKeyword]       = useState('')
@@ -162,9 +127,6 @@ export default function AdminBookingsPage() {
           )
         })}
       </div>
-
-      {/* Commission strip — computed from current page bookings */}
-      <CommissionStrip bookings={bookings} />
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
@@ -440,26 +402,7 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
               <p style={{ fontSize: 10, fontWeight: 700, color: '#93C5FD', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 4px' }}>Check-out</p>
               <p style={{ fontSize: 13, fontWeight: 800, color: '#1E40AF', margin: 0 }}>{new Date(b.checkOutDate + 'T00:00:00').toLocaleDateString('vi-VN')}</p>
             </div>
-          </div>
-
-          {/* Commission breakdown */}
-          <div style={{ background: '#0F172A', borderRadius: 14, padding: '18px 20px' }}>
-            {section('Phân tích hoa hồng')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 14 }}>
-              {[
-                { label: 'Doanh thu gộp', val: gross, color: '#94A3B8' },
-                { label: 'Hoa hồng hệ thống', val: actual, color: '#F59E0B' },
-                { label: 'Chủ KS nhận', val: net, color: '#34D399' },
-              ].map(({ label, val, color }) => (
-                <div key={label}>
-                  <p style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 6px', fontWeight: 600 }}>{label}</p>
-                  <p style={{ fontSize: 15, fontWeight: 800, color, margin: 0, letterSpacing: '-0.02em' }}>
-                    {val.toLocaleString('vi-VN')}<span style={{ fontSize: 10, fontWeight: 500, marginLeft: 1 }}>₫</span>
-                  </p>
-                </div>
-              ))}
-            </div>            
-          </div>
+          </div>      
 
           {/* Price breakdown */}
           <div style={{ background: '#F8FAFC', borderRadius: 12, padding: '14px 16px' }}>
