@@ -106,7 +106,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                             h.hotelName,
                             b.totalAmount,
                             b.commissionAmount,
-                            (b.totalAmount - b.commissionAmount),
+                            (CASE
+                                WHEN pr IS NOT NULL AND pr.hotel IS NULL
+                                THEN (b.totalAmount + b.discountAmount - b.commissionAmount)
+                                ELSE (b.totalAmount - b.commissionAmount)
+                            END),
                             b.status,
                             p.status,
                             b.checkInDate,
@@ -118,6 +122,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                         JOIN h.owner o
                         JOIN b.user u
                         LEFT JOIN Payment p ON p.booking = b
+                        LEFT JOIN b.promotion pr
                         WHERE (:ownerEmail IS NULL OR o.email = :ownerEmail)
                           AND (:ownerId IS NULL OR o.id = :ownerId)
                           AND (:hotelId IS NULL OR h.id = :hotelId)

@@ -167,9 +167,9 @@ public interface HotelStatisticRepository extends JpaRepository<HotelStatistic, 
                 SUM(hs.totalNoShow),
                 SUM(hs.grossRevenue),
                 SUM(hs.totalCommission),
+                SUM(hs.netRevenue),
                 SUM(hs.systemSponsorAmount),
-                (SUM(hs.totalCommission) - SUM(hs.systemSponsorAmount)),
-                SUM(hs.netRevenue)
+                (SUM(hs.totalCommission) - SUM(hs.systemSponsorAmount))
             )
             FROM HotelStatistic hs
             JOIN hs.hotel h
