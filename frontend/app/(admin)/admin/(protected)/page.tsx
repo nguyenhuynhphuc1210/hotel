@@ -55,17 +55,6 @@ const PAYMENT_STATUS: Record<string, { label: string; color: string }> = {
   CANCELLED: { label: 'Đã huỷ',    color: '#EF4444' },
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function fmt(val: number): string {
-  if (val >= 1_000_000_000) return (val / 1_000_000_000).toFixed(2) + ' tỷ'
-  if (val >= 1_000_000)     return (val / 1_000_000).toFixed(1) + ' tr'
-  return val.toLocaleString('vi-VN')
-}
-
-function fmtFull(val: number): string {
-  return val.toLocaleString('vi-VN') + ' ₫'
-}
-
 // ── Stat Card ─────────────────────────────────────────────────────────────────
 function KpiCard({
   label, value, unit = '₫', sub, accent, icon: Icon, badge,
@@ -133,25 +122,14 @@ function CommissionCard({ gross, commission, net }: { gross: number; commission:
         ].map(({ label, val, color }) => (
           <div key={label}>
             <p style={{ fontSize: 10, color: '#64748B', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
-            <p style={{ fontSize: 18, fontWeight: 800, color, letterSpacing: '-0.02em' }}>{fmt(val)}<span style={{ fontSize: 11, fontWeight: 500, marginLeft: 2 }}>₫</span></p>
+            <p style={{ fontSize: 18, fontWeight: 800, color, letterSpacing: '-0.02em' }}>
+  {val.toLocaleString('vi-VN')}
+  <span style={{ fontSize: 11, fontWeight: 500, marginLeft: 2 }}>₫</span>
+</p>
           </div>
         ))}
       </div>
-
-      {/* progress bar */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: '#64748B' }}>Tỷ lệ hoa hồng</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>{pct}%</span>
-        </div>
-        <div style={{ height: 6, background: '#1E3A5F', borderRadius: 999, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #F59E0B, #FBBF24)', borderRadius: 999 }} />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-          <span style={{ fontSize: 10, color: '#475569' }}>0%</span>
-          <span style={{ fontSize: 10, color: '#475569' }}>Trả chủ KS: {(100 - Number(pct)).toFixed(1)}%</span>
-        </div>
-      </div>
+      
     </div>
   )
 }
@@ -370,9 +348,17 @@ export default function AdminDashboardPage() {
           badge={pendingHotelsCount > 0 ? `${pendingHotelsCount} chờ duyệt` : undefined} />
         <KpiCard icon={CalendarCheck} label="Đặt phòng" value={(dashboard?.totalBookings ?? 0).toLocaleString()} unit="" sub={`${summary?.completedBookings ?? 0} hoàn thành`} accent="#8B5CF6" />
         <KpiCard icon={Users} label="Người dùng" value={(dashboard?.totalUsers ?? 0).toLocaleString()} unit="" sub="Khách & chủ sở hữu" accent="#0EA5E9" />
-        <KpiCard icon={TrendingUp} label="Doanh thu gộp" value={fmt(Number(summary?.grossRevenue ?? 0))} sub="Trước hoa hồng" accent="#F59E0B" />
-        <KpiCard icon={Percent} label="Hoa hồng" value={fmt(Number(summary?.totalCommission ?? 0))} sub="Thu của hệ thống" accent="#EF4444" />
-        <KpiCard icon={BadgeDollarSign} label="Net KS nhận" value={fmt(Number(summary?.netRevenue ?? 0))} sub="Sau trừ hoa hồng" accent="#10B981" />
+        <KpiCard icon={TrendingUp} label="Doanh thu gộp"
+          value={Number(summary?.grossRevenue ?? 0).toLocaleString('vi-VN')}
+  unit="₫" sub="Trước hoa hồng" accent="#F59E0B" />
+
+<KpiCard icon={Percent} label="Hoa hồng"
+  value={Number(summary?.totalCommission ?? 0).toLocaleString('vi-VN')}
+  unit="₫" sub="Thu của hệ thống" accent="#EF4444" />
+
+<KpiCard icon={BadgeDollarSign} label="Net KS nhận"
+  value={Number(summary?.netRevenue ?? 0).toLocaleString('vi-VN')}
+  unit="₫" sub="Sau trừ hoa hồng" accent="#10B981" />
       </div>
 
       {/* ── Commission dark card ── */}
@@ -471,14 +457,20 @@ export default function AdminDashboardPage() {
                           <p style={{ fontSize: 13, fontWeight: 700, color: '#1E293B', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.hotelName}</p>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-                          <p style={{ fontSize: 13, fontWeight: 800, color: '#059669', margin: 0 }}>{fmt(gross)} ₫</p>
-                          <p style={{ fontSize: 10, color: '#F59E0B', margin: '1px 0 0', fontWeight: 600 }}>HC: {fmt(comm)} ₫</p>
+                          <p style={{ fontSize: 13, fontWeight: 800, color: '#059669', margin: 0 }}>
+  {gross.toLocaleString('vi-VN')} ₫
+</p>
+<p style={{ fontSize: 10, color: '#F59E0B', margin: '1px 0 0', fontWeight: 600 }}>
+  HC: {comm.toLocaleString('vi-VN')} ₫
+</p>
                         </div>
                       </div>
                       <div style={{ height: 5, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #3B82F6, #6366F1)', borderRadius: 999 }} />
                       </div>
-                      <p style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>{h.completedBookings} đặt · Net: {fmt(net)} ₫</p>
+                      <p style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>
+  {h.completedBookings} đặt · Net: {net.toLocaleString('vi-VN')} ₫
+</p>
                     </div>
                   )
                 })}

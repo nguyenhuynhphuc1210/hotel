@@ -96,10 +96,11 @@ function RoomCard({
     const searchParams = useSearchParams();
     const childAgesRaw = searchParams.getAll('childAges').map(Number);
 
-    const freeChildren = childAgesRaw.filter(age => age >= 0 && age <= 5).slice(0, 1);
-    const adultChildrenCount = childAgesRaw.filter(age => age >= 6).length;
-
-    const totalEffectiveAdults = adults + adultChildrenCount;
+    const under6 = childAgesRaw.filter(age => age >= 0 && age <= 5);
+const freeChildren = under6.slice(0, 1);               
+const paidUnder6Count = Math.max(0, under6.length - 1); 
+const adultChildrenCount = childAgesRaw.filter(age => age >= 6).length;
+const totalEffectiveAdults = adults + adultChildrenCount + paidUnder6Count;
 
 
 
@@ -243,13 +244,6 @@ function RoomCard({
                                     Trẻ em {freeChildren[0] === 0 ? 'dưới 1 tuổi' : `${freeChildren[0]} tuổi`} lưu trú miễn phí với giường có sẵn
                                 </span>
                             </div>
-
-                            {childAgesRaw.filter(age => age >= 0 && age <= 5).length > 1 && (
-                                <div className="flex items-center gap-1.5 text-amber-600 font-medium text-[12px] mt-1">
-                                    <span>⚠️</span>
-                                    <span>Chỉ miễn phí cho <span className="font-bold">1 trẻ</span> — các trẻ còn lại có thể phát sinh phụ phí</span>
-                                </div>
-                            )}
                         </div>
                     )}
 

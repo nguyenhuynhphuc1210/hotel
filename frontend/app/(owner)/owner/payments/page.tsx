@@ -117,38 +117,6 @@ function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | 
   )
 }
 
-// ── Revenue KPI Strip ──────────────────────────────────────────────────────────
-function RevenueStrip({ gross, commission, net }: { gross: number; commission: number; net: number }) {
-  const pct = gross > 0 ? ((commission / gross) * 100).toFixed(1) : '0.0'
-  return (
-    <div className="grid grid-cols-4 gap-3">
-      {([
-        { label: 'Doanh thu gộp',     val: gross,      color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100',   icon: TrendingUp      },
-        { label: 'Hoa hồng hệ thống', val: commission, color: 'text-amber-600',  bg: 'bg-amber-50  border-amber-100',    icon: Percent         },
-        { label: 'Net KS nhận',       val: net,        color: 'text-emerald-600',bg: 'bg-emerald-50 border-emerald-100', icon: BadgeDollarSign  },
-      ] as const).map(({ label, val, color, bg, icon: Icon }) => (
-        <div key={label} className={`rounded-2xl border p-5 ${bg}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <Icon size={14} className={color} />
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
-          </div>
-          <p className={`text-xl font-black leading-none ${color}`}>
-            {val >= 1_000_000 ? (val / 1_000_000).toFixed(1) + 'M' : val.toLocaleString('vi-VN')}
-            <span className="text-xs font-medium ml-0.5 text-gray-400">₫</span>
-          </p>
-        </div>
-      ))}
-      <div className="bg-slate-900 rounded-2xl p-5 flex flex-col justify-between">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tỷ lệ HC</span>
-        <div>
-          <p className="text-3xl font-black text-amber-400 leading-none">{pct}%</p>
-          <p className="text-[10px] text-slate-600 mt-1.5">Hoa hồng / doanh thu gộp</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function OwnerPaymentsPage() {
   const { activeHotelId, hotels, setActiveHotelId, isLoading: isHotelLoading } = useOwnerHotel()
@@ -254,9 +222,6 @@ export default function OwnerPaymentsPage() {
           ))}
         </div>
       )}
-
-      {/* Revenue KPI strip */}
-      <RevenueStrip gross={gross} commission={commission} net={net} />
 
       {/* Status chips */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">

@@ -27,27 +27,22 @@ function calcNights(checkIn: string, checkOut: string): number {
   return Math.ceil(ms / 86_400_000)
 }
 
-function fmt(v: number): string {
-  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'M'
-  return v.toLocaleString('vi-VN')
-}
-
 // ── Commission Summary Strip ───────────────────────────────────────────────────
 function CommissionStrip({ bookings }: { bookings: BookingResponse[] }) {
-  const completed  = bookings.filter(b => b.status === 'COMPLETED')
-  const totalGross = completed.reduce((s, b) => s + Number(b.totalAmount),              0)
-  const totalComm  = completed.reduce((s, b) => s + Number(b.commissionAmount  ?? 0),   0)
-  const totalNet   = completed.reduce((s, b) => s + Number(b.hotelNetAmount    ?? 0),   0)
-  const avgPct     = completed.length > 0
+  const completed = bookings.filter(b => b.status === 'COMPLETED')
+  const totalGross = completed.reduce((s, b) => s + Number(b.totalAmount), 0)
+  const totalComm = completed.reduce((s, b) => s + Number(b.commissionAmount ?? 0), 0)
+  const totalNet = completed.reduce((s, b) => s + Number(b.hotelNetAmount ?? 0), 0)
+  const avgPct = completed.length > 0
     ? (completed.reduce((s, b) => s + Number(b.commissionPercent ?? 0), 0) / completed.length).toFixed(1)
     : '0.0'
 
   return (
     <div className="grid grid-cols-4 gap-3">
       {([
-        { label: 'Doanh thu gộp',        val: totalGross, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100', icon: TrendingUp     },
-        { label: 'Hoa hồng hệ thống',    val: totalComm,  color: 'text-amber-600',  bg: 'bg-amber-50  border-amber-100',  icon: Percent        },
-        { label: 'Net chủ KS nhận',      val: totalNet,   color: 'text-emerald-600',bg: 'bg-emerald-50 border-emerald-100',icon: BadgeDollarSign },
+        { label: 'Doanh thu gộp', val: totalGross, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100', icon: TrendingUp },
+        { label: 'Hoa hồng hệ thống', val: totalComm, color: 'text-amber-600', bg: 'bg-amber-50  border-amber-100', icon: Percent },
+        { label: 'Net chủ KS nhận', val: totalNet, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: BadgeDollarSign },
       ] as const).map(({ label, val, color, bg, icon: Icon }) => (
         <div key={label} className={cn('rounded-2xl border p-5 relative overflow-hidden', bg)}>
           <div className="flex items-center gap-2 mb-3">
@@ -55,46 +50,38 @@ function CommissionStrip({ bookings }: { bookings: BookingResponse[] }) {
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
           </div>
           <p className={cn('text-xl font-black leading-none', color)}>
-            {fmt(val)}<span className="text-xs font-medium ml-0.5 text-gray-400">₫</span>
+            {val.toLocaleString('vi-VN')}<span className="text-xs font-medium ml-0.5 text-gray-400">₫</span>
           </p>
           <p className="text-[10px] text-gray-400 mt-1.5">{completed.length} đơn hoàn thành (trang này)</p>
         </div>
       ))}
 
-      {/* Avg rate — dark chip */}
-      <div className="bg-slate-900 rounded-2xl p-5 flex flex-col justify-between">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tỷ lệ HC trung bình</span>
-        <div>
-          <p className="text-3xl font-black text-amber-400 leading-none">{avgPct}%</p>
-          <p className="text-[10px] text-slate-600 mt-1.5">Hoa hồng / doanh thu gộp</p>
-        </div>
-      </div>
     </div>
   )
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function OwnerBookingsPage() {
-  const [keyword,      setKeyword]      = useState('')
+  const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<BookingStatus | ''>('')
-  const [detailBooking,setDetailBooking]= useState<BookingResponse | null>(null)
-  const [currentPage,  setCurrentPage]  = useState(0)
-  const [isExporting,  setIsExporting]  = useState(false)
+  const [detailBooking, setDetailBooking] = useState<BookingResponse | null>(null)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [isExporting, setIsExporting] = useState(false)
   const pageSize = 10
 
   const queryClient = useQueryClient()
   const { activeHotel, activeHotelId, isLoading: isHotelLoading } = useOwnerHotel()
 
-  const handleKeywordChange = (val: string) => { setKeyword(val);      setCurrentPage(0) }
-  const handleStatusChange  = (val: BookingStatus | '') => { setStatusFilter(val); setCurrentPage(0) }
+  const handleKeywordChange = (val: string) => { setKeyword(val); setCurrentPage(0) }
+  const handleStatusChange = (val: BookingStatus | '') => { setStatusFilter(val); setCurrentPage(0) }
 
   // ── Main table data ──
   const { data: bookingsPage, isLoading: isBookingsLoading } = useQuery({
     queryKey: ['owner-bookings', activeHotelId, currentPage, keyword, statusFilter],
-    queryFn:  () => bookingApi.getAll(currentPage, pageSize, {
-      keyword:  keyword || undefined,
-      status:   statusFilter || undefined,
-      hotelId:  activeHotelId ?? undefined,
+    queryFn: () => bookingApi.getAll(currentPage, pageSize, {
+      keyword: keyword || undefined,
+      status: statusFilter || undefined,
+      hotelId: activeHotelId ?? undefined,
     }).then(r => r.data),
     enabled: !!activeHotelId,
   })
@@ -103,11 +90,11 @@ export default function OwnerBookingsPage() {
   const statusQueries = useQueries({
     queries: BOOKING_STAT_STATUSES.map(s => ({
       queryKey: ['owner-booking-count', activeHotelId, s],
-      queryFn:  () => bookingApi.getAll(0, 1, {
-        status:  s as BookingStatus,
+      queryFn: () => bookingApi.getAll(0, 1, {
+        status: s as BookingStatus,
         hotelId: activeHotelId ?? undefined,
       }).then(r => r.data.totalElements ?? 0),
-      enabled:   !!activeHotelId,
+      enabled: !!activeHotelId,
       staleTime: 30_000,
     })),
   })
@@ -121,8 +108,8 @@ export default function OwnerBookingsPage() {
     mutationFn: ({ id, status }: { id: number; status: BookingStatus }) =>
       bookingApi.updateStatus(id, status),
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['owner-bookings',       activeHotelId] })
-      queryClient.invalidateQueries({ queryKey: ['owner-booking-count',  activeHotelId] })
+      queryClient.invalidateQueries({ queryKey: ['owner-bookings', activeHotelId] })
+      queryClient.invalidateQueries({ queryKey: ['owner-booking-count', activeHotelId] })
       toast.success(`Đã cập nhật: ${BOOKING_STATUS_CONFIG[vars.status]?.label ?? vars.status}`)
       setDetailBooking(null)
     },
@@ -140,7 +127,7 @@ export default function OwnerBookingsPage() {
       await exportBookings({ keyword: keyword || undefined, status: statusFilter || undefined, hotelId: activeHotelId })
       toast.success('Xuất file thành công!')
     } catch { toast.error('Xuất file thất bại, vui lòng thử lại.') }
-    finally   { setIsExporting(false) }
+    finally { setIsExporting(false) }
   }
 
   if (!activeHotel && !isHotelLoading) {
@@ -168,8 +155,8 @@ export default function OwnerBookingsPage() {
       {/* ── Status chips ── */}
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         {BOOKING_STAT_STATUSES.map(s => {
-          const cfg    = BOOKING_STATUS_CONFIG[s]
-          const Icon   = cfg.icon
+          const cfg = BOOKING_STATUS_CONFIG[s]
+          const Icon = cfg.icon
           const active = statusFilter === s
           return (
             <button key={s} onClick={() => handleStatusChange(active ? '' : s)}
@@ -229,12 +216,12 @@ export default function OwnerBookingsPage() {
               <tr>
                 {[
                   'Mã booking', 'Khách', 'Ngày đặt', 'Lưu trú',
-                  'Doanh thu', 'HC%', 'Hoa hồng', 'Net KS',
+                  'Doanh thu', 'Hoa hồng', 'Net KS',
                   'Thanh toán', 'Trạng thái', '',
                 ].map(h => (
                   <th key={h} className={cn(
                     'text-left px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap',
-                    ['Hoa hồng', 'Net KS', 'HC%'].includes(h) && 'border-l border-gray-100',
+                    ['Hoa hồng', 'Net KS'].includes(h) && 'border-l border-gray-100',
                   )}>{h}</th>
                 ))}
               </tr>
@@ -250,17 +237,17 @@ export default function OwnerBookingsPage() {
                   Không có đơn đặt phòng nào
                 </td></tr>
               ) : bookings.map((b: BookingResponse) => {
-                const s          = BOOKING_STATUS_CONFIG[b.status]
-                const Icon       = s.icon
-                const nextSts    = BOOKING_STATUS_TRANSITIONS[b.status]
+                const s = BOOKING_STATUS_CONFIG[b.status]
+                const Icon = s.icon
+                const nextSts = BOOKING_STATUS_TRANSITIONS[b.status]
                 const isUpdating = updateStatusMutation.isPending && updateStatusMutation.variables?.id === b.id
-                const nights     = calcNights(b.checkInDate, b.checkOutDate)
-                const gross      = Number(b.totalAmount)
-                const comm       = Number(b.commissionAmount  ?? 0)
-                const net        = Number(b.hotelNetAmount    ?? 0)
-                const pct        = b.commissionPercent ?? 0
-                const pStatus    = PAYMENT_STATUS_CONFIG[b.paymentStatus as keyof typeof PAYMENT_STATUS_CONFIG]
-                const pMethod    = b.paymentMethod
+                const nights = calcNights(b.checkInDate, b.checkOutDate)
+                const gross = Number(b.totalAmount)
+                const comm = Number(b.commissionAmount ?? 0)
+                const net = Number(b.hotelNetAmount ?? 0)
+                const pct = b.commissionPercent ?? 0
+                const pStatus = PAYMENT_STATUS_CONFIG[b.paymentStatus as keyof typeof PAYMENT_STATUS_CONFIG]
+                const pMethod = b.paymentMethod
                   ? (PAYMENT_METHOD_LABELS[b.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS] ?? b.paymentMethod)
                   : null
 
@@ -303,24 +290,23 @@ export default function OwnerBookingsPage() {
                       {gross.toLocaleString('vi-VN')}₫
                     </td>
 
-                    {/* HC% — highlighted */}
-                    <td className="px-4 py-3 border-l border-amber-100 bg-amber-50/40">
-                      <span className="text-sm font-black text-amber-600">{pct}%</span>
-                    </td>
-
                     {/* Hoa hồng */}
                     <td className="px-4 py-3 bg-amber-50/40">
-                      <p className="text-sm font-bold text-amber-600 whitespace-nowrap">{fmt(comm)}₫</p>
+                      <p className="text-sm font-bold text-amber-600 whitespace-nowrap">
+                        {comm.toLocaleString('vi-VN')}₫
+                      </p>
                       {b.actualCommissionAmount != null && Number(b.actualCommissionAmount) !== comm && (
                         <p className="text-[10px] text-gray-400 mt-0.5">
-                          Thực: {fmt(Number(b.actualCommissionAmount))}₫
+                          Thực: {Number(b.actualCommissionAmount).toLocaleString('vi-VN')}₫
                         </p>
                       )}
                     </td>
 
                     {/* Net KS */}
                     <td className="px-4 py-3 bg-emerald-50/40 border-r border-emerald-100">
-                      <span className="text-sm font-bold text-emerald-600 whitespace-nowrap">{fmt(net)}₫</span>
+                      <span className="text-sm font-bold text-emerald-600 whitespace-nowrap">
+                        {net.toLocaleString('vi-VN')}₫
+                      </span>
                     </td>
 
                     {/* Thanh toán */}
@@ -412,21 +398,21 @@ interface BookingDetailModalProps {
 }
 
 function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }: BookingDetailModalProps) {
-  const s            = BOOKING_STATUS_CONFIG[b.status]
-  const Icon         = s.icon
-  const nights       = calcNights(b.checkInDate, b.checkOutDate)
-  const nextSts      = BOOKING_STATUS_TRANSITIONS[b.status]
-  const pStatusKey   = (b.paymentStatus ?? 'PENDING') as keyof typeof PAYMENT_STATUS_CONFIG
-  const paymentCfg   = PAYMENT_STATUS_CONFIG[pStatusKey]
+  const s = BOOKING_STATUS_CONFIG[b.status]
+  const Icon = s.icon
+  const nights = calcNights(b.checkInDate, b.checkOutDate)
+  const nextSts = BOOKING_STATUS_TRANSITIONS[b.status]
+  const pStatusKey = (b.paymentStatus ?? 'PENDING') as keyof typeof PAYMENT_STATUS_CONFIG
+  const paymentCfg = PAYMENT_STATUS_CONFIG[pStatusKey]
   const paymentMethod = b.paymentMethod
     ? (PAYMENT_METHOD_LABELS[b.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS] ?? b.paymentMethod)
     : '—'
 
-  const gross  = Number(b.totalAmount)
-  const comm   = Number(b.commissionAmount        ?? 0)
-  const actual = Number(b.actualCommissionAmount  ?? comm)
-  const net    = Number(b.hotelNetAmount          ?? (gross - actual))
-  const pct    = b.commissionPercent ?? 0
+  const gross = Number(b.totalAmount)
+  const comm = Number(b.commissionAmount ?? 0)
+  const actual = Number(b.actualCommissionAmount ?? comm)
+  const net = Number(b.hotelNetAmount ?? (gross - actual))
+  const pct = b.commissionPercent ?? 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -521,14 +507,14 @@ function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }:
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-4">Phân tích hoa hồng</p>
             <div className="grid grid-cols-3 gap-4 mb-4">
               {([
-                { l: 'Doanh thu gộp',     v: gross,  c: '#94A3B8' },
+                { l: 'Doanh thu gộp', v: gross, c: '#94A3B8' },
                 { l: 'Hoa hồng hệ thống', v: actual, c: '#F59E0B' },
-                { l: 'Chủ KS nhận',       v: net,    c: '#34D399' },
+                { l: 'Chủ KS nhận', v: net, c: '#34D399' },
               ] as const).map(({ l, v, c }) => (
                 <div key={l}>
                   <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1">{l}</p>
                   <p className="text-base font-black leading-none" style={{ color: c }}>
-                    {fmt(v)}<span className="text-[10px] font-medium ml-0.5">₫</span>
+                    {v.toLocaleString('vi-VN')}<span className="text-[10px] font-medium ml-0.5">₫</span>
                   </p>
                 </div>
               ))}
@@ -543,7 +529,8 @@ function BookingDetailModal({ booking: b, onClose, onUpdateStatus, isUpdating }:
               </div>
               {b.commissionAmount !== b.actualCommissionAmount && b.actualCommissionAmount != null && (
                 <p className="text-[10px] text-slate-500 mt-2">
-                  Dự kiến: {fmt(comm)}₫ · Thực thu: <span className="text-emerald-400 font-bold">{fmt(actual)}₫</span>
+                  Dự kiến: {comm.toLocaleString('vi-VN')}₫ · Thực thu:{' '}
+                  <span className="text-emerald-400 font-bold">{actual.toLocaleString('vi-VN')}₫</span>
                 </p>
               )}
             </div>

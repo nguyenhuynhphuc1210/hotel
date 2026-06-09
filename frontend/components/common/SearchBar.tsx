@@ -433,11 +433,6 @@ function GuestPicker({ adults, children, rooms, childAges, setAdults, setChildre
                                             <option key={idx} value={idx}>{label}</option>
                                         ))}
                                     </select>
-                                    {(childAges[i] ?? 8) === -1 || childAges[i] === 8 && (
-                                        <p className="text-[10px] text-amber-500 mt-0.5 ml-1">
-                                            ⚠️ Nhập tuổi chính xác để xem giá đúng
-                                        </p>
-                                    )}
                                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                 </div>
                             ))}

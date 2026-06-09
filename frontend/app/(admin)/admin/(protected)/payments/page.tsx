@@ -9,7 +9,7 @@ import paymentApi from '@/lib/api/payment.api'
 import {
   Search, Download, Eye, Loader2, RotateCcw, Building2, User,
   Clock, CheckCircle2, XCircle, AlertCircle, RefreshCcw, X,
-  CreditCard, TrendingUp, Percent, BadgeDollarSign,
+  CreditCard,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Pagination from '@/components/ui/Pagination'
@@ -17,7 +17,6 @@ import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
 import { HotelResponse } from '@/lib/api/hotel.api'
 import { exportPayments } from '@/lib/api/export.api'
-import statisticApi from '@/lib/api/statistic.api'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
@@ -41,63 +40,6 @@ const METHOD_CONFIG: Record<string, { label: string; dot: string; badge: string 
 }
 
 const STAT_STATUSES: PaymentStatus[] = ['UNPAID', 'PENDING', 'PAID', 'CANCELLED', 'FAILED', 'REFUNDED']
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-function fmt(v: number) {
-  if (v >= 1_000_000_000) return (v / 1_000_000_000).toFixed(2) + 'B'
-  if (v >= 1_000_000)     return (v / 1_000_000).toFixed(1) + 'M'
-  return v.toLocaleString('vi-VN')
-}
-
-// ── Commission Strip ───────────────────────────────────────────────────────────
-function CommissionStrip({ hotelId, ownerId }: { hotelId?: number | null; ownerId?: number | null }) {
-  const { data } = useQuery({
-    queryKey: ['admin-payment-revenue', hotelId, ownerId],
-    queryFn:  () => statisticApi.getDashboard({
-      hotelId:  hotelId  ?? undefined,
-      ownerId:  ownerId  ?? undefined,
-    }).then(r => r.data),
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const gross      = Number(data?.summary?.grossRevenue    ?? 0)
-  const commission = Number(data?.summary?.totalCommission ?? 0)
-  const net        = Number(data?.summary?.netRevenue      ?? 0)
-  const pct        = gross > 0 ? ((commission / gross) * 100).toFixed(1) : '0.0'
-
-  return (
-    <div className="grid grid-cols-4 gap-3">
-      {([
-        { label: 'Doanh thu gộp',     val: gross,      color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100',    icon: TrendingUp      },
-        { label: 'Hoa hồng hệ thống', val: commission, color: 'text-amber-600',  bg: 'bg-amber-50  border-amber-100',     icon: Percent         },
-        { label: 'Net KS nhận',       val: net,        color: 'text-emerald-600',bg: 'bg-emerald-50 border-emerald-100',  icon: BadgeDollarSign  },
-      ] as const).map(({ label, val, color, bg, icon: Icon }) => (
-        <div key={label} className={cn('rounded-2xl border p-5', bg)}>
-          <div className="flex items-center gap-2 mb-3">
-            <Icon size={14} className={color} />
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
-          </div>
-          <p className={cn('text-xl font-black leading-none', color)}>
-            {fmt(val)}<span className="text-xs font-medium ml-0.5 text-gray-400">₫</span>
-          </p>
-        </div>
-      ))}
-
-      <div className="bg-slate-900 rounded-2xl p-5 flex flex-col justify-between">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tỷ lệ hoa hồng</span>
-        <div>
-          <p className="text-3xl font-black text-amber-400 leading-none">{pct}%</p>
-          <div className="mt-2">
-            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
-            </div>
-            <p className="text-[10px] text-slate-600 mt-1">Hoa hồng / doanh thu gộp</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ── Detail Drawer ──────────────────────────────────────────────────────────────
 function PaymentDetailDrawer({ payment, hotels, onClose }: {
@@ -190,12 +132,13 @@ export default function AdminPaymentsPage() {
 
   const [debouncedSearch] = useDebounce(searchInput, 400)
 
-  // Hotels for filter dropdowns
+  // Hotels list
   const { data: hotels = [] } = useQuery<HotelResponse[]>({
     queryKey: ['admin-hotels-list'],
     queryFn:  () => axiosInstance.get(API_CONFIG.ENDPOINTS.HOTELS, { params: { page: 0, size: 1000 } }).then(r => r.data.content),
   })
 
+  // Owners list for filter
   const owners = useMemo(() =>
     Array.from(new Map(hotels.map(h => [h.ownerId, { id: h.ownerId, name: h.ownerName }])).values()),
     [hotels]
@@ -210,7 +153,7 @@ export default function AdminPaymentsPage() {
     ownerId: selectedOwnerId,
   })
 
-  // ── Status counts: 1 query nhỏ per status thay cho fetch 10000 records ──
+  // Status counts
   const statusQueries = useQueries({
     queries: STAT_STATUSES.map(s => ({
       queryKey: ['admin-payment-count', s, selectedHotelId, selectedOwnerId, methodFilter],
@@ -240,7 +183,7 @@ export default function AdminPaymentsPage() {
         method:  methodFilter     || undefined,
         hotelId: selectedHotelId  || undefined,
         ownerId: selectedOwnerId  || undefined,
-        includeCommission: true,   // admin → có cột hoa hồng
+        includeCommission: true,   
       })
       toast.success('Xuất file thành công!')
     } catch { toast.error('Xuất file thất bại.') }
@@ -291,9 +234,6 @@ export default function AdminPaymentsPage() {
         })}
       </div>
 
-      {/* Commission strip — scoped to current hotel/owner filter */}
-      <CommissionStrip hotelId={selectedHotelId} ownerId={selectedOwnerId} />
-
       {/* Filters */}
       <div className="flex flex-wrap gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
         <div className="relative flex-1 min-w-[250px]">
@@ -303,7 +243,6 @@ export default function AdminPaymentsPage() {
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
         </div>
 
-        {/* Method */}
         <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 bg-white">
           <CreditCard size={14} className="text-gray-400 shrink-0" />
           <select value={methodFilter} onChange={e => { setMethodFilter(e.target.value as PaymentMethod | ''); setCurrentPage(0) }}
@@ -313,7 +252,6 @@ export default function AdminPaymentsPage() {
           </select>
         </div>
 
-        {/* Owner */}
         <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 bg-white">
           <User size={14} className="text-gray-400 shrink-0" />
           <select value={selectedOwnerId ?? ''} onChange={e => { setSelectedOwnerId(Number(e.target.value) || null); setSelectedHotelId(null); setCurrentPage(0) }}
@@ -323,7 +261,6 @@ export default function AdminPaymentsPage() {
           </select>
         </div>
 
-        {/* Hotel */}
         <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 bg-white">
           <Building2 size={14} className="text-gray-400 shrink-0" />
           <select value={selectedHotelId ?? ''} onChange={e => { setSelectedHotelId(Number(e.target.value) || null); setCurrentPage(0) }}
@@ -340,12 +277,6 @@ export default function AdminPaymentsPage() {
           <RotateCcw size={16} />
         </button>
       </div>
-
-      {hasFilter && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
-          📌 File Excel sẽ được xuất theo bộ lọc đang áp dụng (bao gồm cột hoa hồng).
-        </p>
-      )}
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">

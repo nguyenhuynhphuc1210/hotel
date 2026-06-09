@@ -24,11 +24,6 @@ import { exportBookings } from '@/lib/api/export.api'
 import bookingApi from '@/lib/api/booking.api'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-function fmt(val: number) {
-  if (val >= 1_000_000) return (val / 1_000_000).toFixed(1) + 'M'
-  return val.toLocaleString('vi-VN')
-}
-
 function calcNights(checkIn: string, checkOut: string): number {
   const ms = new Date(checkOut + 'T00:00:00').getTime() - new Date(checkIn + 'T00:00:00').getTime()
   return Math.ceil(ms / 86_400_000)
@@ -59,21 +54,12 @@ function CommissionStrip({ bookings }: { bookings: BookingResponse[] }) {
             <Icon size={13} color={color} />
             <span style={{ fontSize: 10, fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
           </div>
-          <p style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-            {fmt(val)} <span style={{ fontSize: 11, fontWeight: 500, color: '#9CA3AF' }}>₫</span>
+          <p style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+            {val.toLocaleString('vi-VN')} <span style={{ fontSize: 11, fontWeight: 500, color: '#9CA3AF' }}>₫</span>
           </p>
           <p style={{ fontSize: 10, color: '#CBD5E1', marginTop: 4 }}>Đơn hoàn thành · {completed.length} đơn</p>
         </div>
       ))}
-
-      {/* Avg commission rate */}
-      <div style={{ background: '#0F172A', borderRadius: 14, padding: '16px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 10, fontWeight: 600, color: '#f1f2f4', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Tỷ lệ TB</span>
-        <div>
-          <p style={{ fontSize: 28, fontWeight: 900, color: '#F59E0B', margin: 0, letterSpacing: '-0.03em' }}>{avgPct}%</p>
-          <p style={{ fontSize: 10, color: '#f7f7f7', marginTop: 4 }}>Hoa hồng trung bình</p>
-        </div>
-      </div>
     </div>
   )
 }
@@ -228,13 +214,13 @@ export default function AdminBookingsPage() {
               <tr style={{ background: '#F8FAFC' }}>
                 {[
                   'Mã booking', 'Khách', 'Khách sạn', 'Ngày đặt', 'Lưu trú',
-                  'Doanh thu', 'HC%', 'Hoa hồng', 'Net KS', 'Thanh toán', 'Trạng thái', '',
+                  'Doanh thu', 'Hoa hồng', 'Net KS', 'Thanh toán', 'Trạng thái', '',
                 ].map(h => (
                   <th key={h} style={{
                     textAlign: 'left', padding: '11px 14px',
                     fontSize: 10, fontWeight: 700, color: '#94A3B8',
                     textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap',
-                    ...((['Hoa hồng', 'Net KS', 'HC%'].includes(h)) ? { borderLeft: '1px solid #F1F5F9' } : {}),
+                    ...((['Hoa hồng', 'Net KS'].includes(h)) ? { borderLeft: '1px solid #F1F5F9' } : {}),
                   }}>{h}</th>
                 ))}
               </tr>
@@ -253,7 +239,6 @@ export default function AdminBookingsPage() {
                 const gross  = Number(b.totalAmount)
                 const comm   = Number(b.commissionAmount ?? 0)
                 const net    = Number(b.hotelNetAmount ?? 0)
-                const pct    = b.commissionPercent ?? 0
                 const pStatus = PAYMENT_STATUS_CONFIG[b.paymentStatus as keyof typeof PAYMENT_STATUS_CONFIG]
                 const pMethod = b.paymentMethod ? (PAYMENT_METHOD_LABELS[b.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS] ?? b.paymentMethod) : null
 
@@ -285,28 +270,27 @@ export default function AdminBookingsPage() {
                       <span style={{ display: 'inline-block', marginTop: 3, fontSize: 10, fontWeight: 700, color: '#6B7280', background: '#F1F5F9', borderRadius: 6, padding: '1px 6px' }}>{nights} đêm</span>
                     </td>
 
-                    {/* Revenue */}
                     <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0F172A', fontSize: 13, whiteSpace: 'nowrap' }}>
                       {gross.toLocaleString('vi-VN')}₫
                     </td>
 
-                    {/* Commission columns with left border accent */}
-                    <td style={{ padding: '12px 14px', borderLeft: '1px solid #FEF3C7', background: '#FFFEF7' }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#D97706' }}>{pct}%</span>
-                    </td>
-
-                    <td style={{ padding: '12px 14px', background: '#FFFEF7' }}>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B', margin: 0, whiteSpace: 'nowrap' }}>{fmt(comm)}₫</p>
+                    <td style={{ padding: '12px 14px', background: '#FFFEF7', borderLeft: '1px solid #F1F5F9' }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B', margin: 0, whiteSpace: 'nowrap' }}>
+                        {comm.toLocaleString('vi-VN')}₫  
+                      </p>
                       {b.actualCommissionAmount != null && b.actualCommissionAmount !== comm && (
-                        <p style={{ fontSize: 10, color: '#9CA3AF', margin: '2px 0 0' }}>Thực: {fmt(b.actualCommissionAmount)}₫</p>
+                        <p style={{ fontSize: 10, color: '#9CA3AF', margin: '2px 0 0' }}>
+                          Thực: {Number(b.actualCommissionAmount).toLocaleString('vi-VN')}₫
+                        </p>
                       )}
                     </td>
 
-                    <td style={{ padding: '12px 14px', background: '#F0FDF4', borderRight: '1px solid #D1FAE5' }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#059669', whiteSpace: 'nowrap' }}>{fmt(net)}₫</span>
+                    <td style={{ padding: '12px 14px', background: '#F0FDF4', borderRight: '1px solid #D1FAE5', borderLeft: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#059669', whiteSpace: 'nowrap' }}>
+                        {net.toLocaleString('vi-VN')}₫
+                      </span>
                     </td>
 
-                    {/* Payment */}
                     <td style={{ padding: '12px 14px' }}>
                       {pMethod && <p style={{ fontSize: 11, fontWeight: 500, color: '#6B7280', margin: 0 }}>{pMethod}</p>}
                       {pStatus && (
@@ -315,7 +299,6 @@ export default function AdminBookingsPage() {
                       )}
                     </td>
 
-                    {/* Status */}
                     <td style={{ padding: '12px 14px' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999 }}
                         className={s.class}>
@@ -353,7 +336,6 @@ export default function AdminBookingsPage() {
         )}
       </div>
 
-      {/* Detail Modal */}
       {detail && (
         <BookingDetailModal
           booking={detail}
@@ -460,7 +442,7 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
             </div>
           </div>
 
-          {/* Commission breakdown — highlighted */}
+          {/* Commission breakdown */}
           <div style={{ background: '#0F172A', borderRadius: 14, padding: '18px 20px' }}>
             {section('Phân tích hoa hồng')}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 14 }}>
@@ -471,25 +453,12 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
               ].map(({ label, val, color }) => (
                 <div key={label}>
                   <p style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 6px', fontWeight: 600 }}>{label}</p>
-                  <p style={{ fontSize: 16, fontWeight: 800, color, margin: 0, letterSpacing: '-0.02em' }}>{fmt(val)}<span style={{ fontSize: 10, fontWeight: 500, marginLeft: 1 }}>₫</span></p>
+                  <p style={{ fontSize: 15, fontWeight: 800, color, margin: 0, letterSpacing: '-0.02em' }}>
+                    {val.toLocaleString('vi-VN')}<span style={{ fontSize: 10, fontWeight: 500, marginLeft: 1 }}>₫</span>
+                  </p>
                 </div>
               ))}
-            </div>
-            {/* progress */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                <span style={{ fontSize: 10, color: '#64748B' }}>Tỷ lệ hoa hồng đặt</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#F59E0B' }}>{pct}%</span>
-              </div>
-              <div style={{ height: 5, background: '#1E293B', borderRadius: 999 }}>
-                <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: '#F59E0B', borderRadius: 999 }} />
-              </div>
-              {b.commissionAmount !== b.actualCommissionAmount && b.actualCommissionAmount != null && (
-                <p style={{ fontSize: 10, color: '#475569', marginTop: 6 }}>
-                  Dự kiến: {fmt(comm)}₫ · Thực thu: <span style={{ color: '#34D399', fontWeight: 700 }}>{fmt(actual)}₫</span>
-                </p>
-              )}
-            </div>
+            </div>            
           </div>
 
           {/* Price breakdown */}

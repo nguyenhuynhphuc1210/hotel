@@ -156,20 +156,7 @@ function CommissionBlock({ gross, commission, net, label }: {
             </p>
           </div>
         ))}
-      </div>
-      <div>
-        <div className="flex justify-between mb-1.5">
-          <span className="text-xs text-slate-500">Tỷ lệ hoa hồng</span>
-          <span className="text-xs font-bold text-amber-400">{pct}%</span>
-        </div>
-        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-          <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
-        </div>
-        <div className="flex justify-between mt-1.5">
-          <span className="text-[10px] text-slate-600">Hệ thống: {pct}%</span>
-          <span className="text-[10px] text-slate-600">KS: {(100 - Number(pct)).toFixed(1)}%</span>
-        </div>
-      </div>
+      </div>      
     </div>
   )
 }
