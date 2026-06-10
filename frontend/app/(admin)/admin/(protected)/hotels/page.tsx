@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import {
   useHotels,
+  useHotelCountByStatus,
   useApproveHotel,
   useDisableHotel,
   useDeleteHotel,
@@ -94,8 +95,14 @@ export default function AdminHotelsPage() {
     return matchOwner
   })
 
-  const totalPending = filtered.filter(h => h.status === HotelStatus.PENDING).length
-  const totalApproved = filtered.filter(h => h.status === HotelStatus.APPROVED).length
+  const statusCounts = useHotelCountByStatus([
+    HotelStatus.APPROVED,
+    HotelStatus.PENDING,
+    HotelStatus.DISABLED,
+  ])
+  const countMap = Object.fromEntries(
+    statusCounts.map(q => [q.data?.status, q.data?.total ?? 0])
+  )
 
   const renderStatusBadge = (status: HotelStatus) => {
     const configs = {
@@ -148,7 +155,7 @@ export default function AdminHotelsPage() {
             Hiển thị {filtered.length} / {pageData?.totalElements || 0} khách sạn
           </p>
         </div>
-        
+
         <button
           onClick={() => {
             setEditingHotel(null)
@@ -162,34 +169,65 @@ export default function AdminHotelsPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
+        {/* Tổng — không clickable */}
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between">
           <span className="text-sm text-gray-500">Tổng hệ thống</span>
-
           <span className="text-lg font-bold px-2.5 py-0.5 rounded-lg text-gray-700 bg-gray-100">
-            {pageData?.totalElements || 0}
+            {pageData?.totalElements ?? 0}
           </span>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between">
-          <span className="text-sm text-gray-500">
-            Hoạt động
-          </span>
-
+        {/* Hoạt động */}
+        <button
+          onClick={() => {
+            setStatusFilter(statusFilter === HotelStatus.APPROVED ? '' : HotelStatus.APPROVED)
+            setCurrentPage(0)
+          }}
+          className={`rounded-xl border px-4 py-3 flex items-center justify-between transition-all text-left
+      ${statusFilter === HotelStatus.APPROVED
+              ? 'border-green-400 ring-2 ring-green-300 bg-green-50'
+              : 'bg-white border-gray-200 hover:border-green-300 hover:bg-green-50'}`}
+        >
+          <span className="text-sm text-gray-500">Hoạt động</span>
           <span className="text-lg font-bold px-2.5 py-0.5 rounded-lg text-green-700 bg-green-50">
-            {totalApproved}
+            {countMap[HotelStatus.APPROVED] ?? 0}
           </span>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between">
-          <span className="text-sm text-gray-500">
-            Chờ duyệt
-          </span>
-
+        {/* Chờ duyệt */}
+        <button
+          onClick={() => {
+            setStatusFilter(statusFilter === HotelStatus.PENDING ? '' : HotelStatus.PENDING)
+            setCurrentPage(0)
+          }}
+          className={`rounded-xl border px-4 py-3 flex items-center justify-between transition-all text-left
+      ${statusFilter === HotelStatus.PENDING
+              ? 'border-amber-400 ring-2 ring-amber-300 bg-amber-50'
+              : 'bg-white border-gray-200 hover:border-amber-300 hover:bg-amber-50'}`}
+        >
+          <span className="text-sm text-gray-500">Chờ duyệt</span>
           <span className="text-lg font-bold px-2.5 py-0.5 rounded-lg text-amber-700 bg-amber-50">
-            {totalPending}
+            {countMap[HotelStatus.PENDING] ?? 0}
           </span>
-        </div>
+        </button>
+
+        {/* Bị khóa */}
+        <button
+          onClick={() => {
+            setStatusFilter(statusFilter === HotelStatus.DISABLED ? '' : HotelStatus.DISABLED)
+            setCurrentPage(0)
+          }}
+          className={`rounded-xl border px-4 py-3 flex items-center justify-between transition-all text-left
+      ${statusFilter === HotelStatus.DISABLED
+              ? 'border-gray-400 ring-2 ring-gray-300 bg-gray-100'
+              : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+        >
+          <span className="text-sm text-gray-500">Bị khóa</span>
+          <span className="text-lg font-bold px-2.5 py-0.5 rounded-lg text-gray-700 bg-gray-100">
+            {countMap[HotelStatus.DISABLED] ?? 0}
+          </span>
+        </button>
       </div>
 
       {/* Filter */}
@@ -430,14 +468,14 @@ export default function AdminHotelsPage() {
 
                       {(h.status === HotelStatus.DISABLED ||
                         h.status === HotelStatus.REJECTED) && (
-                        <button
-                          onClick={() => handleApprove(h)}
-                          title="Kích hoạt lại"
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-green-600 hover:bg-green-50"
-                        >
-                          <RotateCcw size={15} />
-                        </button>
-                      )}
+                          <button
+                            onClick={() => handleApprove(h)}
+                            title="Kích hoạt lại"
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-green-600 hover:bg-green-50"
+                          >
+                            <RotateCcw size={15} />
+                          </button>
+                        )}
 
                       <button
                         onClick={() => handleDelete(h)}

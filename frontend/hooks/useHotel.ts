@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useQueries  } from '@tanstack/react-query'
 import hotelApi, { HotelRequest, HotelStatus } from '@/lib/api/hotel.api'
 import toast from 'react-hot-toast'
 
@@ -18,6 +18,18 @@ export const useHotels = (
       return res.data
     },
     placeholderData: previousData => previousData,
+  })
+}
+
+export const useHotelCountByStatus = (statuses: HotelStatus[]) => {
+  return useQueries({
+    queries: statuses.map(status => ({
+      queryKey: ['hotels', 'count', status],
+      queryFn: async () => {
+        const res = await hotelApi.getAll(0, 1, undefined, status)
+        return { status, total: res.data.totalElements }
+      },
+    })),
   })
 }
 

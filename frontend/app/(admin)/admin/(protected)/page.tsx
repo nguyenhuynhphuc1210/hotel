@@ -477,7 +477,7 @@ export default function AdminDashboardPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#F8FAFC' }}>
-                {['Mã', 'Khách hàng', 'Khách sạn', 'Check-in', 'Doanh thu', 'Hoa hồng', 'Tài trợ', 'Trạng thái', 'Thanh toán'].map(h => (
+                {['Mã', 'Khách hàng', 'Khách sạn', 'Check-in', 'Doanh thu', 'Hoa hồng', 'Net KS', 'Trạng thái', 'Thanh toán'].map(h => (
                   <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
