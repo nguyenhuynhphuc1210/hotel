@@ -60,14 +60,20 @@ function useRoomCalendarPricing(
 function calcAvgPrice(
     calendarData: RoomCalendarResponse[] | undefined,
     fallback: number
-): { avgPrice: number; allAvailable: boolean } {
+): { avgPrice: number; allAvailable: boolean; isClosed: boolean } {
     if (!calendarData || calendarData.length === 0) {
-        return { avgPrice: fallback, allAvailable: true }
+        return { avgPrice: fallback, allAvailable: true, isClosed: false }
     }
     const total = calendarData.reduce((sum, c) => sum + Number(c.price), 0)
     const avgPrice = Math.round(total / calendarData.length)
-    const allAvailable = calendarData.every(c => c.isAvailable && (c.totalRooms - c.bookedRooms) > 0)
-    return { avgPrice, allAvailable }
+
+    // Owner tắt phòng (isAvailable = false)
+    const isClosed = calendarData.some(c => !c.isAvailable)
+    // Hết phòng do booking (còn slot nhưng bookedRooms >= totalRooms)
+    const hasNoRooms = calendarData.some(c => (c.totalRooms - c.bookedRooms) <= 0)
+
+    const allAvailable = !isClosed && !hasNoRooms
+    return { avgPrice, allAvailable, isClosed }
 }
 
 // ── Sub-component: một card phòng (có fetch giá riêng) ────────────────────
@@ -97,10 +103,10 @@ function RoomCard({
     const childAgesRaw = searchParams.getAll('childAges').map(Number);
 
     const under6 = childAgesRaw.filter(age => age >= 0 && age <= 5);
-const freeChildren = under6.slice(0, 1);               
-const paidUnder6Count = Math.max(0, under6.length - 1); 
-const adultChildrenCount = childAgesRaw.filter(age => age >= 6).length;
-const totalEffectiveAdults = adults + adultChildrenCount + paidUnder6Count;
+    const freeChildren = under6.slice(0, 1);
+    const paidUnder6Count = Math.max(0, under6.length - 1);
+    const adultChildrenCount = childAgesRaw.filter(age => age >= 6).length;
+    const totalEffectiveAdults = adults + adultChildrenCount + paidUnder6Count;
 
 
 
@@ -124,7 +130,7 @@ const totalEffectiveAdults = adults + adultChildrenCount + paidUnder6Count;
         staleTime: 1000 * 60 * 10,
     })
 
-    const { avgPrice, allAvailable } = useMemo(
+    const { avgPrice, allAvailable, isClosed } = useMemo(
         () => calcAvgPrice(calendarData, Number(room.basePrice)),
         [calendarData, room.basePrice]
     )
@@ -351,11 +357,10 @@ const totalEffectiveAdults = adults + adultChildrenCount + paidUnder6Count;
 
                         {hasFullDates && !allAvailable && calendarData && (
                             <p className="text-xs text-red-500 font-medium text-right max-w-[200px] leading-snug">
-                                ⚠️ Phòng đang tạm đóng trong khoảng{' '}
-                                {new Date(checkIn).toLocaleDateString('vi-VN')}
-                                {checkIn !== calCheckOut
-                                    ? ` – ${new Date(calCheckOut).toLocaleDateString('vi-VN')}`
-                                    : ''}
+                                {isClosed
+                                    ? `⚠️ Phòng đang tạm đóng trong khoảng ${new Date(checkIn).toLocaleDateString('vi-VN')}${checkIn !== calCheckOut ? ` – ${new Date(calCheckOut).toLocaleDateString('vi-VN')}` : ''}`
+                                    : '🚫 Hết phòng trong khoảng thời gian này'
+                                }
                             </p>
                         )}
                     </div>
