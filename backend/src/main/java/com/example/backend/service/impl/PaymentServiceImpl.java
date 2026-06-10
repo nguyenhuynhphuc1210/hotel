@@ -573,15 +573,14 @@ public class PaymentServiceImpl implements PaymentService {
             String hotelName = booking.getHotel().getHotelName();
 
             String guestName = booking.getUser() != null ? booking.getUser().getFullName() : booking.getGuestName();
-            
+
             String title = "🎉 Đơn đặt phòng mới đã thanh toán!";
             String message = String.format(
-                "Khách hàng %s vừa thanh toán thành công đơn %s tại khách sạn %s. Số tiền: %,d VND.",
-                guestName,
-                booking.getBookingCode(),
-                hotelName,
-                booking.getTotalAmount().longValue()
-            );
+                    "Khách hàng %s vừa thanh toán thành công đơn %s tại khách sạn %s. Số tiền: %,d VND.",
+                    guestName,
+                    booking.getBookingCode(),
+                    hotelName,
+                    booking.getTotalAmount().longValue());
 
             notificationService.createNotification(ownerEmail, title, message);
         } catch (Exception e) {
@@ -611,6 +610,27 @@ public class PaymentServiceImpl implements PaymentService {
 
         paymentRepository.save(payment);
         bookingRepository.save(booking);
+
+        try {
+            String ownerEmail = booking.getHotel().getOwner().getEmail();
+            String hotelName = booking.getHotel().getHotelName();
+            String guestName = booking.getUser() != null ? booking.getUser().getFullName() : booking.getGuestName();
+
+            String title = "CUSTOMER".equals(cancelledBy) ? "⚠️ Khách hàng đã hủy đơn đặt phòng!"
+                    : "⚠️ Đơn đặt phòng thanh toán thất bại!";
+
+            String message = String.format(
+                    "Đơn đặt phòng %s của khách hàng %s tại %s đã bị hủy. Lý do: %s.",
+                    booking.getBookingCode(),
+                    guestName,
+                    hotelName,
+                    reason);
+
+            notificationService.createNotification(ownerEmail, title, message);
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo hủy cho chủ khách sạn (Booking ID: {}): {}", booking.getId(),
+                    e.getMessage());
+        }
     }
 
     @Override
