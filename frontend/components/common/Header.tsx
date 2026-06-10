@@ -6,11 +6,13 @@ import { useLogout } from '@/hooks/useLogout'
 import { LogOut, Menu, X, Bell } from 'lucide-react'
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
+import { usePathname } from 'next/navigation'
 
 function Header() {
   const { user, isAuthenticated, isLoading } = useAuthStore()
   const { logout } = useLogout()
   const [menuOpen, setMenuOpen] = useState(false)
+  const pathname = usePathname()
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
@@ -66,7 +68,7 @@ function Header() {
             </div>
           ) : (
             <>
-              <Link href="/login" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
+              <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
                 Đăng nhập
               </Link>
               <Link href="/register" className="text-sm font-medium bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
