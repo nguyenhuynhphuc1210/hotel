@@ -128,7 +128,7 @@ export default function ForgotPasswordPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#E8F0FE] mb-4">
           <span className="text-3xl">🏨</span>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Vago Hotel</h1>
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Vago</h1>
         <p className="text-sm text-gray-400 mt-1">Đặt phòng khách sạn tại TP.HCM</p>
       </div>
 
@@ -324,7 +324,7 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
 
-      <p className="text-center text-xs text-gray-300 mt-8">© 2025 Vago Hotel. All rights reserved.</p>
+      <p className="text-center text-xs text-gray-300 mt-8">© 2025 Vago. All rights reserved.</p>
     </div>
   )
 }

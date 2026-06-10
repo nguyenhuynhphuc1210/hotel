@@ -99,6 +99,8 @@ export default function AdminHotelsPage() {
     HotelStatus.APPROVED,
     HotelStatus.PENDING,
     HotelStatus.DISABLED,
+    HotelStatus.SUSPENDED,  
+    HotelStatus.REJECTED,
   ])
   const countMap = Object.fromEntries(
     statusCounts.map(q => [q.data?.status, q.data?.total ?? 0])
@@ -169,7 +171,7 @@ export default function AdminHotelsPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {/* Tổng — không clickable */}
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between">
           <span className="text-sm text-gray-500">Tổng hệ thống</span>
@@ -228,6 +230,39 @@ export default function AdminHotelsPage() {
             {countMap[HotelStatus.DISABLED] ?? 0}
           </span>
         </button>
+
+        <button
+    onClick={() => {
+      setStatusFilter(statusFilter === HotelStatus.SUSPENDED ? '' : HotelStatus.SUSPENDED)
+      setCurrentPage(0)
+    }}
+    className={`rounded-xl border px-4 py-3 flex items-center justify-between transition-all text-left
+      ${statusFilter === HotelStatus.SUSPENDED
+        ? 'border-blue-400 ring-2 ring-blue-300 bg-blue-50'
+        : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'}`}
+  >
+    <span className="text-sm text-gray-500">Tạm ngưng</span>
+    <span className="text-lg font-bold px-2.5 py-0.5 rounded-lg text-blue-700 bg-blue-50">
+      {countMap[HotelStatus.SUSPENDED] ?? 0}
+    </span>
+  </button>
+
+  {/* Từ chối */}
+  <button
+    onClick={() => {
+      setStatusFilter(statusFilter === HotelStatus.REJECTED ? '' : HotelStatus.REJECTED)
+      setCurrentPage(0)
+    }}
+    className={`rounded-xl border px-4 py-3 flex items-center justify-between transition-all text-left
+      ${statusFilter === HotelStatus.REJECTED
+        ? 'border-red-400 ring-2 ring-red-300 bg-red-50'
+        : 'bg-white border-gray-200 hover:border-red-300 hover:bg-red-50'}`}
+  >
+    <span className="text-sm text-gray-500">Từ chối</span>
+    <span className="text-lg font-bold px-2.5 py-0.5 rounded-lg text-red-700 bg-red-50">
+      {countMap[HotelStatus.REJECTED] ?? 0}
+    </span>
+  </button>
       </div>
 
       {/* Filter */}
