@@ -68,7 +68,7 @@ function AdminLayout({ children }: { children: React.ReactNode; params?: Promise
         <div className="h-16 flex items-center gap-3 px-5 border-b border-gray-200">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm">🏨</div>
           <div>
-            <div className="text-sm font-bold text-gray-900">Vago Hotel</div>
+            <div className="text-sm font-bold text-gray-900">Vago</div>
             <div className="text-xs text-gray-400">Quản trị hệ thống</div>
           </div>
         </div>
