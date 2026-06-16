@@ -35,6 +35,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +47,9 @@ public class HotelServiceImpl implements HotelService {
     private final RoomCalendarRepository roomCalendarRepository;
     private final RoomTypeRepository roomTypeRepository;
     private final NotificationService notificationService;
+
+    @Value("${app.seed.admin.email}")
+    private String adminEmail;
 
     @Override
     @Transactional(readOnly = true)
@@ -139,9 +143,20 @@ public class HotelServiceImpl implements HotelService {
 
         Hotel hotel = hotelMapper.toHotel(request, owner);
 
-        hotel.setStatus(isAdmin() ? HotelStatus.APPROVED : HotelStatus.PENDING);
+        boolean isAdminCreating = isAdmin();
+        hotel.setStatus(isAdminCreating ? HotelStatus.APPROVED : HotelStatus.PENDING);
 
-        return hotelMapper.toHotelResponse(hotelRepository.save(hotel));
+        Hotel savedHotel = hotelRepository.save(hotel);
+
+        if (!isAdminCreating) {
+            notificationService.createNotification(
+                    adminEmail,
+                    "Yêu cầu duyệt khách sạn mới",
+                    "Chủ sở hữu " + owner.getEmail() + " vừa thêm khách sạn mới: "
+                            + savedHotel.getHotelName() + ". Vui lòng kiểm tra và duyệt yêu cầu.");
+        }
+
+        return hotelMapper.toHotelResponse(savedHotel);
     }
 
     @Override

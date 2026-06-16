@@ -39,12 +39,16 @@ public class ChatMapper {
         
         return ConversationResponse.builder()
                 .id(entity.getId())
-                .hotelId(entity.getHotel().getId())
-                .hotelName(entity.getHotel().getHotelName())
-                .userId(entity.getUser().getId())
-                .userFullName(entity.getUser().getFullName())
-                .userEmail(entity.getUser().getEmail())
-                .userAvatar(entity.getUser().getAvatarUrl())
+                .type(entity.getType())
+
+                .hotelId(entity.getHotel() != null ? entity.getHotel().getId() : null)
+                .hotelName(entity.getHotel() != null ? entity.getHotel().getHotelName() : null)
+
+                .userId(entity.getUser() != null ? entity.getUser().getId() : null)
+                .userFullName(entity.getUser() != null ? entity.getUser().getFullName() : null)
+                .userEmail(entity.getUser() != null ? entity.getUser().getEmail() : null)
+                .userAvatar(entity.getUser() != null ? entity.getUser().getAvatarUrl() : null)
+
                 .bookingId(entity.getBooking() != null ? entity.getBooking().getId() : null)
                 .lastMessageAt(entity.getLastMessageAt())
                 .build();

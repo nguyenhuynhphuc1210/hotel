@@ -36,7 +36,9 @@ public class ChatController {
                 request.getHotelId(),
                 request.getBookingId(),
                 principal.getName(),
-                request.getContent());
+                request.getContent(),
+                request.getType()
+        );
 
         messagingTemplate.convertAndSendToUser(
                 request.getReceiverEmail(),
@@ -63,6 +65,12 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getHotelInbox(hotelId, currentUserEmail));
     }
 
+    @GetMapping("/api/chat/admin-inbox")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAdminInbox() {
+        return ResponseEntity.ok(chatService.getAdminInbox());
+    }
+
     @GetMapping("/api/chat/history/{conversationId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getChatHistory(@PathVariable Long conversationId) {
@@ -86,13 +94,10 @@ public class ChatController {
 
         if (hotelIdObj != null 
             && !hotelIdObj.toString().trim().isEmpty() 
-            && !"null".equalsIgnoreCase(hotelIdObj.toString())) {
-            
+            && !"null".equalsIgnoreCase(hotelIdObj.toString())) {           
             hotelId = Long.valueOf(hotelIdObj.toString());
         }
-
         String prompt = request.getOrDefault("prompt", "").toString();
-
         String aiReply = geminiService.askGemini(hotelId, prompt);
         
         return ResponseEntity.ok(Map.of("reply", aiReply));
