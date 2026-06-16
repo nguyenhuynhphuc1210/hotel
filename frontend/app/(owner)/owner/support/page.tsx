@@ -200,7 +200,7 @@ export default function OwnerSupportPage() {
                     hotelId: activeHotelId,
                     content,
                     type: 'HOTEL_ADMIN',
-                    receiverEmail: '', 
+                    receiverEmail: 'admin@vago.com', 
                 }),
             })
         } catch {

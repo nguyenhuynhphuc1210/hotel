@@ -11,6 +11,7 @@ import SockJS from 'sockjs-client'
 
 interface UserConversationResponse {
     id: number
+    type: string
     hotelId: number
     hotelName: string
     hotelImage?: string | null
@@ -80,10 +81,11 @@ useEffect(() => {
 
     
     const { data: conversations = [], isLoading: isLoadingInbox } = useQuery({
-        queryKey: ['user-chat-inbox'],
-        queryFn: () => axiosInstance.get<UserConversationResponse[]>('/api/chat/user-inbox').then(r => r.data),
-        enabled: !!user,
-    })
+    queryKey: ['user-chat-inbox'],
+    queryFn: () => axiosInstance.get<UserConversationResponse[]>('/api/chat/user-inbox')
+        .then(r => r.data.filter(c => c.type !== 'USER_ADMIN')), 
+    enabled: !!user,
+})
 
     const sendReadReceipt = useCallback((conversationId: number, senderEmail: string, client?: Client) => {
         const stomp = client ?? stompClientRef.current
@@ -180,7 +182,7 @@ useEffect(() => {
     }
 
     const filtered = conversations.filter(c => 
-        c.hotelName.toLowerCase().includes(searchQuery.toLowerCase())
+    (c.hotelName || "").toLowerCase().includes(searchQuery.toLowerCase())
     )
 
     return (

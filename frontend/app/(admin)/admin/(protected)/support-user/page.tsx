@@ -189,7 +189,7 @@ export default function AdminSupportUserPage() {
                     userId: selectedConv.userId,
                     content,
                     type: 'USER_ADMIN',
-                    receiverEmail: selectedConv.userEmail ?? '',
+                    receiverEmail: selectedConv.userEmail 
                 }),
             })
         } catch {

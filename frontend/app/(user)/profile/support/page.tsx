@@ -179,7 +179,7 @@ export default function UserSupportPage() {
                     userId: user.id,
                     content,
                     type: 'USER_ADMIN',
-                    receiverEmail: '', 
+                    receiverEmail: 'admin@vago.com', 
                 }),
             })
         } catch {
