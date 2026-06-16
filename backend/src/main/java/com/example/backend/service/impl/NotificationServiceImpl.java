@@ -9,6 +9,9 @@ import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -28,15 +31,21 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public NotificationResponse createNotification(Long userId, String title, String message) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chủ khách sạn"));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng với ID: " + userId));
         return createNotification(user.getEmail(), title, message);
     }
 
     @Override
     @Transactional
-    public NotificationResponse createNotification(String ownerEmail, String title, String message) {
-        User user = userRepository.findByEmail(ownerEmail)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chủ khách sạn"));
+    public NotificationResponse createNotification(String email, String title, String message) {
+        Optional<User> userOptional = userRepository.findByEmail(email);
+
+        if (userOptional.isEmpty()) {
+            log.warn("Không thể tạo thông báo. Không tìm thấy người dùng với email: {}", email);
+            return null;
+        }
+
+        User user = userOptional.get();
 
         Notification notification = Notification.builder()
                 .user(user)
