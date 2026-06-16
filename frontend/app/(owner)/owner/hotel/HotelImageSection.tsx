@@ -10,7 +10,7 @@ import hotelImageApi from '@/lib/api/hotel-image.api'
 import hotelApi, { HotelResponse, HotelImageResponse } from '@/lib/api/hotel.api'
 import toast from 'react-hot-toast'
 
-// ── Types ────────────────────────────────────────────────
+
 interface AllImagesModalProps {
     images: HotelImageResponse[]
     onClose: () => void
@@ -24,7 +24,7 @@ interface AllImagesModalProps {
     uploadPending: boolean
 }
 
-// ── Component Lightbox ───────────────────────────────────
+
 function Lightbox({ images, startIdx, onClose }: {
     images: HotelImageResponse[]
     startIdx: number
@@ -76,7 +76,7 @@ function Lightbox({ images, startIdx, onClose }: {
     )
 }
 
-// ── Component Chính ──────────────────────────────────────
+
 export function HotelImageSection({ hotel: initialHotel }: { hotel: HotelResponse }) {
     const qc = useQueryClient()
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -266,7 +266,7 @@ export function HotelImageSection({ hotel: initialHotel }: { hotel: HotelRespons
     )
 }
 
-// ── Helpers & Sub-components ─────────────────────────────
+
 
 function ImageHoverActions({ img, onDelete, onSetPrimary, isDeleting, isSettingPrimary, hidePrimary = false }: {
     img: HotelImageResponse; onDelete: () => void; onSetPrimary: () => void; isDeleting: boolean; isSettingPrimary: boolean; hidePrimary?: boolean

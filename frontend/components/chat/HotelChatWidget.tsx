@@ -29,18 +29,18 @@ interface HotelChatWidgetProps {
     onUnreadChange?: (count: number) => void
 }
 
-// THÊM hàm này
+
 function parseTs(ts: string): Date {
     if (!ts) return new Date();
     return new Date(ts.replace(' ', 'T'));
 }
 
-// SỬA fmt — chỉ đổi new Date(ts) → parseTs(ts)
+
 function fmt(ts: string) {
     return parseTs(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
 
-// SỬA timeAgo — chỉ đổi new Date(ts) → parseTs(ts)
+
 function timeAgo(ts: string) {
     if (!ts) return ''
     const diff = Date.now() - parseTs(ts).getTime()
@@ -88,7 +88,7 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, p
         }
     }, [isOpen])
 
-    // Focus input khi panel mở
+    
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => inputRef.current?.focus(), 150)
@@ -116,7 +116,7 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, p
                 client.subscribe('/user/queue/messages', (frame) => {
                     const msg: ChatMsg = JSON.parse(frame.body)
                     
-                    // Kiểm tra nếu tin nhắn thuộc hội thoại hiện tại
+                    
                     if (msg.conversationId && conversationIdRef.current === null)
                         conversationIdRef.current = msg.conversationId
                     
@@ -190,7 +190,7 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, p
         }
     }
 
-    // Load history khi panel được mở từ bên ngoài (panelOnly mode)
+    
     useEffect(() => {
         if (panelOnly && externalOpen && user) {
             setUnreadCount(0)
@@ -223,13 +223,13 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, p
 
     return (
         <div className="flex flex-col items-end gap-3">
-            {/* ── Chat Panel ── */}
+            
             {isOpen && (
                 <div
                     className="w-[360px] bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300"
                     style={{ height: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
                 >
-                    {/* Header */}
+                    
                     <div className="bg-blue-600 px-4 py-3 flex items-center gap-3 shrink-0">
                         <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
                             <Hotel size={18} className="text-white" />
@@ -248,7 +248,7 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, p
                         </button>
                     </div>
 
-                    {/* Messages */}
+                    
                     <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-gray-50/80">
                         {isLoadingHistory ? (
                             <div className="flex items-center justify-center h-full">
@@ -304,7 +304,7 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, p
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input */}
+                    
                     <div className="border-t border-gray-100 px-3 py-3 bg-white flex items-center gap-2 shrink-0">
                         <input
                             ref={inputRef}
@@ -325,7 +325,7 @@ export default function HotelChatWidget({ hotelId, hotelName, hotelOwnerEmail, p
                 </div>
             )}
 
-            {/* ── FAB — chỉ hiển thị khi KHÔNG phải panelOnly ── */}
+            
             {!panelOnly && (
                 <button
                     onClick={isOpen ? handleClose : handleOpen}

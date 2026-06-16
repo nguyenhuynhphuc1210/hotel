@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 const KEY = 'amenities'
 const HOTEL_AMENITY_KEY = 'hotel-amenities'
 const ROOM_TYPE_AMENITY_KEY = 'room-type-amenities'
-// ─── Amenity ───────────────────────────────────────────
+
 
 export const useAmenities = () =>
   useQuery({
@@ -59,7 +59,7 @@ export const useDeleteAmenity = () => {
   })
 }
 
-// ─── Hotel Amenity ──────────────────────────────────────
+
 
 export const useHotelAmenities = (hotelId: number | string) =>
   useQuery({
@@ -114,7 +114,7 @@ export const useDeleteHotelAmenity = () => {
   })
 }
 
-// ─── Room Type Amenity ──────────────────────────────────
+
 
 export const useRoomTypeAmenities = (roomTypeId: number | string) =>
   useQuery({

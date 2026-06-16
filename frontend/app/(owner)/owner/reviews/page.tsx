@@ -36,16 +36,16 @@ export default function OwnerReviewsPage() {
   const [keyword, setKeyword] = useState('')
   const [starFilter, setStarFilter] = useState<number | null>(null)
 
-  // Lightbox
+  
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxImages, setLightboxImages] = useState<string[]>([])
   const [lightboxIndex, setLightboxIndex] = useState(0)
 
-  // Reply modal
+  
   const [replyingReview, setReplyingReview] = useState<ReviewResponse | null>(null)
   const [replyText, setReplyText] = useState('')
 
-  // Report modal
+  
   const [reportingReview, setReportingReview] = useState<ReviewResponse | null>(null)
   const [reportReason, setReportReason] = useState('')
 
@@ -79,7 +79,7 @@ export default function OwnerReviewsPage() {
   const hotel = activeHotel
   const isLoading = isReviewsLoading || isHotelLoading
 
-  // Lightbox
+  
   const openLightbox = (images: string[], index: number) => {
     setLightboxImages(images); setLightboxIndex(index); setLightboxOpen(true)
   }
@@ -87,7 +87,7 @@ export default function OwnerReviewsPage() {
   const prevImg = () => setLightboxIndex(i => (i - 1 + lightboxImages.length) % lightboxImages.length)
   const nextImg = () => setLightboxIndex(i => (i + 1) % lightboxImages.length)
 
-  // Reply
+  
   const openReplyModal = (review: ReviewResponse) => {
     setReplyingReview(review); setReplyText(review.ownerReply || '')
   }
@@ -97,7 +97,7 @@ export default function OwnerReviewsPage() {
     replyMutation.mutate({ id: replyingReview.id, reply: replyText })
   }
 
-  // Report
+  
   const openReportModal = (review: ReviewResponse) => {
     setReportingReview(review); setReportReason('')
   }
@@ -133,7 +133,7 @@ export default function OwnerReviewsPage() {
 
   return (
     <div className="space-y-5">
-      {/* ── Lightbox ─────────────────────────────── */}
+      
       {lightboxOpen && (
         <div
           className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center p-4"
@@ -161,7 +161,7 @@ export default function OwnerReviewsPage() {
         </div>
       )}
 
-      {/* ── Reply Modal ───────────────────────────── */}
+      
       {replyingReview && (
         <div className="fixed inset-0 z-[998] bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
@@ -196,7 +196,7 @@ export default function OwnerReviewsPage() {
         </div>
       )}
 
-      {/* ── Report Modal ──────────────────────────── */}
+      
       {reportingReview && (
         <div className="fixed inset-0 z-[998] bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
@@ -213,7 +213,7 @@ export default function OwnerReviewsPage() {
               <button onClick={closeReportModal} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
             <div className="p-6">
-              {/* Preview đánh giá bị báo cáo */}
+              
               <div className="bg-gray-50 rounded-lg p-3 mb-4 border border-gray-100">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="flex items-center gap-1">
@@ -229,7 +229,7 @@ export default function OwnerReviewsPage() {
                 <p className="text-sm text-gray-600 italic line-clamp-3">{reportingReview.comment || '(Không có nội dung)'}</p>
               </div>
 
-              {/* Lý do báo cáo nhanh */}
+              
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Lý do báo cáo</p>
               <div className="flex flex-wrap gap-2 mb-3">
                 {[
@@ -282,14 +282,14 @@ export default function OwnerReviewsPage() {
         </div>
       )}
 
-      {/* ── Page Header ───────────────────────────── */}
+      
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Đánh giá khách hàng</h1>
         <p className="text-sm text-gray-500 mt-1">{hotel?.hotelName} · {allReviews.length} đánh giá</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* ── Sidebar thống kê ─────────────────────── */}
+        
         <div className="bg-white rounded-xl border border-gray-200 p-5 h-fit">
           <div className="text-center mb-4">
             <div className="text-5xl font-bold text-gray-900">{avgRating}</div>
@@ -323,7 +323,7 @@ export default function OwnerReviewsPage() {
           </div>
         </div>
 
-        {/* ── Danh sách đánh giá ───────────────────── */}
+        
         <div className="lg:col-span-2 space-y-3">
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -381,7 +381,7 @@ export default function OwnerReviewsPage() {
                     <p className="text-sm text-gray-600 leading-relaxed mb-3">{rv.comment}</p>
                   )}
 
-                  {/* Hiển thị lý do báo cáo nếu đã báo cáo */}
+                  
                   {alreadyReported && rv.reportReason && (
                     <div className="mb-3 px-3 py-2 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2">
                       <AlertTriangle size={13} className="text-red-500 shrink-0 mt-0.5" />
@@ -428,7 +428,7 @@ export default function OwnerReviewsPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-3">
-                      {/* Nút báo cáo */}
+                      
                       {alreadyReported ? (
                         <span className="text-xs text-red-400 font-medium flex items-center gap-1">
                           <CheckCircle2 size={13} /> Đã gửi báo cáo
@@ -442,7 +442,7 @@ export default function OwnerReviewsPage() {
                         </button>
                       )}
                       <span className="text-gray-200">|</span>
-                      {/* Nút phản hồi */}
+                      
                       <button
                         onClick={() => openReplyModal(rv)}
                         className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"

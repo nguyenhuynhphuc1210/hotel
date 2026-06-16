@@ -23,13 +23,13 @@ import { cn } from '@/lib/utils'
 import promotionApi from '@/lib/api/promotion.api'
 import { PromotionResponse } from '@/types/promotion.types'
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+
 function calcNights(checkIn: string, checkOut: string): number {
   const ms = new Date(checkOut + 'T00:00:00').getTime() - new Date(checkIn + 'T00:00:00').getTime()
   return Math.ceil(ms / 86_400_000)
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────────
+
 export default function OwnerBookingsPage() {
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<BookingStatus | ''>('')
@@ -51,7 +51,7 @@ const { data: allPromos = [] } = useQuery({
   staleTime: 5 * 60 * 1000,
 })
 
-  // ── Main table data ──
+  
   const { data: bookingsPage, isLoading: isBookingsLoading } = useQuery({
     queryKey: ['owner-bookings', activeHotelId, currentPage, keyword, statusFilter],
     queryFn: () => bookingApi.getAll(currentPage, pageSize, {
@@ -62,7 +62,7 @@ const { data: allPromos = [] } = useQuery({
     enabled: !!activeHotelId,
   })
 
-  // ── Stat counts: 1 query per status (size=1, chỉ lấy totalElements) ──
+  
   const statusQueries = useQueries({
     queries: BOOKING_STAT_STATUSES.map(s => ({
       queryKey: ['owner-booking-count', activeHotelId, s],
@@ -79,7 +79,7 @@ const { data: allPromos = [] } = useQuery({
     BOOKING_STAT_STATUSES.map((s, i) => [s, statusQueries[i].data ?? 0])
   ) as Record<BookingStatus, number>
 
-  // ── Status update ──
+  
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: BookingStatus }) =>
       bookingApi.updateStatus(id, status),
@@ -95,7 +95,7 @@ const { data: allPromos = [] } = useQuery({
   const bookings: BookingResponse[] = bookingsPage?.content ?? []
   const isLoading = isBookingsLoading || isHotelLoading
 
-  // ── Export ──
+  
   const handleExport = async () => {
     if (!activeHotelId) return
     setIsExporting(true)
@@ -113,7 +113,7 @@ const { data: allPromos = [] } = useQuery({
   return (
     <div className="space-y-5 pb-10">
 
-      {/* ── Header ── */}
+      
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Quản lý đặt phòng</h1>
@@ -128,7 +128,7 @@ const { data: allPromos = [] } = useQuery({
         </button>
       </div>
 
-      {/* ── Status chips ── */}
+      
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         {BOOKING_STAT_STATUSES.map(s => {
           const cfg = BOOKING_STATUS_CONFIG[s]
@@ -150,7 +150,7 @@ const { data: allPromos = [] } = useQuery({
         })}
       </div>
 
-      {/* ── Filters ── */}
+      
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[240px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -181,7 +181,7 @@ const { data: allPromos = [] } = useQuery({
         </p>
       )}
 
-      {/* ── Table ── */}
+      
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -226,18 +226,18 @@ const { data: allPromos = [] } = useQuery({
 
                 return (
                   <tr key={b.id} className="hover:bg-gray-50/80 transition-colors">
-                    {/* Mã */}
+                    
                     <td className="px-4 py-3 font-mono text-xs font-bold text-blue-600 whitespace-nowrap">
                       {b.bookingCode}
                     </td>
 
-                    {/* Khách */}
+                    
                     <td className="px-4 py-3">
                       <p className="font-semibold text-gray-900 text-sm leading-tight">{b.guestName}</p>
                       <p className="text-[11px] text-gray-400 mt-0.5">{b.guestEmail}</p>
                     </td>
 
-                    {/* Ngày đặt */}
+                    
                     <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                       {new Date(b.createdAt).toLocaleDateString('vi-VN')}
                       <p className="text-[10px] text-gray-400">
@@ -245,7 +245,7 @@ const { data: allPromos = [] } = useQuery({
                       </p>
                     </td>
 
-                    {/* Lưu trú */}
+                    
                     <td className="px-4 py-3 text-xs">
                       <p className="font-bold text-gray-900 whitespace-nowrap">
                         {new Date(b.checkInDate + 'T00:00:00').toLocaleDateString('vi-VN')}
@@ -258,12 +258,12 @@ const { data: allPromos = [] } = useQuery({
                       </span>
                     </td>
 
-                    {/* Doanh thu */}
+                    
                     <td className="px-4 py-3 font-bold text-gray-900 whitespace-nowrap">
                       {gross.toLocaleString('vi-VN')}₫
                     </td>
 
-                    {/* Hoa hồng */}
+                    
                     <td className="px-4 py-3 bg-amber-50/40">
                       <p className="text-sm font-bold text-amber-600 whitespace-nowrap">
                         {comm.toLocaleString('vi-VN')}₫
@@ -275,14 +275,14 @@ const { data: allPromos = [] } = useQuery({
                       )}
                     </td>
 
-                    {/* Net KS */}
+                    
                     <td className="px-4 py-3 bg-emerald-50/40 border-r border-emerald-100">
                       <span className="text-sm font-bold text-emerald-600 whitespace-nowrap">
                         {net.toLocaleString('vi-VN')}₫
                       </span>
                     </td>
 
-                    {/* Thanh toán */}
+                    
                     <td className="px-4 py-3">
                       {pMethod && (
                         <p className="text-xs font-medium text-gray-600">{pMethod}</p>
@@ -294,7 +294,7 @@ const { data: allPromos = [] } = useQuery({
                       )}
                     </td>
 
-                    {/* Trạng thái */}
+                    
                     <td className="px-4 py-3">
                       {nextSts ? (
                         <select disabled={isUpdating} value={b.status}
@@ -312,7 +312,7 @@ const { data: allPromos = [] } = useQuery({
                       )}
                     </td>
 
-                    {/* Chi tiết */}
+                    
                     <td className="px-4 py-3 text-right">
                       <button onClick={() => setDetailBooking(b)}
                         className="p-2 text-gray-400 hover:text-blue-600 rounded-xl hover:bg-blue-50 transition-colors">
@@ -326,7 +326,7 @@ const { data: allPromos = [] } = useQuery({
           </table>
         </div>
 
-        {/* Pagination */}
+        
         {bookingsPage && bookingsPage.totalPages > 1 && (
           <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
             <p className="text-xs text-gray-500">
@@ -349,7 +349,7 @@ const { data: allPromos = [] } = useQuery({
         )}
       </div>
 
-      {/* ── Detail Modal ── */}
+      
       {detailBooking && (
         <BookingDetailModal
           booking={detailBooking}
@@ -363,7 +363,7 @@ const { data: allPromos = [] } = useQuery({
   )
 }
 
-// ── Detail Modal ───────────────────────────────────────────────────────────────
+
 interface BookingDetailModalProps {
   booking: BookingResponse
   promotions: PromotionResponse[]
@@ -396,7 +396,7 @@ function BookingDetailModal({ booking: b, promotions, onClose, onUpdateStatus, i
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
 
-        {/* Header */}
+        
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/60">
           <div>
             <h2 className="font-black text-gray-900 text-base">Chi tiết Booking #{b.bookingCode}</h2>
@@ -412,7 +412,7 @@ function BookingDetailModal({ booking: b, promotions, onClose, onUpdateStatus, i
 
         <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
 
-          {/* Cancel info */}
+          
           {b.status === 'CANCELLED' && (
             <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
               <p className="text-[10px] font-black text-red-500 uppercase tracking-wider mb-1.5">Thông tin huỷ</p>
@@ -424,7 +424,7 @@ function BookingDetailModal({ booking: b, promotions, onClose, onUpdateStatus, i
             </div>
           )}
 
-          {/* Status row */}
+          
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-gray-50 rounded-2xl p-4">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Trạng thái</p>
@@ -454,14 +454,14 @@ function BookingDetailModal({ booking: b, promotions, onClose, onUpdateStatus, i
             </div>
           </div>
 
-          {/* Guest info */}
+          
           <div className="border border-gray-100 rounded-2xl p-4">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Khách lưu trú</p>
             <p className="text-sm font-bold text-gray-900">{b.guestName}</p>
             <p className="text-xs text-gray-500 mt-1">{b.guestPhone} · {b.guestEmail}</p>
           </div>
 
-          {/* Stay strip */}
+          
           <div className="bg-blue-50 rounded-2xl p-4 flex items-center justify-between">
             <div className="text-center">
               <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider mb-1">Check-in</p>
@@ -480,7 +480,7 @@ function BookingDetailModal({ booking: b, promotions, onClose, onUpdateStatus, i
             </div>
           </div>
 
-          {/* Pricing breakdown */}
+          
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Chi tiết giá phòng</p>
             <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
@@ -526,7 +526,7 @@ function BookingDetailModal({ booking: b, promotions, onClose, onUpdateStatus, i
           </div>
         </div>
 
-        {/* Footer */}
+        
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-gray-400 font-bold uppercase">Trạng thái TT:</span>

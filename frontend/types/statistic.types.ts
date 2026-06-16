@@ -17,9 +17,6 @@ export interface DashboardParams {
   toDate?: string;
 }
 
-// ── Response types ──────────────────────────────────────
-
-// Tương ứng với DailyStatisticResponse.java
 export interface DailyStatisticResponse {
   statDate: string;
   completedBookings: number | null;
@@ -28,11 +25,10 @@ export interface DailyStatisticResponse {
   grossRevenue: number | null;
   totalCommission: number | null;
   netRevenue: number | null;
-  systemSponsorAmount: number | null; // Mới
-  platformNetProfit: number | null;   // Mới
+  systemSponsorAmount: number | null; 
+  platformNetProfit: number | null;   
 }
 
-// Tương ứng với DashboardSummaryResponse.java
 export interface DashboardSummaryResponse {
   completedBookings: number;
   totalCancelled: number;
@@ -40,8 +36,8 @@ export interface DashboardSummaryResponse {
   grossRevenue: number;
   totalCommission: number;
   netRevenue: number;
-  systemSponsorAmount: number; // Mới
-  platformNetProfit: number;   // Mới
+  systemSponsorAmount: number; 
+  platformNetProfit: number;   
 }
 
 export interface HotelStatisticSummaryResponse {
@@ -52,12 +48,11 @@ export interface HotelStatisticSummaryResponse {
   totalNoShow: number | null;
   grossRevenue: number | null;
   totalCommission: number | null;
-  systemSponsorAmount: number | null; // Mới
-  platformNetProfit: number | null;   // Mới
+  systemSponsorAmount: number | null; 
+  platformNetProfit: number | null;   
   netRevenue: number | null;
 }
 
-// Tương ứng với SystemStatisticSummary.java
 export interface SystemStatisticSummary {
   completedBookings: number;
   totalCancelled: number;
@@ -69,7 +64,6 @@ export interface SystemStatisticSummary {
   platformNetProfit: number;
 }
 
-// Interface cũ của bạn (cập nhật thêm field cho đồng bộ nếu cần)
 export interface HotelStatisticResponse {
   id: number;
   hotelId: number;
@@ -104,7 +98,6 @@ export interface DashboardResponse {
   topHotels: HotelStatisticSummaryResponse[];
   chartData: DailyStatisticResponse[];
   recentBookings: RecentBookingResponse[];
-  // Admin-only fields
   totalHotels?: number | null;
   totalUsers?: number | null;
   totalBookings?: number | null;

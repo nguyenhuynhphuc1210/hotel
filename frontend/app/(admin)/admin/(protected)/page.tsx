@@ -36,7 +36,7 @@ import statisticApi from '@/lib/api/statistic.api'
 import hotelApi, { HotelResponse, HotelStatus, PageResponse } from '@/lib/api/hotel.api'
 import { DashboardParams, RecentBookingResponse } from '@/types/statistic.types'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+
 const BOOKING_STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
   PENDING: { label: 'Chờ xác nhận', bg: '#FFF7ED', text: '#C2410C' },
   CONFIRMED: { label: 'Đã xác nhận', bg: '#EFF6FF', text: '#1D4ED8' },
@@ -55,7 +55,7 @@ const PAYMENT_STATUS: Record<string, { label: string; color: string }> = {
   CANCELLED: { label: 'Đã huỷ', color: '#EF4444' },
 }
 
-// ── Stat Card ─────────────────────────────────────────────────────────────────
+
 function KpiCard({
   label, value, unit = '₫', sub, accent, icon: Icon, badge,
 }: {
@@ -71,7 +71,7 @@ function KpiCard({
       position: 'relative',
       overflow: 'hidden',
     }}>
-      {/* accent stripe */}
+      
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent, borderRadius: '16px 16px 0 0' }} />
 
       {badge && (
@@ -101,7 +101,7 @@ function KpiCard({
   )
 }
 
-// ── Custom Tooltip ─────────────────────────────────────────────────────────────
+
 interface TooltipEntry {
   name: string
   value: number
@@ -137,7 +137,7 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   )
 }
 
-// ── Status Badge ──────────────────────────────────────────────────────────────
+
 function StatusBadge({ status }: { status: string }) {
   const cfg = BOOKING_STATUS_CONFIG[status] ?? { label: status, bg: '#F9FAFB', text: '#6B7280' }
   return (
@@ -148,7 +148,7 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+
 export default function AdminDashboardPage() {
   const [filterMode, setFilterMode] = useState<'month' | 'range'>('month')
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1)
@@ -190,7 +190,7 @@ export default function AdminDashboardPage() {
     return ((hotelsData as PageResponse<HotelResponse>).content || []).filter(h => h.status === HotelStatus.PENDING).length
   }, [hotelsData])
 
-  // Chart data — now includes commission lanes
+  
   const areaData = useMemo(() =>
   (dashboard?.chartData ?? []).map(d => ({
     date: new Date(d.statDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
@@ -231,7 +231,7 @@ export default function AdminDashboardPage() {
   return (
     <div style={{ padding: '24px 28px', background: '#F8FAFC', minHeight: '100vh' }}>
 
-      {/* ── Header ── */}
+      
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', margin: 0 }}>Dashboard</h1>
@@ -243,7 +243,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {/* filter mode toggle */}
+          
           <div style={{ display: 'flex', background: '#E2E8F0', borderRadius: 10, padding: 3 }}>
             {(['month', 'range'] as const).map(m => (
               <button key={m} onClick={() => setFilterMode(m)} style={{
@@ -257,7 +257,7 @@ export default function AdminDashboardPage() {
             ))}
           </div>
 
-          {/* filter inputs */}
+          
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '6px 12px' }}>
             {filterMode === 'month' ? (
               <>
@@ -294,7 +294,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* ── Pending alert ── */}
+      
       {pendingHotelsCount > 0 && (
         <a href="/admin/hotels" style={{
           display: 'flex', alignItems: 'center', gap: 12,
@@ -310,7 +310,7 @@ export default function AdminDashboardPage() {
         </a>
       )}
 
-      {/* ── KPI Row ── */}
+      
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 20 }}>
         <KpiCard icon={Building2} label="Khách sạn" value={(dashboard?.totalHotels ?? 0).toLocaleString()} unit="" sub="Tổng cơ sở" accent="#3B82F6"
           badge={pendingHotelsCount > 0 ? `${pendingHotelsCount} chờ duyệt` : undefined} />
@@ -333,9 +333,6 @@ export default function AdminDashboardPage() {
           unit="₫" sub="Hoa hồng – Tài trợ" accent="#6366F1" />
       </div>
 
-
-
-      {/* ── Area chart ── */}
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24, marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
           <div style={{ width: 4, height: 18, background: '#3B82F6', borderRadius: 999 }} />
@@ -392,9 +389,9 @@ export default function AdminDashboardPage() {
           )}
       </div>
 
-      {/* ── Pie + Top Hotels ── */}
+      
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-        {/* Pie */}
+        
         <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24 }}>
           <h2 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: '0 0 4px' }}>Tỷ lệ trạng thái đơn</h2>
           <p style={{ fontSize: 11, color: '#9CA3AF', margin: '0 0 16px' }}>Dựa trên kỳ lọc hiện tại</p>
@@ -422,7 +419,7 @@ export default function AdminDashboardPage() {
             )}
         </div>
 
-        {/* Top Hotels with commission breakdown */}
+        
         <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', padding: 24 }}>
           <h2 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: '0 0 16px' }}>Top khách sạn — doanh thu</h2>
           {topHotels.length === 0
@@ -464,7 +461,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* ── Recent Bookings table ── */}
+      
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #F1F5F9' }}>
           <h2 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: 0 }}>Giao dịch gần đây</h2>
@@ -495,7 +492,7 @@ export default function AdminDashboardPage() {
                   <td style={{ padding: '12px 16px', fontSize: 12, color: '#475569', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.hotelName}</td>
                   <td style={{ padding: '12px 16px', fontSize: 11, color: '#6B7280', whiteSpace: 'nowrap' }}>{new Date(b.checkInDate).toLocaleDateString('vi-VN')}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', fontSize: 12 }}>{Number(b.totalAmount).toLocaleString('vi-VN')}₫</td>
-                  {/* Commission columns - not in RecentBookingResponse so show dash */}
+                  
                   <td style={{ padding: '12px 16px', fontSize: 12, color: '#F59E0B', fontWeight: 600 }}>
                     {b.commissionAmount != null ? `${Number(b.commissionAmount).toLocaleString('vi-VN')}₫` : '—'}
                   </td>

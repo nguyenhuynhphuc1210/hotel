@@ -38,7 +38,7 @@ export default function AdminHotelsPage() {
 
   const hotels = pageData?.content || []
 
-  // Danh sách owner unique
+  
   const owners = Array.from(
     new Map(
       hotels.map(h => [
@@ -87,7 +87,7 @@ export default function AdminHotelsPage() {
     setOpenForm(true)
   }
 
-  // Filter theo owner
+  
   const filtered = hotels.filter(h => {
     const matchOwner =
       !ownerFilter || String(h.ownerId) === ownerFilter
@@ -146,7 +146,7 @@ export default function AdminHotelsPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -170,9 +170,9 @@ export default function AdminHotelsPage() {
         </button>
       </div>
 
-      {/* Stat cards */}
+      
       <div className="grid grid-cols-3 gap-3">
-        {/* Tổng — không clickable */}
+       
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between">
           <span className="text-sm text-gray-500">Tổng hệ thống</span>
           <span className="text-lg font-bold px-2.5 py-0.5 rounded-lg text-gray-700 bg-gray-100">
@@ -180,7 +180,7 @@ export default function AdminHotelsPage() {
           </span>
         </div>
 
-        {/* Hoạt động */}
+        
         <button
           onClick={() => {
             setStatusFilter(statusFilter === HotelStatus.APPROVED ? '' : HotelStatus.APPROVED)
@@ -197,7 +197,7 @@ export default function AdminHotelsPage() {
           </span>
         </button>
 
-        {/* Chờ duyệt */}
+        
         <button
           onClick={() => {
             setStatusFilter(statusFilter === HotelStatus.PENDING ? '' : HotelStatus.PENDING)
@@ -214,7 +214,7 @@ export default function AdminHotelsPage() {
           </span>
         </button>
 
-        {/* Bị khóa */}
+        
         <button
           onClick={() => {
             setStatusFilter(statusFilter === HotelStatus.DISABLED ? '' : HotelStatus.DISABLED)
@@ -247,7 +247,7 @@ export default function AdminHotelsPage() {
     </span>
   </button>
 
-  {/* Từ chối */}
+  
   <button
     onClick={() => {
       setStatusFilter(statusFilter === HotelStatus.REJECTED ? '' : HotelStatus.REJECTED)
@@ -265,10 +265,10 @@ export default function AdminHotelsPage() {
   </button>
       </div>
 
-      {/* Filter */}
+      
       <div className="flex gap-3 flex-wrap">
 
-        {/* Search */}
+        
         <div className="relative flex-1 min-w-[220px] max-w-sm">
           <Search
             size={15}
@@ -287,7 +287,7 @@ export default function AdminHotelsPage() {
           />
         </div>
 
-        {/* Owner filter */}
+        
         <select
           value={ownerFilter}
           onChange={(e) => {
@@ -305,7 +305,7 @@ export default function AdminHotelsPage() {
           ))}
         </select>
 
-        {/* Status */}
+        
         <select
           value={statusFilter}
           onChange={(e) => {
@@ -322,7 +322,7 @@ export default function AdminHotelsPage() {
           <option value={HotelStatus.SUSPENDED}>Tạm ngưng</option>
         </select>
 
-        {/* Page size */}
+        
         <select
           value={pageSize}
           onChange={(e) => {
@@ -336,7 +336,7 @@ export default function AdminHotelsPage() {
           <option value={50}>50 / trang</option>
         </select>
 
-        {/* Clear filter */}
+        
         {(ownerFilter || keyword || statusFilter) && (
           <button
             onClick={() => {
@@ -352,7 +352,7 @@ export default function AdminHotelsPage() {
         )}
       </div>
 
-      {/* Table */}
+      
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
@@ -540,7 +540,7 @@ export default function AdminHotelsPage() {
         )}
       </div>
 
-      {/* Form modal */}
+      
       <HotelFormModal
         open={openForm}
         onClose={() => {
@@ -550,7 +550,7 @@ export default function AdminHotelsPage() {
         hotel={editingHotel}
       />
 
-      {/* Detail modal */}
+      
       {detailHotel && (
         <HotelDetailModal
           hotel={detailHotel}

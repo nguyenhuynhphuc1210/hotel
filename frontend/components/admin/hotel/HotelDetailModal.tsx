@@ -56,7 +56,7 @@ export default function HotelDetailModal({ hotel, onClose }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
 
-                {/* Header */}
+                
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                     <div className="flex items-center gap-3">
                         {hotel.thumbnailUrl ? (
@@ -82,7 +82,7 @@ export default function HotelDetailModal({ hotel, onClose }: Props) {
                     </button>
                 </div>
 
-                {/* Tabs */}
+                
                 <div className="flex gap-1 px-6 pt-3 border-b border-gray-100 shrink-0">
                     {(['overview', 'rooms', 'policy'] as const).map(tab => (
                         <button
@@ -99,13 +99,13 @@ export default function HotelDetailModal({ hotel, onClose }: Props) {
                     ))}
                 </div>
 
-                {/* Content */}
+                
                 <div className="overflow-y-auto flex-1 p-6">
 
-                    {/* ── Tab Tổng quan ── */}
+                    
                     {activeTab === 'overview' && (
                         <div className="space-y-6">
-                            {/* Gallery */}
+                            
                             {images.length > 0 && (
                                 <div className="relative rounded-xl overflow-hidden h-56 bg-gray-100">
                                     <img src={images[imgIdx]?.imageUrl} alt="" className="w-full h-full object-cover" />
@@ -154,7 +154,7 @@ export default function HotelDetailModal({ hotel, onClose }: Props) {
                                 </div>
                             </div>
 
-                            {/* Tiện ích khách sạn */}
+                            
                             {hotelAmenities.length > 0 && (
                                 <div>
                                     <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
@@ -186,7 +186,7 @@ export default function HotelDetailModal({ hotel, onClose }: Props) {
                         </div>
                     )}
 
-                    {/* ── Tab Loại phòng ── */}
+                    
                     {activeTab === 'rooms' && (
                         <div className="space-y-4">
                             {roomsLoading ? (
@@ -207,7 +207,7 @@ export default function HotelDetailModal({ hotel, onClose }: Props) {
                         </div>
                     )}
 
-                    {/* ── Tab Chính sách ── */}
+                    
                     {activeTab === 'policy' && (
                         <div className="space-y-4">
                             {!policy ? (
@@ -250,7 +250,7 @@ export default function HotelDetailModal({ hotel, onClose }: Props) {
     )
 }
 
-// ── RoomCard với expand tiện ích ──────────────────────────────────────────
+
 function RoomCard({ room }: { room: RoomTypeResponse }) {
     const [expanded, setExpanded] = useState(false)
     const thumb = room.thumbnailUrl || room.images?.[0]?.imageUrl
@@ -258,12 +258,12 @@ function RoomCard({ room }: { room: RoomTypeResponse }) {
     const { data: amenities = [], isLoading: amenitiesLoading } = useQuery({
         queryKey: ['admin-room-amenities', room.id],
         queryFn: () => roomTypeAmenityApi.getByRoomType(room.id).then(r => r.data),
-        enabled: expanded, // lazy: chỉ fetch khi user mở expand
+        enabled: expanded, 
     })
 
     return (
         <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-blue-200 hover:shadow-sm transition-all">
-            {/* Row chính */}
+            
             <div className="flex gap-4">
                 <div className="w-32 h-28 shrink-0 bg-gray-100 flex items-center justify-center">
                     {thumb
@@ -323,7 +323,7 @@ function RoomCard({ room }: { room: RoomTypeResponse }) {
                         <p className="text-xs text-gray-400 line-clamp-1 italic mb-2">{room.description}</p>
                     )}
 
-                    {/* Toggle tiện ích */}
+                    
                     <button
                         onClick={() => setExpanded(v => !v)}
                         className="flex items-center gap-1 text-xs font-semibold text-blue-500 hover:text-blue-700 transition-colors"
@@ -334,7 +334,7 @@ function RoomCard({ room }: { room: RoomTypeResponse }) {
                 </div>
             </div>
 
-            {/* Panel tiện ích — lazy expand */}
+            
             {expanded && (
                 <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/60">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tiện ích loại phòng</p>

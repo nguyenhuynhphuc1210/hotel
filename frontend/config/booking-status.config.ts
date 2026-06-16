@@ -1,7 +1,7 @@
 import { CheckCircle, XCircle, Clock, LogIn, Ban } from 'lucide-react'
 import type { BookingStatus } from '@/types/booking.types'
 
-// ─── 1. Status display config ─────────────────────────────────────────────────
+
 
 export const BOOKING_STATUS_CONFIG: Record<
     BookingStatus,
@@ -15,7 +15,7 @@ export const BOOKING_STATUS_CONFIG: Record<
     NO_SHOW: { label: 'Không đến', class: 'bg-gray-100 text-gray-500 border border-gray-200', icon: Ban },
 }
 
-// ─── 2. Transition rules ──────────────────────────────────────────────────────
+
 
 export const BOOKING_STATUS_TRANSITIONS: Partial<Record<BookingStatus, BookingStatus[]>> = {
     PENDING: ['CONFIRMED', 'CANCELLED'],
@@ -31,13 +31,13 @@ export const BOOKING_TRANSITION_LABELS: Partial<Record<BookingStatus, string>> =
     NO_SHOW: 'Đánh dấu no-show',
 }
 
-// ─── 3. Stat tab order ────────────────────────────────────────────────────────
+
 
 export const BOOKING_STAT_STATUSES: BookingStatus[] = [
     'PENDING', 'CONFIRMED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED', 'NO_SHOW',
 ]
 
-// ─── 4. Payment configs (gộp luôn cho tiện) ──────────────────────────────────
+
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
     CASH: 'Tiền mặt',

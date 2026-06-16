@@ -32,7 +32,7 @@ const hotelSchema = z.object({
 })
 type HotelForm = z.infer<typeof hotelSchema>
 
-// ── Status badge ──────────────────────────────────────────
+
 function StatusBadge({ status }: { status: HotelStatus }) {
     switch (status) {
         case HotelStatus.APPROVED:
@@ -70,7 +70,7 @@ function StatusBadge({ status }: { status: HotelStatus }) {
     }
 }
 
-// ── Suspend Modal ─────────────────────────────────────────
+
 function SuspendModal({
     hotel,
     onClose,
@@ -141,7 +141,7 @@ function SuspendModal({
     )
 }
 
-// ── Page ──────────────────────────────────────────────────
+
 export default function OwnerMyHotelsPage() {
     const qc = useQueryClient()
 
@@ -230,7 +230,7 @@ export default function OwnerMyHotelsPage() {
     return (
         <div className="space-y-6">
 
-            {/* Suspend Modal */}
+            
             {suspendTarget && (
                 <SuspendModal
                     hotel={suspendTarget}
@@ -240,7 +240,7 @@ export default function OwnerMyHotelsPage() {
                 />
             )}
 
-            {/* Header */}
+            
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Khách sạn của tôi</h1>
@@ -257,7 +257,7 @@ export default function OwnerMyHotelsPage() {
                 </button>
             </div>
 
-            {/* ── Form đăng ký ── */}
+            
             {showForm && (
                 <div className="bg-white rounded-xl border-2 border-blue-200 p-6 shadow-sm">
                     <div className="flex items-center gap-2 mb-5">
@@ -335,35 +335,35 @@ export default function OwnerMyHotelsPage() {
                 </div>
             )}
 
-            {/* ── Đang hoạt động ── */}
+            
             {approvedHotels.length > 0 && (
                 <HotelSection title="Đang hoạt động" count={approvedHotels.length}
                     icon={<CheckCircle2 size={14} className="text-green-500" />}
                     hotels={approvedHotels} {...sharedProps} />
             )}
 
-            {/* ── Tạm ngưng ── */}
+            
             {suspendedHotels.length > 0 && (
                 <HotelSection title="Đang tạm ngưng" count={suspendedHotels.length}
                     icon={<PauseCircle size={14} className="text-blue-500" />}
                     hotels={suspendedHotels} {...sharedProps} />
             )}
 
-            {/* ── Chờ duyệt ── */}
+            
             {pendingHotels.length > 0 && (
                 <HotelSection title="Đang chờ duyệt" count={pendingHotels.length}
                     icon={<Clock size={14} className="text-amber-500" />}
                     hotels={pendingHotels} {...sharedProps} />
             )}
 
-            {/* ── Bị từ chối / Bị khóa ── */}
+            
             {otherHotels.length > 0 && (
                 <HotelSection title="Từ chối / Bị khóa" count={otherHotels.length}
                     icon={<XCircle size={14} className="text-red-400" />}
                     hotels={otherHotels} {...sharedProps} />
             )}
 
-            {/* Empty state */}
+            
             {hotelList.length === 0 && !showForm && (
                 <div className="bg-white rounded-xl border border-dashed border-gray-300 py-16 text-center">
                     <Building2 size={40} className="text-gray-300 mx-auto mb-3" />
@@ -378,7 +378,7 @@ export default function OwnerMyHotelsPage() {
     )
 }
 
-// ── Hotel Section ─────────────────────────────────────────
+
 function HotelSection({
     title, count, icon, hotels, expandedId, setExpandedId, onSuspend, onReactivate, reactivatingId,
 }: {
@@ -414,7 +414,7 @@ function HotelSection({
     )
 }
 
-// ── Hotel Card ────────────────────────────────────────────
+
 function HotelCard({
     hotel, expanded, onToggle, onSuspend, onReactivate, isReactivating,
 }: {
@@ -437,7 +437,7 @@ function HotelCard({
 
     return (
         <div className={`bg-white rounded-xl border overflow-hidden transition-all ${borderColor[hotel.status] ?? 'border-gray-200'}`}>
-            {/* Header */}
+            
             <div className="flex items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors" onClick={onToggle}>
                 <div className="w-16 h-16 rounded-lg bg-gray-100 overflow-hidden shrink-0">
                     {primaryImage
@@ -459,7 +459,7 @@ function HotelCard({
                 </button>
             </div>
 
-            {/* Expanded */}
+            
             {expanded && (
                 <div className="border-t border-gray-100 px-4 py-4 bg-gray-50 space-y-3">
                     <div className="grid grid-cols-2 gap-3 text-sm">
@@ -476,7 +476,7 @@ function HotelCard({
                         ))}
                     </div>
 
-                    {/* Lý do */}
+                    
                     {hotel.statusReason && (
                         <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
                             <AlertCircle size={14} className="text-blue-500 shrink-0 mt-0.5" />
@@ -487,7 +487,7 @@ function HotelCard({
                         </div>
                     )}
 
-                    {/* Actions */}
+                    
                     <div className="flex justify-end gap-2 pt-1">
                         {hotel.status === HotelStatus.APPROVED && (
                             <button

@@ -16,31 +16,31 @@ export default function RoomTrashPage() {
   const [keyword, setKeyword] = useState('')
   const { activeHotel, activeHotelId } = useOwnerHotel()
   
-  // 1. Lấy tất cả dữ liệu phòng đã xóa của chủ sở hữu
+  
   const { data: deletedRooms = [], isLoading } = useQuery({
-    queryKey: ['rooms-deleted'], // Không nhất thiết để activeHotelId ở key nếu API trả về all, nhưng để đồng bộ logic fetch lại khi đổi ks thì có thể giữ
+    queryKey: ['rooms-deleted'], 
     queryFn: () => roomApi.getDeleted().then(r => r.data)
   })
 
-  // 2. Lọc theo Hotel ID (Lấy ý tưởng từ trang Payment)
+  
   const hotelDeletedRooms = useMemo(() => {
     if (!activeHotelId) return []
     return deletedRooms.filter(room => room.hotelId === activeHotelId)
   }, [deletedRooms, activeHotelId])
 
-  // 3. Lọc theo từ khóa tìm kiếm trên danh sách của khách sạn hiện tại
+  
   const filteredRooms = useMemo(() => {
     return hotelDeletedRooms.filter(room => 
       room.typeName.toLowerCase().includes(keyword.toLowerCase())
     )
   }, [hotelDeletedRooms, keyword])
 
-  // 4. Mutation khôi phục
+  
   const restoreMutation = useMutation({
     mutationFn: (id: number) => roomApi.restore(id),
     onSuccess: () => {
       toast.success('Khôi phục loại phòng thành công!')
-      // Invalidate cả 2 query để cập nhật lại dữ liệu ở trang quản lý và trang thùng rác
+      
       qc.invalidateQueries({ queryKey: ['rooms-deleted'] })
       qc.invalidateQueries({ queryKey: ['owner-rooms', activeHotelId] })
     },
@@ -52,7 +52,7 @@ export default function RoomTrashPage() {
 
   return (
     <div className="space-y-6 p-6 max-w-[1200px] mx-auto">
-      {/* Header Area */}
+      
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link 
@@ -78,7 +78,7 @@ export default function RoomTrashPage() {
         </div>
       </div>
 
-      {/* Filter Bar */}
+      
       <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
         <div className="relative max-w-md">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -92,7 +92,7 @@ export default function RoomTrashPage() {
         </div>
       </div>
 
-      {/* Table Content */}
+      
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm text-left">
           <thead className="bg-gray-50 text-xs uppercase text-gray-500 font-bold border-b">
@@ -188,7 +188,7 @@ export default function RoomTrashPage() {
           </tbody>
         </table>
 
-        {/* Footer info */}
+        
         {!isLoading && filteredRooms.length > 0 && (
           <div className="bg-gray-50 px-6 py-3 border-t border-gray-100 text-[11px] text-gray-400 flex justify-between">
             <span>Hiển thị {filteredRooms.length} loại phòng thuộc {activeHotel?.hotelName}</span>

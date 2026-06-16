@@ -1,4 +1,3 @@
-// types/favorite.types.ts
 export interface FavoriteResponse {
     hotel: {
         id: number

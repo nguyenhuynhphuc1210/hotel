@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 
 const KEY = 'hotels'
 
-// Lấy tất cả khách sạn
+
 export const useHotels = (
   page: number,
   size: number,
@@ -33,7 +33,7 @@ export const useHotelCountByStatus = (statuses: HotelStatus[]) => {
   })
 }
 
-// Lấy 1 khách sạn
+
 export const useHotel = (id: number | string) =>
   useQuery({
     queryKey: [KEY, id],
@@ -41,7 +41,7 @@ export const useHotel = (id: number | string) =>
     enabled: !!id,
   })
 
-// Tạo khách sạn
+
 export const useCreateHotel = () => {
   const qc = useQueryClient()
   return useMutation({
@@ -57,7 +57,7 @@ export const useCreateHotel = () => {
   })
 }
 
-// Cập nhật khách sạn
+
 export const useUpdateHotel = (id: number | string) => {
   const qc = useQueryClient()
   return useMutation({
@@ -73,7 +73,7 @@ export const useUpdateHotel = (id: number | string) => {
   })
 }
 
-// Xoá khách sạn
+
 export const useDeleteHotel = () => {
   const qc = useQueryClient()
   return useMutation({
@@ -89,7 +89,7 @@ export const useDeleteHotel = () => {
   })
 }
 
-// Duyệt khách sạn
+
 export const useApproveHotel = () => {
   const qc = useQueryClient()
   return useMutation({
@@ -101,7 +101,7 @@ export const useApproveHotel = () => {
   })
 }
 
-// Vô hiệu hoá khách sạn
+
 export const useDisableHotel = () => {
   const qc = useQueryClient()
   return useMutation({

@@ -13,14 +13,14 @@ function PaymentFailedContent() {
         <div className="min-h-screen bg-[#f7f8fa] flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 max-w-md w-full text-center">
                 
-                {/* Icon */}
+                
                 <div className="flex justify-center mb-6">
                     <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center">
                         <XCircle size={44} className="text-red-500" />
                     </div>
                 </div>
 
-                {/* Title */}
+                
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">
                     Thanh toán thất bại
                 </h1>
@@ -28,7 +28,7 @@ function PaymentFailedContent() {
                     Giao dịch của bạn không thể hoàn tất. Đơn đặt phòng đã bị hủy và phòng đã được giải phóng.
                 </p>
 
-                {/* Booking code nếu có */}
+                
                 {bookingCode && (
                     <div className="bg-gray-50 rounded-2xl px-5 py-3 mb-6 inline-block">
                         <p className="text-xs text-gray-400 mb-0.5">Mã đặt phòng</p>
@@ -36,7 +36,7 @@ function PaymentFailedContent() {
                     </div>
                 )}
 
-                {/* Lý do thường gặp */}
+                
                 <div className="bg-red-50 rounded-2xl p-4 mb-7 text-left space-y-2">
                     <p className="text-xs font-bold text-red-600 uppercase tracking-wide mb-2">Nguyên nhân thường gặp</p>
                     {[
@@ -52,7 +52,7 @@ function PaymentFailedContent() {
                     ))}
                 </div>
 
-                {/* Actions */}
+                
                 <div className="space-y-3">
                     <button
                         onClick={() => router.push('/')}

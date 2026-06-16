@@ -7,6 +7,7 @@ import { LogOut, Menu, X, Bell } from 'lucide-react'
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
+import NotificationBell from '@/components/layout/NotificationBell'
 
 function Header() {
   const { user, isAuthenticated, isLoading } = useAuthStore()
@@ -18,7 +19,6 @@ function Header() {
     <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
 
-        {/* Logo */}
         <Link href="/home" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
             🏨
@@ -26,13 +26,11 @@ function Header() {
           <span className="text-lg font-bold text-blue-700">Vago</span>
         </Link>
 
-        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
           <Link href="/home" className="hover:text-blue-600 transition-colors">Trang chủ</Link>
           <Link href="/hotels" className="hover:text-blue-600 transition-colors">Khách sạn</Link>
         </nav>
 
-        {/* Auth buttons */}
         <div className="hidden md:flex items-center gap-3">
           {isAuthenticated && user ? (
             <div className="flex items-center gap-3">
@@ -46,6 +44,7 @@ function Header() {
                   Owner Portal
                 </Link>
               )}
+              <NotificationBell />
               <Link
                 href="/profile"
                 className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full hover:bg-blue-50 hover:ring-1 hover:ring-blue-300 transition-all"
@@ -78,13 +77,13 @@ function Header() {
           )}
         </div>
 
-        {/* Mobile menu button */}
+        
         <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden p-2 rounded-lg hover:bg-gray-100">
           {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
-      {/* Mobile menu */}
+      
       {menuOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-2">
           <Link href="/home" className="block py-2 text-sm text-gray-700 hover:text-blue-600">Trang chủ</Link>

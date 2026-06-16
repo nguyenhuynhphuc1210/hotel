@@ -54,7 +54,7 @@ function LoginForm() {
 
     return (
         <div className="w-full max-w-md mx-auto">
-            {/* Logo */}
+            
             <div className="text-center mb-10">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#E8F0FE] mb-4">
                     <span className="text-3xl">🏨</span>
@@ -63,13 +63,13 @@ function LoginForm() {
                 <p className="text-sm text-gray-400 mt-1">Đặt phòng khách sạn tại TP.HCM</p>
             </div>
 
-            {/* Card */}
+            
             <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_24px_rgba(0,0,0,0.06)] p-8">
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">Đăng nhập</h2>
                 <p className="text-sm text-gray-400 mb-7">Chào mừng trở lại! Vui lòng nhập thông tin.</p>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-                    {/* Email */}
+                    
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                         <input
@@ -86,7 +86,7 @@ function LoginForm() {
                         )}
                     </div>
 
-                    {/* Password */}
+                    
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
                             <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
@@ -115,7 +115,7 @@ function LoginForm() {
                         <a href="/forgot-password" className="text-xs text-[#1A56DB] hover:underline">Quên mật khẩu?</a>
                     </div>
 
-                    {/* Submit */}
+                    
                     <button
                         type="submit"
                         disabled={loading}
@@ -126,7 +126,7 @@ function LoginForm() {
                     </button>
                 </form>
 
-                {/* Divider */}
+                
                 <div className="flex items-center gap-3 my-6">
                     <div className="flex-1 h-px bg-gray-100" />
                     <span className="text-xs text-gray-400">hoặc</span>
@@ -153,7 +153,7 @@ function LoginForm() {
                     loading={googleLoading}
                 />
 
-                {/* Footer — giữ redirect param khi chuyển sang register */}
+                
                 <p className="text-center text-sm text-gray-500 mt-5">
                     Chưa có tài khoản?{' '}
                     <a

@@ -26,13 +26,12 @@ export default function HotelTrashPage() {
   const [pageSize, setPageSize] = useState(5)
   const [keyword, setKeyword] = useState('')
 
-  // 1. Lấy dữ liệu khách sạn đã xóa từ Hook
+  
   const { data: pageData, isLoading } = useDeletedHotels(currentPage, pageSize)
   const restoreMutation = useRestoreHotel()
 
   const hotels = pageData?.content || []
 
-  // 2. Logic lọc tìm kiếm tại chỗ (Local Filter)
   const filteredHotels = hotels.filter(h => 
     h.hotelName.toLowerCase().includes(keyword.toLowerCase()) ||
     h.email.toLowerCase().includes(keyword.toLowerCase())
@@ -44,7 +43,7 @@ export default function HotelTrashPage() {
     }
   }
 
-  // Helper hiển thị badge trạng thái (để biết trước khi xóa nó đang ở trạng thái nào)
+  
   const renderStatusBadge = (status: HotelStatus) => {
     const configs = {
       [HotelStatus.PENDING]: { color: 'text-amber-600 bg-amber-50', label: 'Chờ duyệt', icon: <XCircle size={10} /> },
@@ -63,7 +62,7 @@ export default function HotelTrashPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header & Back Button */}
+      
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link 
@@ -86,7 +85,7 @@ export default function HotelTrashPage() {
         </div>
       </div>
 
-      {/* Filter Bar */}
+      
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="relative max-w-md">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -100,7 +99,7 @@ export default function HotelTrashPage() {
         </div>
       </div>
 
-      {/* Table Area */}
+      
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm text-left">
           <thead className="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b">
@@ -185,7 +184,7 @@ export default function HotelTrashPage() {
           </tbody>
         </table>
         
-        {/* Pagination Container */}
+        
         {pageData && pageData.totalPages > 0 && (
           <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
             <Pagination 

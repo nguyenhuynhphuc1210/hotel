@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 interface PaginationProps {
-  currentPage: number        // 0-based (theo Spring Boot)
+  currentPage: number        
   totalPages: number
   totalElements: number
   pageSize: number
@@ -24,7 +24,7 @@ export default function Pagination({
   const from = totalElements === 0 ? 0 : currentPage * pageSize + 1
   const to = Math.min((currentPage + 1) * pageSize, totalElements)
 
-  // Tạo danh sách số trang hiển thị (tối đa 5 nút)
+  
   const getPageNumbers = () => {
     const pages: (number | '...')[] = []
     if (totalPages <= 7) {
@@ -47,7 +47,7 @@ export default function Pagination({
 
   return (
     <div className="flex items-center justify-between gap-4 pt-1">
-      {/* Hiển thị số bản ghi */}
+      
       <div className="flex items-center gap-3">
         <p className="text-sm text-gray-500 whitespace-nowrap">
           {totalElements === 0 ? '0 kết quả' : `${from}–${to} / ${totalElements}`}
@@ -65,7 +65,7 @@ export default function Pagination({
         )}
       </div>
 
-      {/* Nút điều hướng */}
+      
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPageChange(0)}

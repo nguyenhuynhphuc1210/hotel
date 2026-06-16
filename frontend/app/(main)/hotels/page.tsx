@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import { PromotionResponse } from '@/types/promotion.types'
 import promotionApi from '@/lib/api/promotion.api'
 
-// ── Types ─────────────────────────────────────────────────
+
 type SortOption = 'recommended' | 'price_asc' | 'price_desc' | 'star_desc'
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
@@ -41,7 +41,7 @@ function HotelsContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
 
-    // ── Đọc params từ URL ──
+    
     const keyword = searchParams.get('keyword') ?? ''
     const districts = searchParams.getAll('districts')
     const checkIn = searchParams.get('checkIn') ?? ''
@@ -102,7 +102,7 @@ function HotelsContent() {
 }, [pageData, sortBy])
     const totalElements = pageData?.totalElements || 0
 
-    // ── Update URL ──
+    
     const updateQueryParams = (updates: Record<string, string | string[] | number[] | number | null>) => {
         const p = new URLSearchParams(searchParams.toString())
 
@@ -350,7 +350,7 @@ function HotelsContent() {
     )
 }
 
-// ─── Hotel Card Component ──────────────────────────────────
+
 interface HotelCardProps {
     hotel: HotelSummaryResponse
     nights: number
@@ -388,12 +388,12 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: 
     const displayImage = h.thumbnailUrl || h.images?.find(i => i.isPrimary)?.imageUrl
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
 
-    // Lấy danh sách yêu thích để kiểm tra trạng thái trái tim
+    
     const { data: myFavsPage } = useQuery<FavoritePageResponse>({
         queryKey: ['my-favorites', user?.id],
         queryFn: () => favoriteApi.getMyFavorites(0, 100).then(r => r.data as FavoritePageResponse),
         enabled: !!token && !!user,
-        staleTime: 1000 * 60 * 5, // Cache 5 phút
+        staleTime: 1000 * 60 * 5, 
     })
 
     const isFavorited = useMemo(() => {
@@ -402,7 +402,7 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: 
     }, [myFavsPage, h.id])
 
     const handleToggleFavorite = async (e: React.MouseEvent) => {
-        e.stopPropagation() // Ngăn chặn sự kiện click vào Card
+        e.stopPropagation() 
         if (!token) {
             toast.error('Vui lòng đăng nhập để lưu khách sạn!')
             router.push(`/login?redirect=${window.location.pathname}`)
@@ -412,7 +412,7 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: 
         setIsTogglingFav(true)
         try {
             const res = await favoriteApi.toggle(h.id)
-            // Làm mới query list để cập nhật trạng thái trái tim đồng bộ trên toàn app
+            
             await queryClient.invalidateQueries({ queryKey: ['my-favorites', user?.id] })
             toast.success(res.data.isFavorited ? 'Đã thêm vào yêu thích!' : 'Đã xóa khỏi yêu thích!')
         } catch {
@@ -483,7 +483,7 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: 
                 </div>
                 <div className="flex items-end justify-end mt-4 pt-4 border-t border-gray-100">
                     <div className="text-right">
-                        {/* HIỂN THỊ ƯU ĐÃI TẠI ĐÂY */}
+                        
                         {hotelPromo && (
                             <div className="flex items-center justify-end gap-1 text-red-600 font-bold text-[10px] animate-pulse mb-1">
                                 <Tag size={10} /> Có ưu đãi

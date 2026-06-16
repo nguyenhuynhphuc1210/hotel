@@ -3,7 +3,7 @@ import API_CONFIG from '@/config/api.config'
 import { LoginRequest, AuthResponse, RegisterRequest } from '@/types/auth.types'
 
 const authApi = {
-  // POST /api/auth/login
+  
   login: (data: LoginRequest) =>
     axiosInstance.post<AuthResponse>(API_CONFIG.ENDPOINTS.LOGIN, data),
 

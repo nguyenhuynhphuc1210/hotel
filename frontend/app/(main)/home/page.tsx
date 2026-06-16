@@ -15,7 +15,7 @@ import UpgradeToPartnerModal from '@/components/auth/UpgradeToPartnerModal'
 
 
 
-// ─── Districts ────────────────────────────────────────────
+
 const DISTRICTS = [
     'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5',
     'Quận 6', 'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10',
@@ -116,7 +116,7 @@ function HomeContent() {
     const [hotelIdx, setHotelIdx] = useState(0)
     const VISIBLE_HOTELS = 4
 
-    // Tính toán logic cho nút
+    
     const canPrevHotel = hotelIdx > 0
     const canNextHotel = hotelIdx + VISIBLE_HOTELS < featuredHotels.length
 
@@ -141,7 +141,7 @@ function HomeContent() {
 
     const handleNextPromo = () => {
         setPromoIdx(prev => {
-            const nextVal = prev + 1; // Trượt từng cái một cho mượt hoặc đổi thành + VISIBLE_PROMOS nếu muốn trượt cả trang
+            const nextVal = prev + 1; 
             return nextVal > promotions.length - VISIBLE_PROMOS ? promotions.length - VISIBLE_PROMOS : nextVal;
         });
     }
@@ -207,7 +207,7 @@ function HomeContent() {
                     <div className="text-center py-12 text-gray-400">Chưa có khách sạn nào</div>
                 ) : (
                     <div className="relative group/hotel-carousel px-6">
-                        {/* Nút PREV */}
+                        
                         <button
                             onClick={handlePrevHotel}
                             disabled={!canPrevHotel}
@@ -217,7 +217,7 @@ function HomeContent() {
                             <ChevronLeft size={24} strokeWidth={2.5} />
                         </button>
 
-                        {/* Container trượt */}
+                        
                         <div className="overflow-hidden rounded-xl mx-1">
                             <div
                                 className="flex gap-4 transition-transform duration-500 ease-out"
@@ -242,7 +242,7 @@ function HomeContent() {
                             </div>
                         </div>
 
-                        {/* Nút NEXT */}
+                        
                         <button
                             onClick={handleNextHotel}
                             disabled={!canNextHotel}
@@ -267,7 +267,7 @@ function HomeContent() {
                     </div>
 
                     <div className="relative group/promo-carousel px-6">
-                        {/* Nút PREV */}
+                        
                         <button
                             onClick={handlePrevPromo}
                             disabled={!canPrevPromo}
@@ -277,7 +277,7 @@ function HomeContent() {
                             <ChevronLeft size={24} strokeWidth={2.5} />
                         </button>
 
-                        {/* Container trượt */}
+                        
                         <div className="overflow-hidden rounded-xl">
                             <div
                                 className="flex gap-4 transition-transform duration-500 ease-out"
@@ -297,7 +297,7 @@ function HomeContent() {
                             </div>
                         </div>
 
-                        {/* Nút NEXT */}
+                        
                         <button
                             onClick={handleNextPromo}
                             disabled={!canNextPromo}
@@ -328,7 +328,7 @@ function HomeContent() {
     )
 }
 
-// ─── District Carousel ────────────────────────────────────
+
 function DistrictCarousel({
     hotels,
     onSelect,
@@ -367,11 +367,7 @@ function DistrictCarousel({
             </button>
 
             <div className="overflow-hidden">
-                {/* 
-                   SỬA TẠI ĐÂY: 
-                   1. Bỏ gap-4, thay bằng -mx-2 để bù đắp padding của item con
-                   2. Translate tính thuần theo %
-                */}
+                
                 <div
                     className="flex transition-transform duration-500 ease-out -mx-2"
                     style={{
@@ -384,8 +380,8 @@ function DistrictCarousel({
                         return (
                             <div
                                 key={d}
-                                className="shrink-0 px-2" // Sử dụng px-2 thay cho gap để tạo khoảng cách 16px (2 bên là 16)
-                                style={{ width: `${100 / VISIBLE}%` }} // Chia đều chính xác 20% mỗi item
+                                className="shrink-0 px-2" 
+                                style={{ width: `${100 / VISIBLE}%` }} 
                             >
                                 <button
                                     onClick={() => onSelect(d)}
@@ -423,7 +419,7 @@ function DistrictCarousel({
     )
 }
 
-// ─── Hotel Card ───────────────────────────────────────────
+
 function HotelCard({
     hotel,
     checkIn,
@@ -438,7 +434,7 @@ function HotelCard({
     const router = useRouter()
 
     const handleCardClick = () => {
-        // Truyền đúng các tham số đã dùng để search ở Home sang trang chi tiết
+        
         router.push(`/hotels/${hotel.id}?checkIn=${checkIn}&checkOut=${checkOut}&adults=1&children=0&rooms=1`)
     }
 
@@ -452,7 +448,7 @@ function HotelCard({
             onClick={handleCardClick}
             className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-xl transition-all cursor-pointer group flex flex-col h-full"
         >
-            {/* Image Section */}
+            
             <div className="h-44 bg-gray-100 relative overflow-hidden shrink-0">
                 {displayImage ? (
                     <img
@@ -469,7 +465,7 @@ function HotelCard({
                 </div>
             </div>
 
-            {/* Content Section */}
+            
             <div className="p-4 flex flex-col flex-1">
                 <h3 className="font-bold text-gray-900 text-sm line-clamp-1 group-hover:text-blue-700 transition-colors">
                     {hotel.hotelName}
@@ -508,13 +504,13 @@ function HotelCard({
     )
 }
 
-// ─── Promotion Card ───────────────────────────────────────
+
 function PromotionCard({ promotion }: {
     promotion: PromotionResponse
 }) {
     const router = useRouter()
 
-    // Tính số ngày còn lại
+    
     const daysLeft = Math.ceil(
         (new Date(promotion.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
     )

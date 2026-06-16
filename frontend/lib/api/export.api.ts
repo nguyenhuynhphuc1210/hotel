@@ -16,14 +16,14 @@ function downloadBlob(
   URL.revokeObjectURL(url)
 }
 
-// ─── Bookings ─────────────────────────────────────────────────────────────────
+
 
 export interface BookingExportParams {
   keyword?:           string
   status?:            BookingStatus | ''
   hotelId?:           number | ''
   ownerId?:           number
-  includeCommission?: boolean   // true → admin (có cột hoa hồng), false/omit → owner
+  includeCommission?: boolean   
 }
 
 export async function exportBookings(params: BookingExportParams = {}): Promise<void> {
@@ -40,7 +40,7 @@ export async function exportBookings(params: BookingExportParams = {}): Promise<
   downloadBlob(data, 'bookings.xlsx')
 }
 
-// ─── Payments ─────────────────────────────────────────────────────────────────
+
 
 export interface PaymentExportParams {
   keyword?:           string
@@ -48,7 +48,7 @@ export interface PaymentExportParams {
   method?:            PaymentMethod | ''
   hotelId?:           number | null
   ownerId?:           number
-  includeCommission?: boolean   // true → admin (có cột hoa hồng), false/omit → owner
+  includeCommission?: boolean   
 }
 
 export async function exportPayments(params: PaymentExportParams = {}): Promise<void> {
@@ -66,7 +66,7 @@ export async function exportPayments(params: PaymentExportParams = {}): Promise<
   downloadBlob(data, 'payments.xlsx')
 }
 
-// ─── Revenue / Statistics ──────────────────────────────────────────────────────
+
 
 export interface RevenueExportParams {
   hotelId?:           number | null
@@ -75,7 +75,7 @@ export interface RevenueExportParams {
   year?:              number
   fromDate?:          string
   toDate?:            string
-  includeCommission?: boolean   // true → admin, false/omit → owner
+  includeCommission?: boolean   
 }
 
 export async function exportRevenue(params: RevenueExportParams = {}): Promise<void> {

@@ -15,12 +15,12 @@ function parseTs(ts: string): Date {
     return new Date(ts)
 }
 
-// SỬA fmt — chỉ đổi new Date(ts) → parseTs(ts)
+
 function fmt(ts: string) {
     return parseTs(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
 
-// SỬA timeAgo — chỉ đổi new Date(ts) → parseTs(ts)
+
 function timeAgo(ts: string) {
     if (!ts) return ''
     const diff = Date.now() - parseTs(ts).getTime()
@@ -43,17 +43,17 @@ export default function NotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { user } = useAuthStore()
 
-  // ───── Fetch unread count (lightweight, runs on mount + after changes)
+  
   const fetchUnreadCount = useCallback(async () => {
     try {
       const res = await notificationApi.getUnreadCount()
       setUnreadCount(res.data.unreadCount)
     } catch {
-      // silent
+      
     }
   }, [])
 
-  // ───── Fetch notification list
+  
   const fetchNotifications = useCallback(async (pageNum = 0, append = false) => {
     setLoading(true)
     try {
@@ -63,25 +63,25 @@ export default function NotificationBell() {
       setHasMore(!last)
       setPage(pageNum)
     } catch {
-      // silent
+      
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // ───── Open dropdown → fetch
+  
   useEffect(() => {
     if (open) {
       fetchNotifications(0, false)
     }
   }, [open, fetchNotifications])
 
-  // ───── Initial unread count
+  
   useEffect(() => {
     fetchUnreadCount()
   }, [fetchUnreadCount])
 
-  // ───── Close on outside click
+  
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -92,7 +92,7 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  // ───── WebSocket: push new notification into list
+  
   const handleNewNotification = useCallback((notif: NotificationResponse) => {
   const withTs: NotificationResponse = {
     ...notif,
@@ -103,7 +103,7 @@ export default function NotificationBell() {
 }, [])
   useNotificationSocket(user?.email ?? null, handleNewNotification)
 
-  // ───── Mark one as read
+  
   const markAsRead = async (id: number) => {
     try {
       await notificationApi.markAsRead(id)
@@ -112,11 +112,11 @@ export default function NotificationBell() {
       )
       setUnreadCount(prev => Math.max(0, prev - 1))
     } catch {
-      // silent
+      
     }
   }
 
-  // ───── Mark all as read
+  
   const markAllAsRead = async () => {
     setMarkingAll(true)
     try {
@@ -124,13 +124,13 @@ export default function NotificationBell() {
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
       setUnreadCount(0)
     } catch {
-      // silent
+      
     } finally {
       setMarkingAll(false)
     }
   }
 
-  // ───── Load more
+  
   const loadMore = () => {
     if (!loading && hasMore) {
       fetchNotifications(page + 1, true)
@@ -139,7 +139,7 @@ export default function NotificationBell() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Bell button */}
+      
       <button
         onClick={() => setOpen(prev => !prev)}
         className="relative w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
@@ -153,10 +153,10 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown */}
+      
       {open && (
         <div className="absolute right-0 top-11 w-[360px] bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-          {/* Header */}
+          
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <Bell size={15} className="text-blue-600" />
@@ -191,7 +191,7 @@ export default function NotificationBell() {
             </div>
           </div>
 
-          {/* List */}
+          
           <div className="max-h-[420px] overflow-y-auto divide-y divide-gray-50">
             {loading && notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-gray-400">
@@ -213,7 +213,7 @@ export default function NotificationBell() {
                   />
                 ))}
 
-                {/* Load more */}
+                
                 {hasMore && (
                   <div className="px-4 py-2.5">
                     <button
@@ -237,7 +237,7 @@ export default function NotificationBell() {
   )
 }
 
-// ───── Single notification row
+
 function NotificationItem({
   notif,
   onMarkRead,
@@ -245,7 +245,7 @@ function NotificationItem({
   notif: NotificationResponse
   onMarkRead: (id: number) => void
 }) {
-  // Tick mỗi 30s để timeAgo tự cập nhật
+  
   const [tick, setTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 30_000)
@@ -256,7 +256,7 @@ function NotificationItem({
     <div
       className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group cursor-default ${!notif.isRead ? 'bg-blue-50/40' : ''}`}
     >
-      {/* Dot */}
+      
       <div className="mt-1.5 shrink-0">
         {notif.isRead
           ? <div className="w-2 h-2 rounded-full bg-gray-200" />
@@ -264,7 +264,7 @@ function NotificationItem({
         }
       </div>
 
-      {/* Content */}
+      
       <div className="flex-1 min-w-0">
         <p className={`text-sm leading-snug ${notif.isRead ? 'text-gray-600' : 'text-gray-900 font-medium'}`}>
           {notif.title}
@@ -272,13 +272,13 @@ function NotificationItem({
         <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
           {notif.message}
         </p>
-        {/* tick làm dependency để re-render timeAgo */}
+        
         <p className="text-[11px] text-gray-400 mt-1">
           {timeAgo(notif.createdAt)}
         </p>
       </div>
 
-      {/* Mark as read */}
+      
       {!notif.isRead && (
         <button
           onClick={() => onMarkRead(notif.id)}

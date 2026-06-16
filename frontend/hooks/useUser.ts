@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 
 const KEY = 'users'
 
-// Lấy tất cả users
+
 export const useUsers = (
   page = 0,
   size = 10,
@@ -21,7 +21,7 @@ export const useUsers = (
         .then(r => r.data),
   })
 
-// Lấy 1 user
+
 export const useUser = (id: number | string) =>
   useQuery({
     queryKey: [KEY, id],
@@ -29,7 +29,7 @@ export const useUser = (id: number | string) =>
     enabled: !!id,
   })
 
-// Tạo user
+
 export const useCreateUser = () => {
   const qc = useQueryClient()
   return useMutation({
@@ -45,7 +45,7 @@ export const useCreateUser = () => {
   })
 }
 
-// Cập nhật user
+
 export const useUpdateUser = (id: number | string) => {
   const qc = useQueryClient()
   return useMutation({
@@ -61,7 +61,7 @@ export const useUpdateUser = (id: number | string) => {
   })
 }
 
-// Xoá user
+
 export const useDeleteUser = () => {
   const qc = useQueryClient()
   return useMutation({
@@ -77,7 +77,7 @@ export const useDeleteUser = () => {
   })
 }
 
-// Khoá user
+
 export const useDisableUser = () => {
   const qc = useQueryClient()
   return useMutation({
@@ -93,7 +93,7 @@ export const useDisableUser = () => {
   })
 }
 
-// Mở khoá user
+
 export const useEnableUser = () => {
   const qc = useQueryClient()
   return useMutation({

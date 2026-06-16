@@ -77,7 +77,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                 className="relative w-full max-w-lg bg-white rounded-2xl overflow-hidden shadow-2xl"
                 style={{ maxHeight: '90vh', overflowY: 'auto' }}
             >
-                {/* Header gradient banner */}
+                
                 <div
                     className="relative px-8 pt-10 pb-8 text-white"
                     style={{ background: 'linear-gradient(135deg, #6241f5 100%)' }}
@@ -97,10 +97,10 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                     </p>
                 </div>
 
-                {/* Body */}
+                
                 <div className="px-8 py-6">
 
-                    {/* Success state */}
+                    
                     {success ? (
                         <div className="text-center py-6">
                             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
@@ -171,7 +171,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                     ) : (
                         /* Normal upgrade form */
                         <>
-                            {/* Benefits */}
+                            
                             <div className="grid grid-cols-3 gap-3 mb-6">
                                 {[
                                     { icon: '📊', label: 'Quản lý đặt phòng' },
@@ -186,7 +186,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                {/* Email (read-only) */}
+                                
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                         Email tài khoản
@@ -199,7 +199,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                                     />
                                 </div>
 
-                                {/* Phone */}
+                                
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                         Số điện thoại liên hệ <span className="text-red-500">*</span>
@@ -222,7 +222,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                                     }
                                 </div>
 
-                                {/* Terms checkbox */}
+                                
                                 <label className="flex items-start gap-3 cursor-pointer group">
                                     <div className="mt-0.5 shrink-0">
                                         <input
@@ -241,7 +241,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                                     </span>
                                 </label>
 
-                                {/* Error */}
+                                
                                 {error && (
                                     <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
                                         <span className="shrink-0">⚠️</span>
@@ -249,7 +249,7 @@ export default function UpgradeToPartnerModal({ isOpen, onClose }: UpgradeToPart
                                     </div>
                                 )}
 
-                                {/* Submit */}
+                                
                                 <button
                                     type="submit"
                                     disabled={loading}

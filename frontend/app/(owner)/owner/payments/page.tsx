@@ -17,7 +17,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-// ── Pagination ─────────────────────────────────────────────────────────────────
+
 function Pagination({ currentPage, pageSize, totalPages, totalElements, onPageChange, onPageSizeChange }: {
   currentPage: number; pageSize: number; totalPages: number; totalElements: number
   onPageChange: (p: number) => void; onPageSizeChange: (s: number) => void
@@ -48,7 +48,7 @@ function Pagination({ currentPage, pageSize, totalPages, totalElements, onPageCh
   )
 }
 
-// ── Configs ────────────────────────────────────────────────────────────────────
+
 const STATUS_CONFIG: Record<PaymentStatus, { label: string; dot: string; badge: string; icon: LucideIcon; color: string }> = {
   PAID:      { label: 'Đã thanh toán',     dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', icon: CheckCircle2, color: 'text-emerald-500' },
   PENDING:   { label: 'Chờ xử lý',         dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',       icon: Clock,        color: 'text-amber-500'   },
@@ -69,7 +69,7 @@ const METHOD_CONFIG: Record<string, { label: string; badge: string }> = {
 
 const STAT_STATUS_LIST: PaymentStatus[] = ['UNPAID', 'PENDING', 'PAID', 'CANCELLED', 'FAILED', 'REFUNDED']
 
-// ── Payment Drawer ─────────────────────────────────────────────────────────────
+
 function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | null; onClose: () => void }) {
   if (!payment) return null
   const cfg = STATUS_CONFIG[payment.status]
@@ -117,7 +117,7 @@ function PaymentDetailDrawer({ payment, onClose }: { payment: PaymentResponse | 
   )
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────────
+
 export default function OwnerPaymentsPage() {
   const { activeHotelId, hotels, setActiveHotelId, isLoading: isHotelLoading } = useOwnerHotel()
 
@@ -130,24 +130,24 @@ export default function OwnerPaymentsPage() {
   const [isExporting,     setIsExporting]     = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<PaymentResponse | null>(null)
 
-  // Debounce search
+  
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchInput), 400)
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  // Reset page khi filter thay đổi
+  
   useEffect(() => { setCurrentPage(0) }, [debouncedSearch, statusFilter, methodFilter, activeHotelId])
 
-  // ── Main table data ──
+  
   const { data: pageData, isLoading: isPaymentsLoading, isFetching } = useQuery({
     queryKey: ['owner-payments', activeHotelId, currentPage, pageSize, debouncedSearch, statusFilter, methodFilter],
     queryFn:  () => paymentApi.getAll(currentPage, pageSize, debouncedSearch || undefined, statusFilter || undefined, methodFilter || undefined, activeHotelId).then(r => r.data),
     enabled:  !!activeHotelId,
   })
 
-  // ── Status counts: 1 query nhỏ per status, chỉ lấy totalElements ──
-  // Thay thế cho query fetch 2000 records cũ
+  
+  
   const statusQueries = useQueries({
     queries: STAT_STATUS_LIST.map(s => ({
       queryKey: ['owner-payment-count', activeHotelId, s],
@@ -162,7 +162,7 @@ export default function OwnerPaymentsPage() {
     STAT_STATUS_LIST.map((s, i) => [s, statusQueries[i].data ?? 0])
   ) as Record<PaymentStatus, number>
 
-  // ── Revenue từ statistics API — dùng đúng field grossRevenue/netRevenue/totalCommission ──
+  
   const { data: dashboardData } = useQuery({
     queryKey: ['owner-payment-revenue', activeHotelId],
     queryFn:  () => statisticApi.getDashboard({ hotelId: activeHotelId! }).then(r => r.data),
@@ -174,7 +174,7 @@ export default function OwnerPaymentsPage() {
   const commission = Number(dashboardData?.summary?.totalCommission ?? 0)
   const net        = Number(dashboardData?.summary?.netRevenue      ?? 0)
 
-  // ── Export ──
+  
   const handleExport = async () => {
     setIsExporting(true)
     try {
@@ -194,7 +194,7 @@ export default function OwnerPaymentsPage() {
   return (
     <div className="min-h-screen bg-slate-50/50 p-6 space-y-6">
 
-      {/* Header */}
+      
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -210,7 +210,7 @@ export default function OwnerPaymentsPage() {
         </button>
       </div>
 
-      {/* Hotel switcher */}
+      
       {hotels.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
           {hotels.map(h => (
@@ -223,7 +223,7 @@ export default function OwnerPaymentsPage() {
         </div>
       )}
 
-      {/* Status chips */}
+      
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {STAT_STATUS_LIST.map(status => {
           const cfg    = STATUS_CONFIG[status]
@@ -245,7 +245,7 @@ export default function OwnerPaymentsPage() {
         })}
       </div>
 
-      {/* Filters */}
+      
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[260px]">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -272,7 +272,7 @@ export default function OwnerPaymentsPage() {
         </p>
       )}
 
-      {/* Table */}
+      
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">

@@ -8,7 +8,7 @@ import axiosInstance from '@/lib/api/axios'
 import API_CONFIG from '@/config/api.config'
 import { HotelSummaryResponse, HotelStatus } from '@/lib/api/hotel.api'
 
-// ── Constants ──────────────────────────────────────────────
+
 const DISTRICTS = [
     'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7',
     'Quận 8', 'Quận 9', 'Quận 10', 'Quận 11', 'Quận 12',
@@ -23,10 +23,10 @@ const MONTH_NAMES = [
 const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
 const WEEKDAY_NAMES = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy']
 
-// Tuổi trẻ em: < 1 tuổi, 1..17
+
 const CHILD_AGE_OPTIONS = ['< 1 tuổi', ...Array.from({ length: 17 }, (_, i) => `${i + 1} tuổi`)]
 
-// ── Types ──────────────────────────────────────────────────
+
 interface SearchBarProps {
     variant?: 'hero' | 'compact'
     onSearch?: (params: URLSearchParams) => void
@@ -41,7 +41,7 @@ interface SearchBarProps {
     }
 }
 
-// ── Helpers ────────────────────────────────────────────────
+
 const getToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
 const LAST_DAY = new Date(2026, 11, 31)
 
@@ -69,7 +69,7 @@ function getFirstDayMon(y: number, m: number) {
     return d === 0 ? 6 : d - 1
 }
 
-// ── Guest summary string (giống Agoda: "2 người lớn, 1 trẻ em · 1 phòng") ──
+
 function buildGuestSummary(adults: number, children: number, rooms: number): string {
     const parts: string[] = []
     parts.push(`${adults} người lớn`)
@@ -77,9 +77,9 @@ function buildGuestSummary(adults: number, children: number, rooms: number): str
     return `${parts.join(', ')} · ${rooms} phòng`
 }
 
-// ═══════════════════════════════════════════════════════════
-// DatePicker
-// ═══════════════════════════════════════════════════════════
+
+
+
 interface DatePickerProps {
     checkIn: Date | null
     checkOut: Date | null
@@ -278,14 +278,14 @@ function DatePicker({
     )
 }
 
-// ═══════════════════════════════════════════════════════════
-// GuestPicker — Agoda style với child age selector
-// ═══════════════════════════════════════════════════════════
+
+
+
 interface GuestPickerProps {
     adults: number
     children: number
     rooms: number
-    childAges: number[]        // -1 = chưa chọn, 0 = <1 tuổi, 1-17 = tuổi
+    childAges: number[]        
     setAdults: React.Dispatch<React.SetStateAction<number>>
     setChildren: React.Dispatch<React.SetStateAction<number>>
     setRooms: React.Dispatch<React.SetStateAction<number>>
@@ -311,7 +311,7 @@ function GuestPicker({ adults, children, rooms, childAges, setAdults, setChildre
         setChildren(newCount)
         setChildAges(prev => {
             if (newCount > prev.length) {
-                // Thêm trẻ mới — -1 = chưa chọn tuổi
+                
                 return [...prev, ...Array(newCount - prev.length).fill(-1)]
             }
             return prev.slice(0, newCount)
@@ -339,7 +339,7 @@ function GuestPicker({ adults, children, rooms, childAges, setAdults, setChildre
             </div>
 
             <div className="px-5 divide-y divide-gray-100">
-                {/* Phòng */}
+                
                 <div className="flex items-center justify-between py-4">
                     <div>
                         <div className="text-sm font-semibold text-gray-800">Phòng</div>
@@ -362,7 +362,7 @@ function GuestPicker({ adults, children, rooms, childAges, setAdults, setChildre
                     </div>
                 </div>
 
-                {/* Người lớn */}
+                
                 <div className="flex items-center justify-between py-4">
                     <div>
                         <div className="text-sm font-semibold text-gray-800">Người lớn</div>
@@ -386,7 +386,7 @@ function GuestPicker({ adults, children, rooms, childAges, setAdults, setChildre
                     </div>
                 </div>
 
-                {/* Trẻ em */}
+                
                 <div className="py-4">
                     <div className="flex items-center justify-between">
                         <div>
@@ -412,7 +412,7 @@ function GuestPicker({ adults, children, rooms, childAges, setAdults, setChildre
                         </div>
                     </div>
 
-                    {/* Child age selectors */}
+                    
                     {children > 0 && (
                         <div className="mt-3 space-y-2">
                             <p className="text-xs text-gray-500 leading-snug">
@@ -454,9 +454,9 @@ function GuestPicker({ adults, children, rooms, childAges, setAdults, setChildre
     )
 }
 
-// ═══════════════════════════════════════════════════════════
-// SuggestDropdown
-// ═══════════════════════════════════════════════════════════
+
+
+
 function SuggestDropdown({
     hotelSuggestions, districtSuggestions, onSelectHotel, onSelectDistrict
 }: {
@@ -509,9 +509,9 @@ function SuggestDropdown({
     )
 }
 
-// ═══════════════════════════════════════════════════════════
-// Main SearchBar
-// ═══════════════════════════════════════════════════════════
+
+
+
 export default function SearchBar({ variant = 'hero', defaultValues, onSearch }: SearchBarProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -540,7 +540,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
     const [adults, setAdults] = useState(Number(searchParams.get('adults')) || defaultValues?.adults || 1)
     const [children, setChildren] = useState(Number(searchParams.get('children')) || defaultValues?.children || 0)
     const [rooms, setRooms] = useState(Number(searchParams.get('rooms')) || defaultValues?.rooms || 1)
-    // childAges: mảng số, -1 = chưa chọn
+    
     const [childAges, setChildAges] = useState<number[]>(() => {
     const fromUrl = searchParams.getAll('childAges').map(Number)
     const childCount = Number(searchParams.get('children')) || defaultValues?.children || 0
@@ -571,7 +571,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
         return () => document.removeEventListener('mousedown', fn)
     }, [])
 
-    // ── Hotel suggestions ──
+    
     const { data: hotelPage } = useQuery({
         queryKey: ['hotels-public'],
         queryFn: () => axiosInstance.get(`${API_CONFIG.ENDPOINTS.HOTELS}/active`).then(r => r.data),
@@ -588,7 +588,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
 
     const districtSuggestions = DISTRICTS.filter(d => !q || d.toLowerCase().includes(q)).slice(0, q ? 6 : 8)
 
-    // ── Date selection ──
+    
     const handleDaySelect = (d: Date) => {
         const now = new Date()
         now.setHours(0, 0, 0, 0)
@@ -606,7 +606,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
         ? Math.round((checkOut.getTime() - checkIn.getTime()) / 86400000)
         : 0
 
-    // ── Search ──
+    
     const handleSearch = () => {
         if (!checkIn || !checkOut) {
             setShowDate(true)
@@ -657,15 +657,15 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
         onSelectDistrict: (d: string) => { setKeyword(d); setShowSuggest(false) },
     }
 
-    // ═══════════════════════════════════════
-    // HERO VARIANT
-    // ═══════════════════════════════════════
+    
+    
+    
     if (isHero) {
         return (
             <div ref={wrapRef} className="relative w-full">
                 <div className="bg-white rounded-2xl shadow-xl">
 
-                    {/* Destination */}
+                    
                     <div className="relative px-5 pt-5 pb-4 border-b border-gray-100">
                         <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">
                             Điểm đến
@@ -697,7 +697,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
                         {showSuggest && <SuggestDropdown {...suggestProps} />}
                     </div>
 
-                    {/* Dates + Guests */}
+                    
                     <div className="relative grid grid-cols-3 divide-x divide-gray-100">
                         <button
                             onClick={() => { setShowDate(true); setPickingEnd(false); setShowGuests(false); setShowSuggest(false) }}
@@ -739,7 +739,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
 
                     {showDate && <DatePicker {...datePickerProps} />}
 
-                    {/* Footer */}
+                    
                     <div className="px-5 py-4 bg-gray-50 rounded-b-2xl border-t border-gray-100 flex items-center justify-between">
                         <span className="text-sm text-gray-400">
                             {nights > 0
@@ -759,15 +759,15 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
         )
     }
 
-    // ═══════════════════════════════════════
-    // COMPACT VARIANT
-    // ═══════════════════════════════════════
+    
+    
+    
     return (
         <div ref={wrapRef} className="relative w-full">
             <div className="bg-white border border-gray-200 rounded-2xl shadow-lg">
                 <div className="flex items-stretch">
 
-                    {/* Destination */}
+                    
                     <div className="flex-[2.5] relative">
                         <div
                             className="flex items-center gap-3 px-5 h-full cursor-text py-3"
@@ -792,7 +792,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
 
                     <div className="w-px bg-gray-200 self-stretch" />
 
-                    {/* Check-in */}
+                    
                     <button
                         onClick={() => { setShowDate(true); setPickingEnd(false); setShowGuests(false); setShowSuggest(false) }}
                         className="flex-1 flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left"
@@ -807,7 +807,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
 
                     <div className="w-px bg-gray-200 self-stretch" />
 
-                    {/* Check-out */}
+                    
                     <button
                         onClick={() => { setShowDate(true); setPickingEnd(true); setShowGuests(false); setShowSuggest(false) }}
                         className="flex-1 flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left"
@@ -822,7 +822,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
 
                     <div className="w-px bg-gray-200 self-stretch" />
 
-                    {/* Guests */}
+                    
                     <div className="relative">
                         <button
                             onClick={() => { setShowGuests(v => !v); setShowDate(false); setShowSuggest(false) }}
@@ -840,7 +840,7 @@ export default function SearchBar({ variant = 'hero', defaultValues, onSearch }:
                         {showGuests && <GuestPicker {...guestPickerProps} />}
                     </div>
 
-                    {/* Search button */}
+                    
                     <div className="flex items-center px-4 border-l border-gray-200">
                         <button
                             onClick={handleSearch}

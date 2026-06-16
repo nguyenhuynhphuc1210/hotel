@@ -20,8 +20,6 @@ import toast from 'react-hot-toast'
 import { useOwnerHotel } from '../../owner-hotel-context'
 import { HotelImageSection } from './HotelImageSection'
 
-
-// ── Schemas ──────────────────────────────────────────────
 const hotelSchema = z.object({
   hotelName: z.string().min(1, 'Không được để trống'),
   description: z.string().optional(),
@@ -51,7 +49,7 @@ const textareaClass = `${inputClass} resize-none`
 
 type Tab = 'info' | 'policy' | 'amenity'
 
-// ── Page ─────────────────────────────────────────────────
+
 export default function OwnerHotelPage() {
   const qc = useQueryClient()
   const [tab, setTab] = useState<Tab>('info')
@@ -75,7 +73,7 @@ export default function OwnerHotelPage() {
         <p className="text-sm text-gray-500 mt-1">{hotel.hotelName}</p>
       </div>
 
-      {/* Tabs */}
+      
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
         {tabs.map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key)}
@@ -94,7 +92,7 @@ export default function OwnerHotelPage() {
   )
 }
 
-// ─── Tab Thông tin ────────────────────────────────────────
+
 function InfoTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
   const updateMutation = useMutation({
     mutationFn: (data: HotelForm) =>
@@ -194,7 +192,7 @@ function InfoTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
   )
 }
 
-// ─── Image Section ────────────────────────────────────────
+
 function ImageSection({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
 
   const uploadMutation = useMutation({
@@ -236,7 +234,7 @@ function ImageSection({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <h2 className="text-sm font-semibold text-gray-900">Ảnh khách sạn</h2>
         <div className="flex flex-wrap items-center gap-3">
-          {/* 5. Đã xóa phần input nhập URL và icon LinkIcon ở đây */}
+          
           
           <label className={`flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer transition-colors ${isProcessing ? 'opacity-60 pointer-events-none' : ''}`}>
             {uploadMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
@@ -302,7 +300,7 @@ function PolicyTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
     },
   })
 
-  // ✅ FIX: Reset form với data thực sau khi query trả về
+  
   useEffect(() => {
     if (policy) {
       reset({
@@ -398,7 +396,7 @@ function PolicyTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
   )
 }
 
-// ─── Tab Tiện ích ─────────────────────────────────────────
+
 interface ExtendedHotelAmenity extends HotelAmenityResponse {
   amenity_id?: number
 }
@@ -406,7 +404,7 @@ interface ExtendedHotelAmenity extends HotelAmenityResponse {
 export function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClient }) {
   const { data: allAmenities = [] } = useAmenities()
 
-  // ✅ FIX: Chỉ lấy tiện ích loại HOTEL, không lấy ROOM
+  
   const hotelTypeAmenities = allAmenities.filter(a => a.type === 'HOTEL')
 
   const { data: hotelAmenities = [], isLoading } = useQuery<HotelAmenityResponse[]>({
@@ -444,7 +442,7 @@ export function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClien
     (hotelAmenities as ExtendedHotelAmenity[]).map(a => String(a.amenityId || a.amenity_id))
   )
 
-  // ✅ Lọc từ hotelTypeAmenities (chỉ type HOTEL) thay vì allAmenities
+  
   const selectedAmenities = hotelTypeAmenities.filter(a => linkedIds.has(String(a.id)))
   const availableAmenities = hotelTypeAmenities.filter(a => !linkedIds.has(String(a.id)))
 
@@ -460,7 +458,7 @@ export function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClien
   return (
     <div className="space-y-6">
 
-      {/* ── Tiện ích ĐANG CÓ ── */}
+      
       <div className="bg-white rounded-2xl border-2 border-blue-500 shadow-md overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-blue-100 bg-blue-50">
           <div className="flex items-center gap-2">
@@ -508,7 +506,7 @@ export function AmenityTab({ hotel, qc }: { hotel: HotelResponse; qc: QueryClien
         </div>
       </div>
 
-      {/* ── Kho tiện ích ── */}
+      
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
           <h3 className="text-sm font-bold text-gray-700 uppercase">Kho tiện ích hệ thống (Thêm mới)</h3>

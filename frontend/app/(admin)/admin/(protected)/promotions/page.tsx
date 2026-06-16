@@ -35,7 +35,7 @@ type PromoForm = z.infer<typeof promoSchema>
 
 type FilterStatus = 'all' | 'active' | 'inactive' | 'expired'
 
-// ── Move outside component so React Compiler can track dependencies correctly ──
+
 function getPromoStatus(p: PromotionResponse, now: Date): FilterStatus {
   const end = new Date(p.endDate)
   const start = new Date(p.startDate)
@@ -110,7 +110,7 @@ export default function AdminPromotionsPage() {
   return (
     <div className="space-y-6">
 
-      {/* Header */}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Quản lý khuyến mãi</h1>
@@ -124,7 +124,7 @@ export default function AdminPromotionsPage() {
         </button>
       </div>
 
-      {/* Stats */}
+      
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {([
           { key: 'all'      as const, val: stats.total,    label: 'Tất cả',          dot: 'bg-gray-400'   },
@@ -150,9 +150,9 @@ export default function AdminPromotionsPage() {
         ))}
       </div>
 
-      {/* Filters */}
+      
       <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap gap-3 items-center">
-        {/* Search */}
+        
         <div className="relative flex-1 min-w-[200px]">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -163,7 +163,7 @@ export default function AdminPromotionsPage() {
           />
         </div>
 
-        {/* Hotel filter */}
+        
         <div className="relative">
           <Hotel size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <select
@@ -180,7 +180,7 @@ export default function AdminPromotionsPage() {
           <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
 
-        {/* Status filter */}
+        
         <div className="relative">
           <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <select
@@ -198,7 +198,7 @@ export default function AdminPromotionsPage() {
         <span className="text-xs text-gray-400 ml-auto">{filtered.length} kết quả</span>
       </div>
 
-      {/* Table */}
+      
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {isPromosLoading ? (
           <div className="py-20 text-center text-gray-400 flex flex-col items-center gap-3">
@@ -282,7 +282,7 @@ export default function AdminPromotionsPage() {
                         {cfg.label}
                       </span>
                     </td>
-                    {/* Nút sửa/xoá — chỉ hiện với global promotion */}
+                    
                     <td className="px-5 py-4 w-20">
                       {isGlobal && (
                         <div className="flex items-center gap-1 justify-end">
@@ -314,7 +314,7 @@ export default function AdminPromotionsPage() {
         )}
       </div>
 
-      {/* Modal */}
+      
       {modalPromo !== null && (
         <PromoFormModal
           promo={modalPromo === 'new' ? null : modalPromo}
@@ -346,7 +346,7 @@ function PromoFormModal({
 
   const saveMutation = useMutation({
     mutationFn: (data: PromoForm) => {
-      // hotelId null/0/undefined => global promotion, không gửi hotelId
+      
       const hotelId = data.hotelId && data.hotelId !== 0 ? data.hotelId : undefined
       const req = {
         promoCode: data.promoCode,
@@ -406,7 +406,7 @@ function PromoFormModal({
 
         <form onSubmit={handleSubmit(d => saveMutation.mutate(d))} className="px-6 py-5 space-y-4">
 
-          {/* Áp dụng cho khách sạn */}
+          
           <div>
             <label className={labelClass}>Áp dụng cho</label>
             <div className="relative">
@@ -421,7 +421,7 @@ function PromoFormModal({
             <p className="text-xs text-gray-400 mt-1">Để trống = áp dụng cho tất cả khách sạn</p>
           </div>
 
-          {/* Mã giảm giá */}
+          
           <div>
             <label className={labelClass}>Mã giảm giá <span className="text-red-500">*</span></label>
             <input
@@ -436,7 +436,7 @@ function PromoFormModal({
             {errors.promoCode && <p className="text-xs text-red-500 mt-1">{errors.promoCode.message}</p>}
           </div>
 
-          {/* Giảm % + Tối đa */}
+          
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Giảm (%) <span className="text-red-500">*</span></label>
@@ -456,13 +456,13 @@ function PromoFormModal({
             </div>
           </div>
 
-          {/* Đơn tối thiểu */}
+          
           <div>
             <label className={labelClass}>Đơn tối thiểu (₫)</label>
             <input {...register('minOrderValue')} type="number" min={0} className={inputClass} placeholder="Không giới hạn" />
           </div>
 
-          {/* Ngày */}
+          
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Bắt đầu <span className="text-red-500">*</span></label>
@@ -476,7 +476,7 @@ function PromoFormModal({
             </div>
           </div>
 
-          {/* Kích hoạt */}
+          
           <div className="flex items-center gap-3 py-2 px-3 bg-gray-50 rounded-lg">
             <input {...register('isActive')} type="checkbox" id="isActive" className="w-4 h-4 rounded accent-blue-600" />
             <label htmlFor="isActive" className="text-sm font-medium text-gray-700 cursor-pointer flex-1">
@@ -485,7 +485,7 @@ function PromoFormModal({
             <span className="text-xs text-gray-400">Bỏ chọn để tạm ẩn mã</span>
           </div>
 
-          {/* Actions */}
+          
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"

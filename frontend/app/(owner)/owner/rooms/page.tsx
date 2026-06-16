@@ -123,7 +123,7 @@ export default function OwnerRoomsPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Quản lý loại phòng</h1>
@@ -149,7 +149,7 @@ export default function OwnerRoomsPage() {
         </div>
       </div>
 
-      {/* List */}
+      
       {isLoading ? (
         <div className="text-center py-12 text-gray-400">Đang tải...</div>
       ) : allRooms.length === 0 ? (
@@ -180,7 +180,7 @@ export default function OwnerRoomsPage() {
         </div>
       )}
 
-      {/* Form Modal */}
+      
       {modalRoom !== null && (
         <RoomFormModal
           room={modalRoom === 'new' ? null : modalRoom}
@@ -190,7 +190,7 @@ export default function OwnerRoomsPage() {
         />
       )}
 
-      {/* Image Modal */}
+      
       {imageRoom && (
         <RoomImageModal
           room={imageRoom}
@@ -198,7 +198,7 @@ export default function OwnerRoomsPage() {
         />
       )}
 
-      {/* ── Amenity Modal (NEW) ── */}
+      
       {amenityRoom && (
         <RoomTypeAmenityModal
           room={amenityRoom}
@@ -210,7 +210,7 @@ export default function OwnerRoomsPage() {
   )
 }
 
-// ─── Room Card ────────────────────────────────────────────
+
 
 function RoomCard({
   room,
@@ -237,20 +237,20 @@ function RoomCard({
     <div className={`bg-white rounded-2xl border transition-all group flex flex-col relative overflow-hidden ${
       room.isActive 
         ? 'border-gray-200 hover:shadow-lg' 
-        : 'border-gray-100 bg-gray-50/50 shadow-none' // Làm mờ border và đổi nền nếu tạm ngưng
+        : 'border-gray-100 bg-gray-50/50 shadow-none' 
     }`}>
 
-      {/* Badge Trạng thái ở góc trái */}
+      
       <div className={`absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-sm backdrop-blur-md ${
         room.isActive
           ? 'bg-green-500/90 text-white'
-          : 'bg-gray-400/90 text-white' // Màu xám cho tạm ngưng
+          : 'bg-gray-400/90 text-white' 
         }`}>
         {room.isActive ? <CheckCircle2 size={10} /> : <Pause size={10} />}
         {room.isActive ? 'ĐANG KINH DOANH' : 'TẠM NGƯNG'}
       </div>
 
-      {/* ── Ảnh ── */}
+      
       <div
         className="relative h-48 bg-gray-100 overflow-hidden cursor-pointer"
         onClick={onManageImages}
@@ -260,7 +260,7 @@ function RoomCard({
             src={displayImage}
             alt={room.typeName}
             className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${
-              !room.isActive && 'grayscale opacity-40' // Ảnh xám và mờ đi khi tạm ngưng
+              !room.isActive && 'grayscale opacity-40' 
             }`}
           />
         ) : (
@@ -270,7 +270,7 @@ function RoomCard({
           </div>
         )}
 
-        {/* Action buttons on hover */}
+        
         <div className="absolute top-3 right-3 flex gap-2 translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all z-20">
           <button
             onClick={(e) => { e.stopPropagation(); onToggleStatus() }}
@@ -299,7 +299,7 @@ function RoomCard({
         </div>
       </div>
 
-      {/* ── Nội dung ── */}
+      
       <div className={`p-4 flex-1 flex flex-col ${!room.isActive ? 'opacity-60' : ''}`}>
         <div className="mb-2">
           <div className="flex items-start justify-between gap-2">
@@ -320,7 +320,7 @@ function RoomCard({
           </p>
         </div>
 
-        {/* Tags cơ bản */}
+        
         <div className="grid grid-cols-3 gap-2 py-3 border-y border-gray-50 my-2">
           <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
             <Users size={13} className="shrink-0" />
@@ -336,7 +336,7 @@ function RoomCard({
           </div>
         </div>
 
-        {/* Giá + Actions */}
+        
         <div className="mt-auto pt-2 flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Giá mỗi đêm</span>
@@ -375,7 +375,7 @@ function RoomCard({
   )
 }
 
-// ─── Room Type Amenity Modal (NEW) ────────────────────────
+
 function RoomTypeAmenityModal({
   room,
   qc,
@@ -385,11 +385,11 @@ function RoomTypeAmenityModal({
   qc: QueryClient
   onClose: () => void
 }) {
-  // Tất cả tiện ích hệ thống loại ROOM
+  
   const { data: allAmenities = [] } = useAmenities()
   const roomAmenities = allAmenities.filter(a => a.type === 'ROOM')
 
-  // Tiện ích đã gắn với loại phòng này
+  
   const { data: linked = [], isLoading } = useQuery<RoomTypeAmenityResponse[]>({
     queryKey: ['room-type-amenities', room.id],
     queryFn: () => roomTypeAmenityApi.getByRoomType(room.id).then(r => r.data),
@@ -400,7 +400,7 @@ function RoomTypeAmenityModal({
   const selectedAmenities = roomAmenities.filter(a => linkedIds.has(String(a.id)))
   const availableAmenities = roomAmenities.filter(a => !linkedIds.has(String(a.id)))
 
-  // Thêm tiện ích
+  
   const addMutation = useMutation({
     mutationFn: (amenityId: number) =>
       roomTypeAmenityApi.create({ roomTypeId: room.id, amenityId, isFree: true }),
@@ -414,7 +414,7 @@ function RoomTypeAmenityModal({
     },
   })
 
-  // Gỡ tiện ích
+  
   const removeMutation = useMutation({
     mutationFn: (amenityId: number) =>
       roomTypeAmenityApi.delete(room.id, amenityId),
@@ -434,7 +434,7 @@ function RoomTypeAmenityModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
 
-        {/* ── Header ── */}
+        
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
@@ -453,7 +453,7 @@ function RoomTypeAmenityModal({
           </button>
         </div>
 
-        {/* ── Scrollable Body ── */}
+        
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
 
           {isLoading ? (
@@ -463,7 +463,7 @@ function RoomTypeAmenityModal({
             </div>
           ) : (
             <>
-              {/* ── Tiện ích ĐANG CÓ ── */}
+              
               <div className="rounded-2xl border-2 border-violet-400 overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 bg-violet-50 border-b border-violet-100">
                   <div className="flex items-center gap-2">
@@ -521,7 +521,7 @@ function RoomTypeAmenityModal({
                 </div>
               </div>
 
-              {/* ── Kho tiện ích ── */}
+              
               <div className="rounded-2xl border border-gray-200 overflow-hidden">
                 <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
                   <div className="flex items-center gap-2">
@@ -569,7 +569,7 @@ function RoomTypeAmenityModal({
           )}
         </div>
 
-        {/* ── Footer ── */}
+        
         <div className="px-6 py-3 border-t border-gray-100 bg-gray-50/60 flex items-center justify-between shrink-0">
           <p className="text-xs text-gray-400">
             {selectedAmenities.length}/{roomAmenities.length} tiện ích đã chọn
@@ -586,7 +586,7 @@ function RoomTypeAmenityModal({
   )
 }
 
-// ─── Room Form Modal ──────────────────────────────────────
+
 function RoomFormModal({ room, hotelId, qc, onClose }: {
   room: RoomTypeResponse | null
   hotelId: number

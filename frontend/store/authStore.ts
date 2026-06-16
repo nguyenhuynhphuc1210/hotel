@@ -9,7 +9,6 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   setAuth: (token: string, user: UserResponse) => void
-  // Thêm hàm setUser vào interface
   setUser: (user: UserResponse | null) => void 
   clearAuth: () => void
   logout: () => void
@@ -45,19 +44,15 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ token, user, isAuthenticated: true })
   },
 
-  // --- HÀM CẬP NHẬT THÔNG TIN USER (Đã fix lỗi Implicit Any) ---
   setUser: (user: UserResponse | null) => {
     if (user) {
-      // Cập nhật LocalStorage
       localStorage.setItem('user', JSON.stringify(user))
-      // Cập nhật Cookie
       document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; SameSite=Strict`
     } else {
       localStorage.removeItem('user')
       document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
     }
     
-    // Cập nhật trạng thái trong Zustand
     set({ user })
   },
 

@@ -11,6 +11,7 @@ import SockJS from 'sockjs-client'
 
 interface ConversationResponse {
     id: number
+    type: string
     hotelId: number
     hotelName: string
     userId: number
@@ -34,12 +35,10 @@ function parseTs(ts: string): Date {
     return new Date(ts.replace(' ', 'T'));
 }
 
-// SỬA fmt — chỉ đổi new Date(ts) → parseTs(ts)
 function fmt(ts: string) {
     return parseTs(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
 
-// SỬA timeAgo — chỉ đổi new Date(ts) → parseTs(ts)
 function timeAgo(ts: string) {
     if (!ts) return ''
     const diff = Date.now() - parseTs(ts).getTime()
@@ -84,11 +83,12 @@ export default function OwnerMessagesPage() {
     }, [messages])
 
     const { data: conversations = [] } = useQuery({
-        queryKey: ['owner-hotel-inbox', activeHotelId],
-        queryFn: () => axiosInstance.get<ConversationResponse[]>(`/api/chat/hotel-inbox/${activeHotelId}`).then(r => r.data),
-        enabled: !!activeHotelId,
-        refetchInterval: 30000,
-    })
+    queryKey: ['owner-hotel-inbox', activeHotelId],
+    queryFn: () => axiosInstance.get<ConversationResponse[]>(`/api/chat/hotel-inbox/${activeHotelId}`)
+        .then(r => r.data.filter(c => c.type !== 'HOTEL_ADMIN')), 
+    enabled: !!activeHotelId,
+    refetchInterval: 30000,
+})
 
     const sendReadReceipt = useCallback((conversationId: number, senderEmail: string, client?: Client) => {
         const stomp = client ?? stompClientRef.current
@@ -111,11 +111,13 @@ export default function OwnerMessagesPage() {
 
                 client.subscribe('/user/queue/messages', (frame) => {
                     const msg: ChatMsg = JSON.parse(frame.body)
+                    const isGuestMessage = conversations.some(c => c.id === msg.conversationId);
+    if (!isGuestMessage && conversations.length > 0) return;
+
                     const current = selectedConvRef.current
-                    console.log('WS msg timestamp:', msg.timestamp)
 
                     if (current && msg.conversationId === current.id) {
-                        // Đang xem conversation này → thêm tin + gửi read receipt ngay
+                        
                         setMessages(prev => {
                             const idx = prev.findIndex(m => m.id < 0 && m.senderEmail === msg.senderEmail && m.content === msg.content)
                             if (idx !== -1) { const next = [...prev]; next[idx] = msg; return next }
@@ -158,7 +160,6 @@ export default function OwnerMessagesPage() {
         setSelectedConv(conv)
         setIsLoadingMsgs(true)
         setMessages([])
-        // ✅ Xóa unread khi mở conversation
         setUnreadConvIds(prev => { const next = new Set(prev); next.delete(conv.id); return next })
         setTotalUnread(prev => Math.max(0, prev - 1))
         try {
@@ -198,8 +199,7 @@ export default function OwnerMessagesPage() {
 
     return (
         <div className="flex rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm" style={{ height: 'calc(100vh - 7rem)' }}>
-
-            {/* ── Sidebar ──────────────────────────────────────────────── */}
+    
             <div className="w-80 shrink-0 border-r border-gray-100 flex flex-col bg-gray-50/50">
                 <div className="px-4 pt-5 pb-4 border-b border-gray-100">
                     <div className="flex items-center justify-between mb-4">
@@ -238,7 +238,6 @@ export default function OwnerMessagesPage() {
                                     className={`w-full text-left px-4 py-3.5 flex items-center gap-3 border-b border-gray-50 transition-colors
                                         ${isActive ? 'bg-blue-50 border-l-2 border-l-blue-500' : hasUnread ? 'bg-white hover:bg-gray-50' : 'hover:bg-white'}`}
                                 >
-                                    {/* Avatar */}
                                     <div className="relative shrink-0">
                                         <div className={`w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden
                                             ${isActive ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'}`}>
@@ -246,32 +245,30 @@ export default function OwnerMessagesPage() {
                                                 ? <img src={conv.userAvatar} alt={conv.userFullName} className="w-full h-full object-cover" />
                                                 : initials(conv.userFullName)}
                                         </div>
-                                        {/* ✅ Chấm đỏ thông báo chưa đọc — góc dưới phải avatar */}
+                                        
                                         {hasUnread && !isActive && (
                                             <span className="absolute bottom-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
                                         )}
                                     </div>
 
-                                    {/* Nội dung */}
+                                    
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-0.5">
-                                            {/* ✅ Tên đậm nếu chưa đọc, nhạt nếu đã đọc */}
+                                            
                                             <span className={`text-sm truncate
                                                 ${isActive
                                                     ? 'text-blue-700 font-semibold'
                                                     : hasUnread
-                                                        ? 'text-gray-900 font-bold'      // chưa đọc → đậm
-                                                        : 'text-gray-500 font-normal'    // đã đọc → nhạt
+                                                        ? 'text-gray-900 font-bold'      
+                                                        : 'text-gray-500 font-normal'    
                                                 }`}>
                                                 {conv.userFullName}
                                             </span>
-                                            {/* ✅ Giờ đậm nếu chưa đọc */}
                                             <span className={`text-[10px] shrink-0 ml-2
                                                 ${hasUnread && !isActive ? 'text-gray-700 font-semibold' : 'text-gray-400'}`}>
                                                 {timeAgo(conv.lastMessageAt)}
                                             </span>
                                         </div>
-                                        {/* ✅ Email nhạt hơn nếu đã đọc */}
                                         <p className={`text-xs truncate ${hasUnread && !isActive ? 'text-gray-500' : 'text-gray-400'}`}>
                                             {conv.userEmail}
                                         </p>
@@ -283,7 +280,6 @@ export default function OwnerMessagesPage() {
                 </div>
             </div>
 
-            {/* ── Chat Area ────────────────────────────────────────────── */}
             {selectedConv ? (
                 <div className="flex-1 flex flex-col min-w-0">
                     <div className="h-[65px] border-b border-gray-100 px-5 flex items-center gap-3 shrink-0 bg-white">

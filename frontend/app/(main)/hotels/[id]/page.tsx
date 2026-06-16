@@ -36,7 +36,7 @@ import { cn } from '@/lib/utils'
 import promotionApi from '@/lib/api/promotion.api'
 import { PromotionResponse } from '@/types/promotion.types'
 
-// ── Hook: fetch calendar cho 1 room trong khoảng checkIn/checkOut ──────────
+
 function useRoomCalendarPricing(
     roomTypeId: number,
     checkIn: string,
@@ -56,7 +56,7 @@ function useRoomCalendarPricing(
     })
 }
 
-// ── Helper: tính giá trung bình / đêm từ calendar ─────────────────────────
+
 function calcAvgPrice(
     calendarData: RoomCalendarResponse[] | undefined,
     fallback: number
@@ -67,16 +67,15 @@ function calcAvgPrice(
     const total = calendarData.reduce((sum, c) => sum + Number(c.price), 0)
     const avgPrice = Math.round(total / calendarData.length)
 
-    // Owner tắt phòng (isAvailable = false)
+    
     const isClosed = calendarData.some(c => !c.isAvailable)
-    // Hết phòng do booking (còn slot nhưng bookedRooms >= totalRooms)
+   
     const hasNoRooms = calendarData.some(c => (c.totalRooms - c.bookedRooms) <= 0)
 
     const allAvailable = !isClosed && !hasNoRooms
     return { avgPrice, allAvailable, isClosed }
 }
 
-// ── Sub-component: một card phòng (có fetch giá riêng) ────────────────────
 function RoomCard({
     room,
     hasFullDates,
@@ -144,8 +143,7 @@ function RoomCard({
         return Math.min(...calendarData.map(c => c.totalRooms - c.bookedRooms));
     }, [calendarData, room.totalRooms]);
 
-    // Agoda style:
-    // 8 khách => có thể chọn tối đa 8 phòng
+    
     const maxSelectable = Math.min(
         availableRooms,
         adults
@@ -168,9 +166,9 @@ function RoomCard({
     return (
         <div className="bg-white rounded-[24px] border border-gray-200 overflow-hidden flex shadow-sm hover:shadow-md transition-all group mb-6">
 
-            {/* CỘT TRÁI: Hình ảnh + Nút chi tiết + Thông số phòng (Người, Diện tích, Giường) */}
+            
             <div className="p-4 shrink-0 w-[280px] flex flex-col items-center border-r border-gray-50">
-                {/* Hình ảnh */}
+               
                 <div
                     className="w-full h-[180px] relative overflow-hidden rounded-[18px] bg-gray-100 cursor-pointer group/img shadow-sm"
                     onClick={() => onOpenGallery(room)}
@@ -186,7 +184,7 @@ function RoomCard({
                     )}
                 </div>
 
-                {/* Nút xem chi tiết */}
+                
                 <button
                     onClick={() => onOpenGallery(room)}
                     className="mt-3 text-blue-600 text-xs font-bold hover:underline"
@@ -194,7 +192,7 @@ function RoomCard({
                     Xem ảnh và chi tiết
                 </button>
 
-                {/* PHẦN THÔNG SỐ PHÒNG: Đã chuyển sang đây (Dưới nút xem ảnh) */}
+                
                 <div className="mt-4 w-full space-y-2">
 
                     <h4
@@ -253,12 +251,12 @@ function RoomCard({
                         </div>
                     )}
 
-                    {/* Mô tả in nghiêng giống ảnh mẫu */}
+                    
                     <p className="text-sm text-gray-500 italic leading-relaxed mb-6">
                         {room.description || 'Phòng tiêu chuẩn với đầy đủ tiện nghi cơ bản'}
                     </p>
 
-                    {/* Tiện ích phòng */}
+                    
                     {amenities.length > 0 && (
                         <div className="border-t border-gray-100 pt-4">
                             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
@@ -279,7 +277,7 @@ function RoomCard({
                                 ))}
                             </div>
 
-                            {/* Badge hút thuốc */}
+                            
                             <div className="mt-3">
                                 {room.isNonSmoking ? (
                                     <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md">
@@ -295,7 +293,7 @@ function RoomCard({
                     )}
                 </div>
 
-                {/* Phần giá + nút đặt ở dưới cùng */}
+                
                 <div className="flex items-end justify-between border-t border-gray-100 pt-6 mt-6">
                     <div className="space-y-1">
                         {hasFullDates ? (
@@ -375,7 +373,7 @@ const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
 const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-// ── Page chính ────────────────────────────────────────────────────────────
+
 function HotelDetailContent() {
     const router = useRouter()
     const { id } = useParams()
@@ -619,7 +617,7 @@ function HotelDetailContent() {
                     </div>
                 </div>
             )}
-            {/* Lightbox review ảnh */}
+            
             {lightboxOpen && (
                 <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center" onClick={() => setLightboxOpen(false)}>
                     <button className="absolute top-4 right-4 text-white" onClick={() => setLightboxOpen(false)}><X size={28} /></button>
@@ -638,7 +636,7 @@ function HotelDetailContent() {
                 </div>
             )}
 
-            {/* Search Bar */}
+            
             <div className="bg-white border-b sticky top-16 z-30 py-3 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4">
                     <SearchBar
@@ -667,7 +665,7 @@ function HotelDetailContent() {
                     <HotelGallery images={hotel.images || []} hotelId={hotelId} />
                 </div>
 
-                {/* Room Gallery Modal */}
+                
                 {galleryRoom && (
                     <RoomGalleryModal
                         room={galleryRoom}
@@ -678,11 +676,10 @@ function HotelDetailContent() {
                     />
                 )}
 
-                {/* ── Hotel Info + Sidebar ── */}
-                {/* ── Hotel Info + Sidebar ── */}
+                
                 <div className="grid grid-cols-12 gap-6 mb-8">
                     <div className="col-span-12 lg:col-span-8 space-y-6">
-                        {/* Hotel Info */}
+                        
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Khách sạn</span>
@@ -699,7 +696,7 @@ function HotelDetailContent() {
                                     </span>
                                 </div>
 
-                                {/* Google Map */}
+                                
                                 <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
                                     <iframe
                                         title="hotel-map"
@@ -715,7 +712,7 @@ function HotelDetailContent() {
                                     />
                                 </div>
 
-                                {/* Open Google Maps */}
+                                
                                 <a
                                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                                         `${hotel.addressLine}, ${hotel.ward}, ${hotel.district}, ${hotel.city}`
@@ -730,7 +727,7 @@ function HotelDetailContent() {
                             </div>
                         </div>
 
-                        {/* Mô tả */}
+                        
                         {hotel.description && (
                             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-gray-900">
@@ -741,7 +738,7 @@ function HotelDetailContent() {
                         )}
                     </div>
 
-                    {/* Right Sidebar */}
+                    
                     <div className="col-span-12 lg:col-span-4 space-y-6">
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                             <div className="flex items-center justify-between mb-4">
@@ -803,9 +800,9 @@ function HotelDetailContent() {
                     </div>
                 </div>
 
-                {/* ── Tiện ích & Khuyến mãi (Đã đưa ra ngoài Grid Sidebar để chiếm FULL WIDTH bằng phần Chọn phòng) ── */}
+                
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mb-8">
-                    {/* Cột trái: Tiện ích (7/12) */}
+                    
                     <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
                         <h3 className="font-bold text-lg mb-6 flex items-center gap-2 shrink-0">
                             <CheckCircle2 size={20} className="text-blue-500" /> Tiện ích tại chỗ nghỉ
@@ -823,7 +820,6 @@ function HotelDetailContent() {
                         </div>
                     </div>
 
-                    {/* Cột phải: Khuyến mãi (5/12) */}
                     <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
                         <h3 className="font-bold text-lg mb-6 flex items-center gap-2 shrink-0">
                             <Tag size={20} className="text-red-500" /> Ưu đãi dành cho bạn
@@ -867,7 +863,7 @@ function HotelDetailContent() {
                     </div>
                 </div>
 
-                {/* ── Chọn phòng — FULL WIDTH ── */}
+                
                 <div id="rooms" className="space-y-4 mb-8">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xl font-bold text-gray-900">Chọn phòng</h3>
@@ -904,7 +900,7 @@ function HotelDetailContent() {
                     )}
                 </div>
 
-                {/* ── Đánh giá — FULL WIDTH ── */}
+                
                 <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6 mb-8">
                     <div
                         ref={reviewSectionRef}
@@ -1092,7 +1088,7 @@ function HotelDetailContent() {
                     </div>
                 </div>
 
-                {/* ── Khách sạn liên quan — FULL WIDTH ── */}
+                
                 {relatedHotels.length > 0 && (
                     <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                         <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -1143,14 +1139,13 @@ function HotelDetailContent() {
 
             <div className="fixed bottom-6 right-6 z-[999] flex flex-col items-end gap-4">
 
-                {/* Panel AI */}
+                
                 <AIChatWidget
                     panelOnly
                     externalOpen={openPanel === 'ai'}
                     onToggle={() => setOpenPanel(null)}
                 />
 
-                {/* Panel Hotel Chat */}
                 <HotelChatWidget
                     hotelId={hotelId}
                     hotelName={hotel?.hotelName ?? ''}
@@ -1161,7 +1156,7 @@ function HotelDetailContent() {
                     onUnreadChange={setHotelUnreadCount}
                 />
 
-                {/* Thanh Bar Điều Khiển */}
+                
                 <div className="flex items-center bg-white rounded-full shadow-2xl border border-gray-200 p-1.5 backdrop-blur-md">
                     <button
                         onClick={() => setOpenPanel(openPanel === 'ai' ? null : 'ai')}
@@ -1187,7 +1182,7 @@ function HotelDetailContent() {
                                 : "text-gray-600 hover:bg-gray-100"
                         )}
                     >
-                        {/* 3. Hiển thị Badge đỏ nếu có tin nhắn chưa đọc */}
+                        
                         <div className="relative">
                             <MessageSquare size={18} />
                             {hotelUnreadCount > 0 && openPanel !== 'chat' && (

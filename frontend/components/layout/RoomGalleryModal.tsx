@@ -22,34 +22,34 @@ const TABS: { key: TabKey; label: string }[] = [
 ]
 
 export default function RoomGalleryModal({
-    room: basicRoom, // Đổi tên prop nhận vào thành basicRoom
+    room: basicRoom, 
     onClose,
     onBook,
     hasFullDates,
     nights,
 }: RoomGalleryModalProps) {
-    // 1. Gọi API lấy chi tiết đầy đủ của phòng (bao gồm mảng images)
+    
     const { data: fullRoom, isLoading } = useQuery({
         queryKey: ['room-detail-public', basicRoom.id],
         queryFn: () => roomApi.getById(basicRoom.id).then(r => r.data),
         enabled: !!basicRoom.id,
     })
 
-    // 2. Ưu tiên lấy dữ liệu từ fullRoom, nếu chưa tải xong thì dùng basicRoom
+    
     const room = fullRoom || basicRoom
 
-    // 3. Lấy mảng ảnh từ room
+    
     const images = useMemo(() => room.images ?? [], [room.images])
     const allUrls = useMemo(() => {
-    // 1. Lấy tất cả url từ mảng images của API chi tiết (fullRoom)
-    // Nếu fullRoom chưa load xong thì dùng basicRoom
+    
+    
     const currentRoom = fullRoom || basicRoom;
     const imagesArr = currentRoom.images?.map(i => i.imageUrl) || [];
     
-    // 2. Lấy thumbnailUrl
+    
     const thumb = currentRoom.thumbnailUrl;
 
-    // 3. Gộp lại và loại bỏ trùng lặp
+    
     let finalUrls = [...imagesArr];
     if (thumb && !finalUrls.includes(thumb)) {
         finalUrls = [thumb, ...finalUrls];
@@ -63,7 +63,7 @@ export default function RoomGalleryModal({
     const [lightboxOpen, setLightboxOpen] = useState(false)
     const [lightboxIdx, setLightboxIdx] = useState(0)
 
-    // Lọc ảnh (Hiện tại mặc định lấy tất cả, có thể mở rộng nếu backend có tag)
+    
     const filtered = allUrls
 
     const totalPrice = room.basePrice * (nights || 1)
@@ -81,7 +81,7 @@ export default function RoomGalleryModal({
         setLightboxOpen(true)
     }
 
-    // Điều hướng bàn phím
+    
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -97,7 +97,7 @@ export default function RoomGalleryModal({
 
     return (
         <>
-            {/* ── Lightbox (Khi nhấn Phóng to) ── */}
+            
             {lightboxOpen && (
                 <div
                     className="fixed inset-0 z-[100] flex items-center justify-center"
@@ -138,7 +138,7 @@ export default function RoomGalleryModal({
                 </div>
             )}
 
-            {/* ── Modal Chính ── */}
+            
             <div
                 className="fixed inset-0 z-[60] flex items-center justify-center p-4"
                 style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
@@ -149,7 +149,7 @@ export default function RoomGalleryModal({
                     style={{ maxWidth: 960, maxHeight: '90vh' }}
                     onClick={e => e.stopPropagation()}
                 >
-                    {/* Top Bar */}
+                    
                     <div className="shrink-0 flex items-center justify-between px-6 pt-4 pb-0 border-b border-gray-100">
                         <div className="flex items-center gap-1">
                             {TABS.map(t => (
@@ -177,7 +177,7 @@ export default function RoomGalleryModal({
                     </div>
 
                     <div className="flex flex-1 overflow-hidden">
-                        {/* LEFT: Thư viện ảnh */}
+                        
                         <div className="flex flex-col flex-1 overflow-hidden bg-gray-50 border-r">
                             {isLoading ? (
                                 <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
@@ -193,7 +193,7 @@ export default function RoomGalleryModal({
                                             className="w-full h-full object-cover"
                                         />
 
-                                        {/* Nav */}
+                                        
                                         <button onClick={prev} className="absolute left-4 w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60"><ChevronLeft size={20} /></button>
                                         <button onClick={next} className="absolute right-4 w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60"><ChevronRight size={20} /></button>
 
@@ -206,7 +206,7 @@ export default function RoomGalleryModal({
                                             </div>
                                         </div>
                                     </div>
-                                    {/* Thumbnail strip */}
+                                    
                                     <div className="p-4 flex gap-2 overflow-x-auto bg-white border-t scrollbar-hide">
                                         {filtered.map((url, idx) => (
                                             <button
@@ -227,7 +227,7 @@ export default function RoomGalleryModal({
                             )}
                         </div>
 
-                        {/* RIGHT: Thông tin phòng */}
+                        
                         <div className="w-72 shrink-0 flex flex-col p-6 bg-white overflow-y-auto">
                             <div className="flex-1 space-y-5">
                                 <div>

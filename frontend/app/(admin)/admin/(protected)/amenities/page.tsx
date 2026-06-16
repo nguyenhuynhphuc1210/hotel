@@ -17,7 +17,6 @@ import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
-// ─── Schema ──────────────────────────────────────────────────────────────────
 
 const schema = z.object({
   amenityName: z.string().min(1, 'Tên tiện ích không được để trống'),
@@ -26,7 +25,6 @@ const schema = z.object({
 })
 type FormValues = z.infer<typeof schema>
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 const TAB_CONFIG = {
   ALL:   { label: 'Tất cả',      icon: Grid3X3,   color: 'indigo' },
@@ -41,7 +39,6 @@ const TYPE_BADGE: Record<AmenityType, { label: string; bg: string; text: string;
   ROOM:  { label: 'Loại phòng', bg: 'bg-violet-50',   text: 'text-violet-700',  dot: 'bg-violet-400'  },
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminAmenitiesPage() {
   const { data: amenities = [], isLoading } = useAmenities()
@@ -82,7 +79,6 @@ export default function AdminAmenitiesPage() {
     <div className="min-h-screen bg-gray-50/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
-        {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs text-gray-400 font-medium mb-1">
@@ -104,7 +100,6 @@ export default function AdminAmenitiesPage() {
           </button>
         </div>
 
-        {/* ── Stats Cards ── */}
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Tất cả',      count: amenities.length, icon: Tag,       bg: 'bg-indigo-500', light: 'bg-indigo-50',  text: 'text-indigo-600' },
@@ -123,10 +118,8 @@ export default function AdminAmenitiesPage() {
           ))}
         </div>
 
-        {/* ── Tabs + Search + View Toggle ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           
-          {/* Tab bar */}
           <div className="flex items-center border-b border-gray-100 px-4 gap-1">
             {(Object.entries(TAB_CONFIG) as [TabKey, typeof TAB_CONFIG[TabKey]][]).map(([key, cfg]) => {
               const Icon = cfg.icon
@@ -152,10 +145,8 @@ export default function AdminAmenitiesPage() {
               )
             })}
 
-            {/* Spacer */}
             <div className="flex-1" />
 
-            {/* Search */}
             <div className="relative w-56 my-2">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -172,7 +163,6 @@ export default function AdminAmenitiesPage() {
               )}
             </div>
 
-            {/* View toggle */}
             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden my-2 ml-2">
               <button
                 onClick={() => setViewMode('grid')}
@@ -189,7 +179,6 @@ export default function AdminAmenitiesPage() {
             </div>
           </div>
 
-          {/* Content */}
           <div className="p-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-16 text-gray-400 gap-2">
@@ -220,7 +209,6 @@ export default function AdminAmenitiesPage() {
             )}
           </div>
 
-          {/* Footer count */}
           {!isLoading && filtered.length > 0 && (
             <div className="px-4 py-2.5 border-t border-gray-50 bg-gray-50/50">
               <p className="text-xs text-gray-400">
@@ -230,7 +218,6 @@ export default function AdminAmenitiesPage() {
           )}
         </div>
 
-        {/* Modal */}
         {openModal && (
           <AmenityModal
             item={editingItem}
@@ -243,7 +230,6 @@ export default function AdminAmenitiesPage() {
   )
 }
 
-// ─── Grid View ─────────────────────────────────────────────────────────────────
 
 function GridView({
   items,
@@ -265,7 +251,7 @@ function GridView({
             className="group relative bg-white rounded-xl border border-gray-100 hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-50 transition-all duration-200 p-4"
           >
             <div className="flex items-start gap-3">
-              {/* Icon */}
+             
               <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
                 a.type === 'HOTEL' ? 'bg-emerald-50' : 'bg-violet-50'
               }`}>
@@ -278,14 +264,12 @@ function GridView({
                 )}
               </div>
 
-              {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{a.amenityName}</p>
                 <p className="text-xs text-gray-400 mt-0.5">ID #{a.id}</p>
               </div>
             </div>
 
-            {/* Badge + Actions */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
               <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${badge.bg} ${badge.text}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
@@ -316,7 +300,6 @@ function GridView({
   )
 }
 
-// ─── List View ─────────────────────────────────────────────────────────────────
 
 function ListView({
   items,
@@ -329,7 +312,6 @@ function ListView({
 }) {
   return (
     <div className="divide-y divide-gray-50 -mx-4">
-      {/* Header row */}
       <div className="grid grid-cols-[auto_1fr_140px_100px] items-center gap-4 px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
         <span className="w-9" />
         <span>Tên tiện ích</span>
@@ -344,7 +326,6 @@ function ListView({
             key={a.id}
             className="group grid grid-cols-[auto_1fr_140px_100px] items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
           >
-            {/* Icon */}
             <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
               a.type === 'HOTEL' ? 'bg-emerald-50' : 'bg-violet-50'
             }`}>
@@ -357,19 +338,16 @@ function ListView({
               )}
             </div>
 
-            {/* Name */}
             <div>
               <p className="text-sm font-medium text-gray-900">{a.amenityName}</p>
               <p className="text-xs text-gray-400">#{a.id}</p>
             </div>
 
-            {/* Badge */}
             <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full w-fit ${badge.bg} ${badge.text}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
               {badge.label}
             </span>
 
-            {/* Actions */}
             <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={() => onEdit(a)}
@@ -391,7 +369,6 @@ function ListView({
   )
 }
 
-// ─── Modal ─────────────────────────────────────────────────────────────────────
 
 function AmenityModal({
   item,
@@ -453,7 +430,6 @@ function AmenityModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
 
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <h2 className="text-base font-bold text-gray-900">
@@ -471,10 +447,8 @@ function AmenityModal({
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-5 space-y-5">
 
-          {/* Type selector */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Loại tiện ích <span className="text-red-500">*</span>
@@ -507,7 +481,6 @@ function AmenityModal({
             </div>
           </div>
 
-          {/* Name */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
               Tên tiện ích <span className="text-red-500">*</span>
@@ -525,7 +498,6 @@ function AmenityModal({
             )}
           </div>
 
-          {/* Icon URL */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">URL Icon</label>
             <input
@@ -536,7 +508,6 @@ function AmenityModal({
             <p className="text-xs text-gray-400 mt-1.5">Để trống để dùng icon mặc định theo loại</p>
           </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-2.5 pt-1">
             <button
               type="button"

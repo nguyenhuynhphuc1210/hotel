@@ -33,10 +33,10 @@ export default function OwnerPromotionsPage() {
   const qc = useQueryClient()
   const [modalPromo, setModalPromo] = useState<PromotionResponse | null | 'new'>(null)
 
-  // 1. Lấy thông tin từ Context
+  
   const { activeHotel, activeHotelId, isLoading: isHotelLoading } = useOwnerHotel()
 
-  // 2. Lấy danh sách KM dựa trên activeHotelId
+  
   const { data: allPromos = [], isLoading: isPromosLoading } = useQuery({
     queryKey: ['owner-promotions', activeHotelId],
     queryFn: () => promotionApi.getAll().then(r =>

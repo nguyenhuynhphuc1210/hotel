@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 import authApi from '@/lib/api/auth.api'
 import toast from 'react-hot-toast'
 
-// ─── Schemas ──────────────────────────────────────────────────────────────────
+
 
 const emailSchema = z.object({
   email: z.string().min(1, 'Email không được để trống').email('Email không đúng định dạng'),
@@ -33,7 +33,7 @@ type EmailForm    = z.infer<typeof emailSchema>
 type OtpForm      = z.infer<typeof otpSchema>
 type PasswordForm = z.infer<typeof passwordSchema>
 
-// ─── Step indicator ───────────────────────────────────────────────────────────
+
 
 const STEPS = [
   { icon: Mail,     label: 'Email' },
@@ -41,7 +41,7 @@ const STEPS = [
   { icon: Lock,     label: 'Mật khẩu' },
 ]
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+
 
 export default function ForgotPasswordPage() {
   const router  = useRouter()
@@ -50,16 +50,15 @@ export default function ForgotPasswordPage() {
   const [email,   setEmail]   = useState('')
   const [otp,     setOtp]     = useState('')
 
-  // ── Form step 0 ──
+  
   const emailForm = useForm<EmailForm>({ resolver: zodResolver(emailSchema) })
 
-  // ── Form step 1 ──
+  
   const otpForm = useForm<OtpForm>({ resolver: zodResolver(otpSchema) })
 
-  // ── Form step 2 ──
+  
   const passwordForm = useForm<PasswordForm>({ resolver: zodResolver(passwordSchema) })
 
-  // ── Handlers ──
 
   const handleSendOtp = async (data: EmailForm) => {
     try {
@@ -118,12 +117,12 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  
 
   return (
     <div className="w-full max-w-md mx-auto">
 
-      {/* Logo */}
+     
       <div className="text-center mb-10">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#E8F0FE] mb-4">
           <span className="text-3xl">🏨</span>
@@ -134,7 +133,7 @@ export default function ForgotPasswordPage() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_24px_rgba(0,0,0,0.06)] p-8">
 
-        {/* Step indicator */}
+        
         <div className="flex items-center justify-center gap-2 mb-8">
           {STEPS.map((s, i) => {
             const Icon = s.icon
@@ -162,7 +161,7 @@ export default function ForgotPasswordPage() {
           })}
         </div>
 
-        {/* ── Step 0: Email ── */}
+        
         {step === 0 && (
           <>
             <h2 className="text-xl font-semibold text-gray-900 mb-1">Quên mật khẩu</h2>
@@ -201,7 +200,7 @@ export default function ForgotPasswordPage() {
           </>
         )}
 
-        {/* ── Step 1: OTP ── */}
+        
         {step === 1 && (
           <>
             <h2 className="text-xl font-semibold text-gray-900 mb-1">Nhập mã OTP</h2>
@@ -259,7 +258,7 @@ export default function ForgotPasswordPage() {
           </>
         )}
 
-        {/* ── Step 2: New password ── */}
+        
         {step === 2 && (
           <>
             <h2 className="text-xl font-semibold text-gray-900 mb-1">Đặt mật khẩu mới</h2>
@@ -316,7 +315,7 @@ export default function ForgotPasswordPage() {
           </>
         )}
 
-        {/* Back to login */}
+        
         <div className="mt-6 text-center">
           <a href="/login" className="text-sm text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1 transition-colors">
             <ArrowLeft size={14} /> Quay lại đăng nhập

@@ -47,7 +47,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Partner CTA Banner */}
+        
         <div className="border-t border-gray-800">
           <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col items-center gap-4 text-center">
             <div className="flex items-center gap-3">

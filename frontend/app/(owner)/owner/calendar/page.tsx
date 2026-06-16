@@ -38,7 +38,7 @@ type UpdateForm = z.infer<typeof updateSchema>
 const inputClass = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
 const labelClass = 'block text-sm font-medium text-gray-700 mb-1'
 
-// --- Component Chính (Wrapper) ---
+
 export default function OwnerCalendarPage() {
   const { activeHotel, activeHotelId } = useOwnerHotel()
 
@@ -65,21 +65,21 @@ export default function OwnerCalendarPage() {
   )
 }
 
-// --- Component Nội dung (Chứa toàn bộ logic cũ) ---
+
 function CalendarContent({ activeHotelId, hotelName }: { activeHotelId: number, hotelName: string }) {
   const qc = useQueryClient()
 
-  // State sẽ tự reset khi key ở component cha thay đổi
+  
   const [calYear, setCalYear] = useState(new Date().getFullYear())
   const [calMonth, setCalMonth] = useState(new Date().getMonth())
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null)
   const [selectedDates, setSelectedDates] = useState<string[]>([])
   const [showUpdateModal, setShowUpdateModal] = useState(false)
 
-  // Lấy Room types của khách sạn đang chọn
+  
   const { data: allRooms = [], isLoading: isRoomsLoading } = useQuery({
     queryKey: ['owner-rooms', activeHotelId],
-    queryFn: () => roomApi.getByHotelId(activeHotelId).then(r => r.data), // Dùng getByHotelId
+    queryFn: () => roomApi.getByHotelId(activeHotelId).then(r => r.data), 
     enabled: !!activeHotelId,
   })
 
@@ -336,7 +336,7 @@ function UpdateModal({ roomId, selectedDates, calendarData, qc, calYear, calMont
       endDate,
       price: defaultPrice,
       totalRooms: defaultTotalRooms,
-      isAvailable: defaultIsAvailable,  // ← dùng giá trị thực
+      isAvailable: defaultIsAvailable,  
     },
   })
 

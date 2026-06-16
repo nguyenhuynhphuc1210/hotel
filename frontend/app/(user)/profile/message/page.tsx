@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/authStore'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 
-// Interface tương ứng với dữ liệu User Inbox
+
 interface UserConversationResponse {
     id: number
     hotelId: number
@@ -34,12 +34,12 @@ function parseTs(ts: string): Date {
     return new Date(ts.replace(' ', 'T'));
 }
 
-// SỬA fmt — chỉ đổi new Date(ts) → parseTs(ts)
+
 function fmt(ts: string) {
     return parseTs(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
 
-// SỬA timeAgo — chỉ đổi new Date(ts) → parseTs(ts)
+
 function timeAgo(ts: string) {
     if (!ts) return ''
     const diff = Date.now() - parseTs(ts).getTime()
@@ -69,7 +69,7 @@ export default function UserMessagesPage() {
     const selectedConvRef = useRef<UserConversationResponse | null>(null)
     selectedConvRef.current = selectedConv
 
-    // Cuộn xuống cuối khi có tin nhắn mới
+    
     const messagesContainerRef = useRef<HTMLDivElement>(null)
 
 useEffect(() => {
@@ -78,7 +78,7 @@ useEffect(() => {
     container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
 }, [messages])
 
-    // Lấy danh sách inbox của user
+    
     const { data: conversations = [], isLoading: isLoadingInbox } = useQuery({
         queryKey: ['user-chat-inbox'],
         queryFn: () => axiosInstance.get<UserConversationResponse[]>('/api/chat/user-inbox').then(r => r.data),
@@ -94,7 +94,7 @@ useEffect(() => {
         })
     }, [])
 
-    // WebSocket Connection
+    
     useEffect(() => {
         if (!user || !token) return
 
@@ -186,7 +186,7 @@ useEffect(() => {
     return (
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col lg:flex-row" style={{ height: '700px' }}>
             
-            {/* Sidebar: Danh sách khách sạn */}
+            
             <div className="w-full lg:w-80 border-r border-gray-100 flex flex-col bg-gray-50/30">
                 <div className="p-4 border-b border-gray-100 bg-white">
                     <div className="flex items-center justify-between mb-3">
@@ -247,11 +247,11 @@ useEffect(() => {
                 </div>
             </div>
 
-            {/* Khung chat chính */}
+            
             <div className="flex-1 flex flex-col bg-white">
                 {selectedConv ? (
                     <>
-                        {/* Header Chat */}
+                        
                         <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white">
@@ -264,7 +264,7 @@ useEffect(() => {
                             </div>
                         </div>
 
-                        {/* Danh sách tin nhắn */}
+                        
                         <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/50">
                             {isLoadingMsgs ? (
                                 <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin text-blue-500" /></div>
@@ -297,7 +297,7 @@ useEffect(() => {
                             )}
                         </div>
 
-                        {/* Ô nhập tin nhắn */}
+                        
                         <div className="p-4 bg-white border-t border-gray-100">
                             <div className="flex items-center gap-2">
                                 <input

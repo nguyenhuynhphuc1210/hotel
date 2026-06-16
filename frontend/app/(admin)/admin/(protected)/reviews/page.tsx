@@ -78,7 +78,7 @@ export default function AdminReviewsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Quản lý Đánh giá</h1>
@@ -86,7 +86,7 @@ export default function AdminReviewsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      
       <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-fit">
         <button
           onClick={() => setActiveTab('all')}
@@ -108,7 +108,7 @@ export default function AdminReviewsPage() {
         </button>
       </div>
 
-      {/* TAB: BÁO CÁO CHỜ DUYỆT */}
+      
       {activeTab === 'reported' && (
         <div className="space-y-4">
           {isReportedLoading ? (
@@ -198,7 +198,7 @@ export default function AdminReviewsPage() {
         </div>
       )}
 
-      {/* TAB: TẤT CẢ ĐÁNH GIÁ */}
+      
       {activeTab === 'all' && (
         <>
           <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap gap-3">
@@ -250,7 +250,7 @@ export default function AdminReviewsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Sidebar điểm TB */}
+              
               <div className="lg:col-span-1">
                 <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm text-center">
                   <div className="text-5xl font-extrabold text-gray-900">{avgRating}</div>
@@ -258,7 +258,7 @@ export default function AdminReviewsPage() {
                 </div>
               </div>
 
-              {/* Danh sách đánh giá */}
+              
               <div className="lg:col-span-3 space-y-4">
                 {isReviewsLoading ? (
                   <div className="text-center py-20">
@@ -272,8 +272,7 @@ export default function AdminReviewsPage() {
                 ) : (
                   <>
                     {filtered.map((rv: ReviewResponse) => {
-                      // isPublished = true  → đang hiển thị → nút "Ẩn" (EyeOff)
-                      // isPublished = false → đang ẩn       → nút "Bỏ ẩn" (Eye) + card mờ
+                      
                       const isHidden = !rv.isPublished
 
                       return (
@@ -288,7 +287,7 @@ export default function AdminReviewsPage() {
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
-                            {/* Avatar + Info */}
+                            
                             <div className="flex gap-3 flex-1 min-w-0">
                               <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${isHidden ? 'bg-gray-400' : 'bg-blue-600'}`}>
                                 {rv.userName.charAt(0).toUpperCase()}
@@ -303,7 +302,7 @@ export default function AdminReviewsPage() {
                                       Đã báo cáo
                                     </span>
                                   )}
-                                  {/* Badge trạng thái hiển thị */}
+                                  
                                   {isHidden ? (
                                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">
                                       <EyeOff size={9} /> Đang ẩn
@@ -321,14 +320,14 @@ export default function AdminReviewsPage() {
                               </div>
                             </div>
 
-                            {/* Nút toggle ẩn/hiện — label + icon rõ ràng */}
+                            
                             <button
                               onClick={() => toggleVisibility.mutate(rv.id)}
                               title={isHidden ? 'Bỏ ẩn đánh giá này' : 'Ẩn đánh giá này'}
                               className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
                                 isHidden
-                                  ? 'border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100'    // đang ẩn → bỏ ẩn
-                                  : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-100'       // đang hiện → ẩn
+                                  ? 'border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100'    
+                                  : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-100'      
                               }`}
                             >
                               {isHidden ? (
@@ -339,7 +338,6 @@ export default function AdminReviewsPage() {
                             </button>
                           </div>
 
-                          {/* Nội dung comment */}
                           <p className={`mt-4 text-sm italic leading-relaxed p-3 rounded-lg ${
                             isHidden
                               ? 'text-gray-400 bg-gray-100/60'
@@ -351,7 +349,7 @@ export default function AdminReviewsPage() {
                       )
                     })}
 
-                    {/* Phân trang */}
+                    
                     <div className="bg-white p-4 rounded-xl border border-gray-200">
                       <Pagination
                         currentPage={pageAll}

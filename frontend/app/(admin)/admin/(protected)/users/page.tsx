@@ -47,21 +47,21 @@ const GENDER_MAP = {
 }
 
 export default function AdminUsersPage() {
-  // Pagination
+  
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
 
-  // Search & Filter
+  
   const [search, setSearch] = useState('')
   const [keyword, setKeyword] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
 
-  // Modal
+  
   const [openCreate, setOpenCreate] = useState(false)
   const [editingUser, setEditingUser] = useState<UserResponse | null>(null)
 
-  // Debounce search
+  
   useEffect(() => {
     const timer = setTimeout(() => {
       setKeyword(search)
@@ -70,7 +70,7 @@ export default function AdminUsersPage() {
     return () => clearTimeout(timer)
   }, [search])
 
-  // API
+  
   const { data: pageData, isLoading } = useUsers(
   currentPage,
   pageSize,
@@ -83,25 +83,24 @@ const users: UserResponse[] = pageData?.content || []
 const { data: allData } = useUsers(0, 9999, '', '')
 const allUsers = allData?.content || []
 
-  // Filter status local
+  
   const finalUsers = users.filter(u => {
     if (statusFilter === 'active') return u.isActive
     if (statusFilter === 'inactive') return !u.isActive
     return true
   })
 
-  // Mutations
+  
   const deleteMutation = useDeleteUser()
   const disableMutation = useDisableUser()
   const enableMutation = useEnableUser()
 
-  // Stats
+ 
   const totalAdmin  = allUsers.filter(u => u.roleName === 'ROLE_ADMIN').length
 const totalOwner  = allUsers.filter(u => u.roleName === 'ROLE_HOTEL_OWNER').length
 const totalUser   = allUsers.filter(u => u.roleName === 'ROLE_USER').length
 const totalLocked = allUsers.filter(u => !u.isActive).length
 
-  // Actions
   const handleDelete = (u: UserResponse) => {
     if (confirm(`Xoá tài khoản "${u.fullName}"?`)) {
       deleteMutation.mutate(u.id)
@@ -133,7 +132,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
 
   const handleStatClick = (filterType: string) => {
   if (activeStatFilter === filterType) {
-    // Click lần 2 → bỏ filter
+    
     setActiveStatFilter('')
     setRoleFilter('')
     setStatusFilter('')
@@ -152,7 +151,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
 
   return (
     <div className="space-y-5">
-      {/* Header */}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -165,7 +164,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
         </div>
       </div>
 
-      {/* Stats */}
+      
 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
   {[
     {
@@ -231,9 +230,9 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
   })}
 </div>
 
-      {/* Filters */}
+      
       <div className="flex gap-3 flex-wrap">
-        {/* Search */}
+        
         <div className="relative flex-1 min-w-[240px] max-w-sm">
           <Search
             size={15}
@@ -252,7 +251,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
           />
         </div>
 
-        {/* Role */}
+        
         <select
           value={roleFilter}
           onChange={e => {
@@ -267,7 +266,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
           <option value="ROLE_USER">Khách hàng</option>
         </select>
 
-        {/* Status */}
+        
         <select
           value={statusFilter}
           onChange={e => {
@@ -281,7 +280,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
           <option value="inactive">Bị khoá</option>
         </select>
 
-        {/* Clear filter */}
+        
         <button
           onClick={handleClearFilter}
           className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors"
@@ -291,7 +290,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
         </button>
       </div>
 
-      {/* Table */}
+      
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
@@ -348,7 +347,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
                     className={`hover:bg-gray-50 transition-colors ${!u.isActive ? 'opacity-60' : ''
                       }`}
                   >
-                    {/* User */}
+                    
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm shrink-0">
@@ -367,7 +366,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
                       </div>
                     </td>
 
-                    {/* Contact */}
+                    
                     <td className="px-4 py-3 text-gray-700">
                       <div>{u.email}</div>
 
@@ -376,12 +375,12 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
                       </div>
                     </td>
 
-                    {/* Gender */}
+                    
                     <td className="px-4 py-3 text-gray-600">
                       {genderLabel}
                     </td>
 
-                    {/* Role */}
+                    
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${role.class}`}
@@ -391,7 +390,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
                       </span>
                     </td>
 
-                    {/* Status */}
+                    
                     <td className="px-4 py-3">
                       {u.isActive ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
@@ -406,14 +405,14 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
                       )}
                     </td>
 
-                    {/* Created */}
+                    
                     <td className="px-4 py-3 text-xs text-gray-400">
                       {new Date(u.createdAt).toLocaleDateString(
                         'vi-VN'
                       )}
                     </td>
 
-                    {/* Actions */}
+                    
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
@@ -441,13 +440,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
                           )}
                         </button>
 
-                        {/* <button
-                          onClick={() => handleDelete(u)}
-                          disabled={deleteMutation.isPending}
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 size={15} />
-                        </button> */}
+                        
                       </div>
                     </td>
                   </tr>
@@ -457,7 +450,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
           </tbody>
         </table>
 
-        {/* Pagination */}
+        
         {pageData && pageData.totalPages > 1 && (
           <div className="px-4 py-4 border-t border-gray-100">
             <Pagination
@@ -472,7 +465,7 @@ const totalLocked = allUsers.filter(u => !u.isActive).length
         )}
       </div>
 
-      {/* Modals */}
+      
       <UserCreateModal
         open={openCreate}
         onClose={() => setOpenCreate(false)}

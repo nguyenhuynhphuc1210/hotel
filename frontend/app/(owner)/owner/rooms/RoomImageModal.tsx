@@ -53,7 +53,7 @@ export function RoomImageModal({
         qc.invalidateQueries({ queryKey: ['room-detail', room.id] })
     }, [qc, room.id])
 
-    // ── Upload ────────────────────────────────────────────────
+    
     const handleFiles = useCallback(async (files: File[]) => {
         if (!files.length) return
         setUploading(true)
@@ -76,7 +76,7 @@ export function RoomImageModal({
         }
     }, [room.id, refreshData])
 
-    // ── Delete single ─────────────────────────────────────────
+    
     const handleDelete = async (img: RoomImageResponse) => {
         if (!confirm('Xoá ảnh này?')) return
         setDeletingIds(prev => new Set(prev).add(img.id))
@@ -95,7 +95,7 @@ export function RoomImageModal({
         }
     }
 
-    // ── Delete selected ───────────────────────────────────────
+    
     const handleDeleteSelected = async () => {
         if (!selected.size || !confirm(`Xoá ${selected.size} ảnh đã chọn?`)) return
         const ids = Array.from(selected)
@@ -114,7 +114,7 @@ export function RoomImageModal({
         refreshData()
     }
 
-    // ── Set primary ───────────────────────────────────────────
+    
     const handleSetPrimary = async (img: RoomImageResponse) => {
         setSettingPrimaryId(img.id)
         try {
@@ -129,7 +129,7 @@ export function RoomImageModal({
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────
+    
     const toggleSelect = (id: number) => {
         setSelected(prev => {
             const s = new Set(prev)
@@ -153,7 +153,7 @@ export function RoomImageModal({
 
     return (
         <>
-            {/* ── Lightbox ── */}
+            
             {lightboxIdx !== null && (
                 <div
                     className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-5"
@@ -196,7 +196,7 @@ export function RoomImageModal({
                 </div>
             )}
 
-            {/* ── Modal ── */}
+            
             <div
                 className="fixed inset-0 z-50 flex items-center justify-center p-4"
                 style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
@@ -205,7 +205,7 @@ export function RoomImageModal({
                     className="bg-white rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden"
                     style={{ maxWidth: 800, maxHeight: '92vh' }}
                 >
-                    {/* ── Header ── */}
+                    
                     <div className="shrink-0 px-6 pt-5 pb-4 border-b border-gray-100">
                         <div className="flex items-start justify-between gap-4">
                             <div className="flex items-center gap-3">
@@ -261,7 +261,7 @@ export function RoomImageModal({
                             </div>
                         </div>
 
-                        {/* Stats chips */}
+                        
                         <div className="flex items-center gap-2 mt-4">
                             <div
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
@@ -291,7 +291,7 @@ export function RoomImageModal({
                         </div>
                     </div>
 
-                    {/* ── Toolbar ── */}
+                    
                     <div
                         className="shrink-0 flex items-center justify-between px-6 py-2 border-b border-gray-100"
                         style={{ background: '#F8FAFC' }}
@@ -345,10 +345,10 @@ export function RoomImageModal({
                         </div>
                     </div>
 
-                    {/* ── Body ── */}
+                    
                     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
 
-                        {/* Drop zone */}
+                        
                         <div
                             onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
                             onDragLeave={() => setIsDragOver(false)}
@@ -381,7 +381,7 @@ export function RoomImageModal({
                             <p className="text-xs text-gray-400">PNG, JPG, WEBP · Nhiều file cùng lúc</p>
                         </div>
 
-                        {/* Loading */}
+                        
                         {isFetchingRoom ? (
                             <div className="flex flex-col items-center justify-center py-16 gap-3">
                                 <Loader2 size={28} className="animate-spin" style={{ color: '#2563EB' }} />
@@ -403,7 +403,7 @@ export function RoomImageModal({
                         ) : viewMode === 'grid' ? (
                             <div className="grid grid-cols-3 gap-3">
                                 {filtered.map((img, idx) => {
-                                    // KEY FIX: dùng `id-idx` để luôn unique, tránh lỗi key warning
+                                    
                                     const itemKey = `img-${img.id ?? 'x'}-${idx}`
                                     const isSelected = selected.has(img.id)
                                     const isDeleting = deletingIds.has(img.id)
@@ -432,7 +432,7 @@ export function RoomImageModal({
                                                 loading="lazy"
                                             />
 
-                                            {/* Hover overlay */}
+                                            
                                             <div
                                                 className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2.5"
                                                 style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)' }}
@@ -476,7 +476,7 @@ export function RoomImageModal({
                                                 </div>
                                             </div>
 
-                                            {/* Primary badge */}
+                                            
                                             {img.isPrimary && (
                                                 <div
                                                     className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold"
@@ -486,7 +486,7 @@ export function RoomImageModal({
                                                 </div>
                                             )}
 
-                                            {/* Selected indicator */}
+                                            
                                             {isSelected && (
                                                 <div
                                                     className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
@@ -576,7 +576,7 @@ export function RoomImageModal({
                         )}
                     </div>
 
-                    {/* ── Footer ── */}
+                    
                     <div
                         className="shrink-0 flex items-center justify-between px-6 py-3 border-t border-gray-100"
                         style={{ background: '#F8FAFC' }}

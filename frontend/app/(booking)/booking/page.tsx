@@ -100,7 +100,7 @@ function BookingContent() {
         (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000
     )
 
-    // ── Promotion state ──
+    
     const [promoCode, setPromoCode] = useState('')
     const [appliedPromo, setAppliedPromo] = useState<PromotionResponse | null>(null)
     const [promoError, setPromoError] = useState('')
@@ -156,7 +156,7 @@ function BookingContent() {
         }
     }, [calendarData, roomType, nights, quantity])
 
-    // ── Tính discount và finalPrice từ appliedPromo ──
+    
     const { discountAmount, finalPrice } = useMemo(() => {
         if (!appliedPromo || totalPrice === 0) return { discountAmount: 0, finalPrice: totalPrice }
         let discount = Math.round(totalPrice * (appliedPromo.discountPercent / 100))
@@ -180,7 +180,7 @@ function BookingContent() {
                 p.isActive &&
                 new Date(p.startDate) <= now &&
                 new Date(p.endDate) >= now &&
-                (p.hotelId === null || p.hotelId === hotelId) // global hoặc đúng khách sạn
+                (p.hotelId === null || p.hotelId === hotelId) 
             )
 
             if (!promo) {
@@ -294,7 +294,7 @@ function BookingContent() {
     return (
         <div className="min-h-screen bg-[#f7f8fa] py-8 font-sans">
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
+                @import url('https:
                 .booking-page { font-family: 'Be Vietnam Pro', sans-serif; }
                 .input-field {
                     width: 100%; padding: 12px 16px;
@@ -363,10 +363,10 @@ function BookingContent() {
                 <form id="booking-form" onSubmit={handleSubmit(onSubmit)}>
                     <div className="grid grid-cols-12 gap-7">
 
-                        {/* ── CỘT TRÁI ── */}
+                        
                         <div className="col-span-12 lg:col-span-7 space-y-6">
 
-                            {/* Bước 1: Thông tin người đặt */}
+                            
                             <div className="section-card fade-up">
                                 <div className="flex items-center gap-3 mb-6">
                                     <div className="step-badge">1</div>
@@ -393,7 +393,7 @@ function BookingContent() {
                                 </div>
                             </div>
 
-                            {/* Bước 2: Mã giảm giá */}
+                            
                             <div className="section-card fade-up-2">
                                 <div className="flex items-center gap-3 mb-5">
                                     <div className="step-badge">2</div>
@@ -401,7 +401,7 @@ function BookingContent() {
                                 </div>
 
                                 {appliedPromo ? (
-                                    // ── Đã áp dụng thành công ──
+                                    
                                     <div className="promo-applied">
                                         <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
                                             <div className="flex items-center gap-3">
@@ -440,7 +440,7 @@ function BookingContent() {
                                         </div>
                                     </div>
                                 ) : (
-                                    // ── Chưa áp dụng ──
+                                    
                                     <div className="space-y-4">
                                         <div className="flex">
                                             <input
@@ -474,7 +474,7 @@ function BookingContent() {
                                             </p>
                                         )}
 
-                                        {/* DANH SÁCH THẺ GIẢM GIÁ GỢI Ý */}
+                                        
                                         {availablePromos.length > 0 && (
                                             <div className="space-y-2 mt-4">
                                                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Ưu đãi dành cho bạn</p>
@@ -521,7 +521,7 @@ function BookingContent() {
                                 )}
                             </div>
 
-                            {/* Bước 3: Phương thức thanh toán */}
+                            
                             <div className="section-card fade-up-3">
                                 <div className="flex items-center gap-3 mb-6">
                                     <div className="step-badge">3</div>
@@ -581,7 +581,7 @@ function BookingContent() {
                                 )}
                             </div>
 
-                            {/* Cam kết */}
+                            
                             <div className="fade-up-4 flex gap-3 items-start bg-white rounded-2xl border border-gray-100 p-5">
                                 <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
                                     <ShieldCheck size={18} className="text-white" />
@@ -595,7 +595,7 @@ function BookingContent() {
                             </div>
                         </div>
 
-                        {/* ── CỘT PHẢI: TÓM TẮT ── */}
+                        
                         <div className="col-span-12 lg:col-span-5">
                             <div className="summary-card sticky top-24">
                                 {roomImage && (
@@ -613,7 +613,7 @@ function BookingContent() {
                                 )}
 
                                 <div className="p-5 space-y-4">
-                                    {/* Ngày check-in / check-out */}
+                                    
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="bg-gray-50 rounded-xl p-3">
                                             <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
@@ -638,7 +638,7 @@ function BookingContent() {
 
                                     <hr className="divider" />
 
-                                    {/* Bảng giá */}
+                                    
                                     {isCalLoading ? (
                                         <div className="space-y-2.5">
                                             <div className="h-4 bg-gray-100 animate-pulse rounded-md w-3/4" />
@@ -655,7 +655,7 @@ function BookingContent() {
                                                 </span>
                                             </div>
 
-                                            {/* Dòng giảm giá — chỉ hiện khi có promo */}
+                                            
                                             {appliedPromo && discountAmount > 0 && (
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-emerald-600 flex items-center gap-1">
@@ -682,7 +682,7 @@ function BookingContent() {
                                         </div>
                                     )}
 
-                                    {/* Tổng cộng — đổi màu nếu có giảm giá */}
+                                    
                                     <div
                                         className="rounded-2xl px-4 py-3 flex items-center justify-between transition-colors"
                                         style={{
@@ -706,7 +706,7 @@ function BookingContent() {
                                         )}
                                     </div>
 
-                                    {/* Submit */}
+                                    
                                     <button
                                         form="booking-form"
                                         type="submit"

@@ -51,7 +51,7 @@ function BookingDetailPage() {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const MAX_IMAGES = 5
 
-    // Track which room's rate breakdown is expanded
+    
     const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set())
 
     const toggleExpanded = (roomIdx: number) => {
@@ -89,13 +89,13 @@ function BookingDetailPage() {
         queryFn: async () => {
             if (!booking?.hotelId) return null
             try {
-                // Dùng endpoint đã có sẵn
+                
                 const res = await axiosInstance.get(
                     `/api/reviews/hotel/${booking.hotelId}/public`,
                     { params: { page: 0, size: 1000 } }
                 )
                 const reviews = res.data?.content ?? []
-                // Filter theo bookingId
+                
                 return reviews.find((r: { bookingId: number }) =>
                     r.bookingId === Number(bookingId)
                 ) ?? null
@@ -216,7 +216,7 @@ function BookingDetailPage() {
         <div className="min-h-screen bg-gray-50 py-12">
             <div className="max-w-4xl mx-auto px-4">
 
-                {/* Header Actions */}
+                
                 <div className="flex items-center justify-between mb-8">
                     <button
                         onClick={() => router.push('/profile/booking')}
@@ -232,10 +232,10 @@ function BookingDetailPage() {
                     </button>
                 </div>
 
-                {/* Main Card */}
+                
                 <div className="bg-white rounded-[32px] shadow-xl shadow-gray-200/50 overflow-hidden border border-gray-100">
 
-                    {/* Status Banner */}
+                    
                     <div className={`${status.color} p-6 text-white flex items-center justify-between`}>
                         <div className="flex items-center gap-3">
                             {status.icon}
@@ -276,7 +276,7 @@ function BookingDetailPage() {
 
                     <div className="p-8 md:p-12 space-y-12">
 
-                        {/* Section 1: Hotel & Stay */}
+                        
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2 text-blue-600">
@@ -293,7 +293,7 @@ function BookingDetailPage() {
                                         <Phone size={16} />
                                         <span>{booking.hotelPhone}</span>
                                     </div>
-                                    {/* Google Map */}
+                                    
                                     <div className="mt-5 rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
                                         <iframe
                                             title="hotel-map"
@@ -309,7 +309,7 @@ function BookingDetailPage() {
                                         />
                                     </div>
 
-                                    {/* Open Google Maps */}
+                                    
                                     <a
                                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                                             hotelFullAddress
@@ -344,7 +344,7 @@ function BookingDetailPage() {
                             </div>
                         </div>
 
-                        {/* Section 2: Guest Info */}
+                        
                         <div className="border-t border-gray-100 pt-10">
                             <div className="flex items-center gap-2 text-blue-600 mb-6">
                                 <User size={20} />
@@ -375,7 +375,7 @@ function BookingDetailPage() {
                             </div>
                         </div>
 
-                        {/* Section 3: Room Details với per-night breakdown */}
+                        
                         <div className="border-t border-gray-100 pt-10">
                             <div className="flex items-center gap-2 text-blue-600 mb-6">
                                 <Receipt size={20} />
@@ -387,14 +387,14 @@ function BookingDetailPage() {
                                     const hasRates = rates.length > 0
                                     const isExpanded = expandedRooms.has(idx)
 
-                                    // Tổng tiền = sum của rates * quantity (nếu có rates), fallback về pricePerNight * nights * quantity
+                                    
                                     const roomTotal = hasRates
                                         ? rates.reduce((sum, r) => sum + Number(r.price), 0) * room.quantity
                                         : Number(room.pricePerNight) * nights * room.quantity
 
                                     return (
                                         <div key={idx} className="border border-gray-100 rounded-2xl overflow-hidden">
-                                            {/* Room header row */}
+                                            
                                             <div className="flex items-center justify-between p-4 bg-gray-50">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm font-bold text-blue-600 text-sm shrink-0">
@@ -421,7 +421,7 @@ function BookingDetailPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Per-night breakdown */}
+                                            
                                             {hasRates && isExpanded && (
                                                 <div className="border-t border-gray-100 divide-y divide-gray-50">
                                                     {rates.map((rate, rIdx) => {
@@ -432,7 +432,7 @@ function BookingDetailPage() {
                                                                 className="flex items-center justify-between px-5 py-3 bg-white hover:bg-blue-50/30 transition-colors"
                                                             >
                                                                 <div className="flex items-center gap-3">
-                                                                    {/* Night number badge */}
+                                                                    
                                                                     <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-[11px] font-bold text-blue-600 shrink-0">
                                                                         {rIdx + 1}
                                                                     </div>
@@ -452,7 +452,7 @@ function BookingDetailPage() {
                                                         )
                                                     })}
 
-                                                    {/* Subtotal row */}
+                                                    
                                                     <div className="flex items-center justify-between px-5 py-3 bg-blue-50/50">
                                                         <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">
                                                             Tổng · {room.roomTypeName}
@@ -469,7 +469,7 @@ function BookingDetailPage() {
                             </div>
                         </div>
 
-                        {/* Section 4: Payment Summary */}
+                        
                         <div className="border-t border-gray-100 pt-10">
                             <div className="bg-blue-600 rounded-[32px] p-8 text-white">
                                 <div className="flex items-center gap-2 mb-6">
@@ -504,7 +504,7 @@ function BookingDetailPage() {
                             </div>
                         </div>
 
-                        {/* Section 5: Review */}
+                        
                         {booking.status === 'COMPLETED' && (
                             <div className="border-t border-gray-100 pt-10">
                                 <div className="flex items-center gap-2 text-blue-600 mb-6">

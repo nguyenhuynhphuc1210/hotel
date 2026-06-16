@@ -25,7 +25,7 @@ import type {
 } from '@/types/statistic.types'
 import { cn } from '@/lib/utils'
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+
 type FilterMode = 'month' | 'range'
 type StatColor = 'blue' | 'green' | 'red' | 'orange' | 'purple' | 'amber'
 
@@ -41,7 +41,7 @@ interface ChartDataPoint {
 interface PieDataPoint { name: string; value: number }
 interface BarDataPoint { hotelName: string; gross: number; net: number; commission: number; bookings: number }
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+
 const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
 
 const BOOKING_STATUS_COLORS: Record<string, string> = {
@@ -61,7 +61,7 @@ const BOOKING_STATUS_LABELS: Record<string, string> = {
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
 const YEARS  = Array.from({ length: 5  }, (_, i) => new Date().getFullYear() - i)
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+
 function fmtMoney(v: number) {
   if (v >= 1_000_000_000) return (v / 1_000_000_000).toFixed(1) + 'B'
   if (v >= 1_000_000)     return (v / 1_000_000).toFixed(1) + 'M'
@@ -71,7 +71,7 @@ function fmtMoney(v: number) {
 
 function fmtFull(v: number) { return v.toLocaleString('vi-VN') + ' ₫' }
 
-// ── Typed Tooltip ──────────────────────────────────────────────────────────────
+
 interface TooltipEntry { name?: string; value?: number | string; color?: string }
 interface CustomTooltipProps extends TooltipProps<number, string> {
   active?: boolean; payload?: TooltipEntry[]; label?: string
@@ -103,7 +103,7 @@ function RevenueTooltip({ active, payload, label }: CustomTooltipProps) {
   )
 }
 
-// ── StatCard ───────────────────────────────────────────────────────────────────
+
 interface StatCardProps {
   icon: React.ComponentType<{ size?: number; className?: string }>
   label: string; value: string; sub: string; color: StatColor; accent?: string
@@ -132,7 +132,7 @@ function StatCard({ icon: Icon, label, value, sub, color }: StatCardProps) {
   )
 }
 
-// ── Recent Booking Card ────────────────────────────────────────────────────────
+
 function RecentBookingCard({ booking: b }: { booking: RecentBookingResponse }) {
   return (
     <div className="p-3 rounded-xl border border-gray-100 bg-gray-50/40 hover:bg-white hover:shadow-sm transition-all">
@@ -154,7 +154,7 @@ function RecentBookingCard({ booking: b }: { booking: RecentBookingResponse }) {
   )
 }
 
-// ── Section Header ─────────────────────────────────────────────────────────────
+
 function SectionHeader({ color, icon: Icon, title, onExport, isExporting }: {
   color: 'blue' | 'emerald'
   icon: React.ComponentType<{ size?: number; className?: string }>
@@ -177,7 +177,7 @@ function SectionHeader({ color, icon: Icon, title, onExport, isExporting }: {
   )
 }
 
-// ── Date Filter ────────────────────────────────────────────────────────────────
+
 function DateFilter({ mode, month, year, fromDate, toDate, onModeChange, onMonthChange, onYearChange, onFromChange, onToChange }: {
   mode: FilterMode; month: number; year: number; fromDate: string; toDate: string
   onModeChange: (m: FilterMode) => void; onMonthChange: (v: number) => void
@@ -226,7 +226,7 @@ function DateFilter({ mode, month, year, fromDate, toDate, onModeChange, onMonth
   )
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────────
+
 export default function OwnerDashboardPage() {
   const { activeHotelId, activeHotel } = useOwnerHotel()
 
@@ -241,13 +241,13 @@ export default function OwnerDashboardPage() {
     filterMode === 'month' ? { month: filterMonth, year: filterYear } : { fromDate, toDate }
   ), [filterMode, filterMonth, filterYear, fromDate, toDate])
 
-  // Global: toàn bộ hệ thống của owner (không truyền hotelId)
+  
   const { data: globalData, isLoading: isGlobalLoading } = useQuery({
     queryKey: ['owner-dashboard-global', commonParams],
     queryFn: () => statisticApi.getDashboard(commonParams).then(r => r.data),
   })
 
-  // Local: KS đang chọn
+  
   const { data: localData, isLoading: isLocalLoading } = useQuery({
     queryKey: ['owner-dashboard-local', activeHotelId, commonParams],
     queryFn: () => statisticApi.getDashboard({ ...commonParams, hotelId: activeHotelId! }).then(r => r.data),
@@ -264,7 +264,7 @@ export default function OwnerDashboardPage() {
     finally { setIsExporting(false) }
   }
 
-  // ── Chart data ──
+  
   const hotelPieData = useMemo<PieDataPoint[]>(() =>
     (globalData?.topHotels ?? [])
       .filter((h: HotelStatisticSummaryResponse) => Number(h.grossRevenue ?? 0) > 0)
@@ -283,7 +283,7 @@ export default function OwnerDashboardPage() {
     [globalData]
   )
 
-  // Area chart — now has 3 revenue lanes
+  
   const areaChartData = useMemo<ChartDataPoint[]>(() =>
   (localData?.chartData ?? []).map((s: DailyStatisticResponse) => ({
     date:       new Date(s.statDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
@@ -319,7 +319,7 @@ export default function OwnerDashboardPage() {
   return (
     <div className="space-y-10 pb-20">
 
-      {/* ── Header ── */}
+      
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Thống kê kinh doanh</h1>
@@ -333,12 +333,12 @@ export default function OwnerDashboardPage() {
         />
       </div>
 
-      {/* ════════ SECTION 1: TOÀN HỆ THỐNG ════════ */}
+      
       <div className="space-y-5">
         <SectionHeader color="blue" icon={LayoutDashboard} title="Toàn bộ hệ thống"
           onExport={() => handleExport(true)} isExporting={isExporting} />
 
-        {/* 6 KPI — now includes commission */}
+        
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <StatCard icon={TrendingUp}      color="blue"   label="Doanh thu gộp"   value={fmtFull(Number(gs?.grossRevenue    ?? 0))} sub="Trước hoa hồng" />
           <StatCard icon={Percent}         color="amber"  label="Hoa hồng HT"     value={fmtFull(Number(gs?.totalCommission ?? 0))} sub="Thu của hệ thống" />
@@ -351,7 +351,7 @@ export default function OwnerDashboardPage() {
         
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Bar chart: so sánh KS — gross vs net */}
+          
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-6">
             <h3 className="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
               <BarChart3 size={16} className="text-blue-500" /> So sánh doanh thu theo cơ sở
@@ -378,7 +378,7 @@ export default function OwnerDashboardPage() {
               )}
           </div>
 
-          {/* Pie: tỷ trọng gross revenue */}
+          
           <div className="bg-white rounded-2xl border border-gray-100 p-6 flex flex-col">
             <h3 className="text-sm font-bold text-gray-900 mb-1">Tỷ trọng doanh thu</h3>
             <p className="text-xs text-gray-400 mb-4">Phân bổ doanh thu gộp theo cơ sở</p>
@@ -411,13 +411,13 @@ export default function OwnerDashboardPage() {
         </div>
       </div>
 
-      {/* ════════ SECTION 2: CHI TIẾT KS ĐANG CHỌN ════════ */}
+      
       <div className="space-y-5 pt-6 border-t border-dashed border-gray-200">
         <SectionHeader color="emerald" icon={Target}
           title={`Chi tiết: ${activeHotel?.hotelName ?? 'Đang chọn...'}`}
           onExport={() => handleExport(false)} isExporting={isExporting} />
 
-        {/* Local KPI */}
+        
         {!isLocalLoading && ls && (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -440,7 +440,7 @@ export default function OwnerDashboardPage() {
           </div>
         ) : (
           <div className="space-y-5">
-            {/* Row 1: Area chart (3 lanes) + Recent bookings */}
+            
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
               <div className="lg:col-span-8 bg-white rounded-2xl border border-gray-100 p-6">
                 <h3 className="text-sm font-bold text-gray-900 mb-1">Biến động doanh thu & hoa hồng</h3>
@@ -486,7 +486,7 @@ export default function OwnerDashboardPage() {
               </div>
             </div>
 
-            {/* Row 2: Lượt đặt/huỷ + Tỷ lệ huỷ */}
+            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
                 <h3 className="text-sm font-bold text-gray-900 mb-1">Lượt đặt & Huỷ phòng</h3>

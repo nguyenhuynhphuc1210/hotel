@@ -3,19 +3,19 @@
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import React, { useRef, ChangeEvent } from 'react' // Thêm useRef, ChangeEvent
+import React, { useRef, ChangeEvent } from 'react' 
 import {
   LayoutDashboard, Hotel, BedDouble, CalendarDays,
   CalendarCheck, Star, Tag, LogOut, ChevronRight, ChevronDown,
-  Building2, CreditCard, MessageSquare, Camera, Loader2, User as UserIcon // Thêm icons
+  Building2, CreditCard, MessageSquare, Camera, Loader2, User as UserIcon, LifeBuoy
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
 import { OwnerHotelProvider, useOwnerHotel } from './owner-hotel-context'
 import NotificationBell from '@/components/layout/NotificationBell'
-import userApi from '@/lib/api/user.api' // Thêm api
-import { useMutation } from '@tanstack/react-query' // Thêm mutation
-import toast from 'react-hot-toast' // Thêm toast
+import userApi from '@/lib/api/user.api'
+import { useMutation } from '@tanstack/react-query' 
+import toast from 'react-hot-toast' 
 
 const navItems = [
   { href: '/owner', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -28,20 +28,20 @@ const navItems = [
   { href: '/owner/reviews', label: 'Đánh giá', icon: Star },
   { href: '/owner/promotions', label: 'Khuyến mãi', icon: Tag },
   { href: '/owner/messages', label: 'Tin nhắn', icon: MessageSquare },
+  { href: '/owner/support', label: 'Hỗ trợ hệ thống', icon: LifeBuoy },
 ]
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, clearAuth, setUser } = useAuthStore() // Lấy thêm setUser
-  const fileInputRef = useRef<HTMLInputElement>(null) // Ref cho input file
+  const { user, clearAuth, setUser } = useAuthStore() 
+  const fileInputRef = useRef<HTMLInputElement>(null) 
 
   const handleLogout = () => {
     clearAuth()
     router.push('/admin/login')
   }
 
-  // LOGIC UPLOAD AVATAR
   const uploadAvatarMutation = useMutation({
     mutationFn: (file: File) => userApi.uploadAvatar(file),
     onSuccess: async () => {
@@ -65,7 +65,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
 
-      {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
         <div className="h-16 flex items-center gap-3 px-5 border-b border-gray-200">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm">🏨</div>
@@ -91,11 +90,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* User Section với chức năng Avatar */}
         <div className="border-t border-gray-200 p-3 space-y-1">
           <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 relative group">
             
-            {/* AVATAR CONTAINER */}
             <div className="relative shrink-0">
               <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-sm font-semibold overflow-hidden border border-gray-200">
                 {user?.avatarUrl ? (
@@ -105,7 +102,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 )}
               </div>
               
-              {/* Nút upload nhỏ đè lên avatar khi hover */}
               <button 
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadAvatarMutation.isPending}
@@ -118,7 +114,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 )}
               </button>
               
-              {/* Input file ẩn */}
               <input
                 type="file"
                 ref={fileInputRef}
@@ -145,10 +140,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
-          {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-gray-400">
             <span>Owner Portal</span>
             <ChevronRight size={14} />
@@ -157,7 +150,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          {/* Right side */}
           <div className="flex items-center gap-3">
             <span className="hidden md:inline text-xs text-gray-400 font-medium uppercase tracking-wider">Khách sạn:</span>
             <div className="relative">
@@ -182,7 +174,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             <div className="w-px h-5 bg-gray-200 mx-1" />
             <NotificationBell />
             
-            {/* Hiển thị avatar nhỏ ở header cho đồng bộ */}
             <div className="w-8 h-8 rounded-full bg-blue-100 overflow-hidden border border-gray-200">
                {user?.avatarUrl ? (
                   <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
@@ -195,7 +186,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Content Area */}
         <main className="flex-1 overflow-auto p-6">
           {children}
         </main>

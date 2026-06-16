@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface PaginationProps {
-  currentPage: number        // 0-based
+  currentPage: number        
   totalPages: number
   totalElements: number
   pageSize: number
@@ -35,13 +35,13 @@ export default function Pagination({
   }
 
   const btnBase = 'w-9 h-9 flex items-center justify-center rounded-full text-sm font-medium transition-all duration-200'
-  const btnActive = 'border-2 border-blue-600 text-blue-600 font-bold' // Hình tròn viền xanh như Agoda
+  const btnActive = 'border-2 border-blue-600 text-blue-600 font-bold' 
   const btnInactive = 'text-gray-600 hover:bg-gray-100'
   const btnDisabled = 'text-gray-300 cursor-not-allowed'
 
   return (
     <div className="flex items-center justify-center gap-1 py-2">
-      {/* Nút Previous */}
+      
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
@@ -50,7 +50,7 @@ export default function Pagination({
         <ChevronLeft size={20} />
       </button>
 
-      {/* Danh sách số trang */}
+      
       <div className="flex items-center gap-1">
         {getPageNumbers().map((p, i) =>
           p === '...' ? (
@@ -67,7 +67,7 @@ export default function Pagination({
         )}
       </div>
 
-      {/* Nút Next */}
+      
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage >= totalPages - 1}

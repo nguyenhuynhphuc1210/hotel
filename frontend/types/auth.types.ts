@@ -18,7 +18,6 @@ export interface AuthResponse {
   user: UserResponse
 }
 
-// Sửa lại đúng với BE trả về
 export interface UserResponse {
   id: number
   fullName: string

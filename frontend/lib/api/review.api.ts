@@ -1,5 +1,3 @@
-// lib/api/review.api.ts
-
 import axiosInstance from './axios'
 import API_CONFIG from '@/config/api.config'
 import { ReviewReportRequest, ReviewRequest, ReviewResponse } from '@/types/review.types'

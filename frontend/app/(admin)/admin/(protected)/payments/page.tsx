@@ -20,7 +20,7 @@ import { exportPayments } from '@/lib/api/export.api'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
-// ── Configs ────────────────────────────────────────────────────────────────────
+
 const STATUS_CONFIG: Record<PaymentStatus, { label: string; dot: string; badge: string; icon: LucideIcon; color: string }> = {
   PENDING:   { label: 'Chờ xử lý',       dot: 'bg-amber-400',   badge: 'bg-amber-50   text-amber-700   ring-1 ring-amber-200',   icon: Clock,        color: 'text-amber-500'   },
   PAID:      { label: 'Đã thanh toán',   dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', icon: CheckCircle2, color: 'text-emerald-500' },
@@ -41,7 +41,7 @@ const METHOD_CONFIG: Record<string, { label: string; dot: string; badge: string 
 
 const STAT_STATUSES: PaymentStatus[] = ['UNPAID', 'PENDING', 'PAID', 'CANCELLED', 'FAILED', 'REFUNDED']
 
-// ── Detail Drawer ──────────────────────────────────────────────────────────────
+
 function PaymentDetailDrawer({ payment, hotels, onClose }: {
   payment: PaymentResponse | null
   hotels: HotelResponse[]
@@ -118,7 +118,7 @@ function PaymentDetailDrawer({ payment, hotels, onClose }: {
   )
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────────
+
 export default function AdminPaymentsPage() {
   const [currentPage,     setCurrentPage]     = useState(0)
   const [pageSize,        setPageSize]        = useState(10)
@@ -132,19 +132,19 @@ export default function AdminPaymentsPage() {
 
   const [debouncedSearch] = useDebounce(searchInput, 400)
 
-  // Hotels list
+  
   const { data: hotels = [] } = useQuery<HotelResponse[]>({
     queryKey: ['admin-hotels-list'],
     queryFn:  () => axiosInstance.get(API_CONFIG.ENDPOINTS.HOTELS, { params: { page: 0, size: 1000 } }).then(r => r.data.content),
   })
 
-  // Owners list for filter
+  
   const owners = useMemo(() =>
     Array.from(new Map(hotels.map(h => [h.ownerId, { id: h.ownerId, name: h.ownerName }])).values()),
     [hotels]
   )
 
-  // Main table data
+  
   const { data: pageData, isLoading: isLoadingPayments } = usePayments(currentPage, pageSize, {
     search:  debouncedSearch,
     status:  statusFilter,
@@ -153,7 +153,6 @@ export default function AdminPaymentsPage() {
     ownerId: selectedOwnerId,
   })
 
-  // Status counts
   const statusQueries = useQueries({
     queries: STAT_STATUSES.map(s => ({
       queryKey: ['admin-payment-count', s, selectedHotelId, selectedOwnerId, methodFilter],
@@ -195,7 +194,7 @@ export default function AdminPaymentsPage() {
   return (
     <div className="space-y-6 pb-10">
 
-      {/* Header */}
+      
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Quản lý giao dịch</h1>
@@ -210,7 +209,7 @@ export default function AdminPaymentsPage() {
         </button>
       </div>
 
-      {/* Status chips */}
+      
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {STAT_STATUSES.map(status => {
           const cfg    = STATUS_CONFIG[status]
@@ -234,7 +233,7 @@ export default function AdminPaymentsPage() {
         })}
       </div>
 
-      {/* Filters */}
+      
       <div className="flex flex-wrap gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
         <div className="relative flex-1 min-w-[250px]">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -278,7 +277,7 @@ export default function AdminPaymentsPage() {
         </button>
       </div>
 
-      {/* Table */}
+      
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">

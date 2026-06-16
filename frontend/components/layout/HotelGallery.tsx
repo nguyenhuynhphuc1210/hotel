@@ -13,7 +13,7 @@ import favoriteApi from '@/lib/api/favorite.api'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
-// --- ĐỊNH NGHĨA INTERFACE ĐỂ TRÁNH LỖI ANY ---
+
 interface FavoriteHotelSummary {
     id: number
     hotelName: string
@@ -49,7 +49,7 @@ export default function HotelGallery({ images, hotelId }: Props) {
     const [currentIdx, setCurrentIdx] = useState(0)
     const thumbnailRefs = useRef<(HTMLDivElement | null)[]>([])
 
-    // Khóa cuộn trang khi mở modal
+    
     useEffect(() => {
         if (isModalOpen) {
             document.body.style.overflow = 'hidden'
@@ -61,7 +61,7 @@ export default function HotelGallery({ images, hotelId }: Props) {
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
 
-    // --- FETCH DANH SÁCH YÊU THÍCH VỚI TYPE RÕ RÀNG ---
+    
     const { data: myFavsPage } = useQuery<FavoritePageResponse>({
         queryKey: ['my-favorites', user?.id],
         queryFn: () => favoriteApi.getMyFavorites(0, 100).then(r => r.data as FavoritePageResponse),
@@ -69,7 +69,7 @@ export default function HotelGallery({ images, hotelId }: Props) {
         staleTime: 1000 * 60 * 5,
     })
 
-    // Kiểm tra trạng thái bằng cách tìm trong danh sách
+    
     const isFavorited = useMemo(() => {
         if (!myFavsPage?.content) return false
         return myFavsPage.content.some((fav: FavoriteItem) => fav.hotel.id === hotelId)
@@ -85,7 +85,7 @@ export default function HotelGallery({ images, hotelId }: Props) {
         setIsTogglingFav(true)
         try {
             const res = await favoriteApi.toggle(hotelId)
-            // Làm mới query list để cập nhật trạng thái trái tim
+            
             await queryClient.invalidateQueries({ queryKey: ['my-favorites', user?.id] })
             toast.success(res.data.isFavorited ? 'Đã thêm vào yêu thích!' : 'Đã xóa khỏi yêu thích!')
         } catch { 
@@ -104,7 +104,7 @@ export default function HotelGallery({ images, hotelId }: Props) {
         setCurrentIdx(prev => (prev - 1 + images.length) % images.length)
     }
 
-    // Tự động cuộn thumbnail vào giữa
+    
     useEffect(() => {
         if (viewMode === 'slideshow' && thumbnailRefs.current[currentIdx]) {
             thumbnailRefs.current[currentIdx]?.scrollIntoView({
@@ -118,7 +118,7 @@ export default function HotelGallery({ images, hotelId }: Props) {
 
     return (
         <div className="relative group">
-            {/* GRID HIỂN THỊ NGOÀI TRANG CHI TIẾT */}
+            
             <div className="h-[450px] grid grid-cols-4 grid-rows-2 gap-2 rounded-2xl overflow-hidden bg-gray-100 shadow-sm border border-gray-200">
                 <div className="col-span-2 row-span-2 cursor-pointer overflow-hidden relative group/item" 
                      onClick={() => { setIsModalOpen(true); setViewMode('slideshow'); setCurrentIdx(0); }}>
@@ -158,7 +158,7 @@ export default function HotelGallery({ images, hotelId }: Props) {
                 </button>
             </div>
 
-            {/* MODAL THƯ VIỆN */}
+            
             {isModalOpen && (
                 <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300">
                     <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />

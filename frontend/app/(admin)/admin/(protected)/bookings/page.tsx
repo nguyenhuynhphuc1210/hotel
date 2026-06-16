@@ -24,13 +24,11 @@ import { exportBookings } from '@/lib/api/export.api'
 import bookingApi from '@/lib/api/booking.api'
 import promotionApi from '@/lib/api/promotion.api'
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
 function calcNights(checkIn: string, checkOut: string): number {
   const ms = new Date(checkOut + 'T00:00:00').getTime() - new Date(checkIn + 'T00:00:00').getTime()
   return Math.ceil(ms / 86_400_000)
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function AdminBookingsPage() {
   const [keyword, setKeyword]       = useState('')
   const [statusFilter, setStatus]   = useState<BookingStatus | ''>('')
@@ -88,7 +86,6 @@ export default function AdminBookingsPage() {
   return (
     <div style={{ padding: '24px 28px', background: '#F8FAFC', minHeight: '100vh' }}>
 
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', margin: 0 }}>Quản lý đặt phòng</h1>
@@ -107,7 +104,6 @@ export default function AdminBookingsPage() {
         </button>
       </div>
 
-      {/* Stat chips */}
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${BOOKING_STAT_STATUSES.length}, 1fr)`, gap: 10, marginBottom: 20 }}>
         {BOOKING_STAT_STATUSES.map(s => {
           const cfg = BOOKING_STATUS_CONFIG[s]
@@ -129,7 +125,6 @@ export default function AdminBookingsPage() {
         })}
       </div>
 
-      {/* Filters */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
         <div style={{ position: 'relative', flex: '1', minWidth: 240 }}>
           <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
@@ -169,7 +164,6 @@ export default function AdminBookingsPage() {
         )}
       </div>
 
-      {/* Table */}
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -312,7 +306,6 @@ export default function AdminBookingsPage() {
   )
 }
 
-// ── Detail Modal ──────────────────────────────────────────────────────────────
 function BookingDetailModal({ booking: b, ownerName, onClose }: {
   booking: BookingResponse; ownerName: string; onClose: () => void
 }) {
@@ -354,7 +347,6 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
         maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
         boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
       }}>
-        {/* Header */}
         <div style={{ padding: '18px 22px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h2 style={{ fontSize: 15, fontWeight: 800, color: '#0F172A', margin: 0 }}>Chi tiết đơn đặt phòng</h2>
@@ -371,7 +363,7 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
         </div>
 
         <div style={{ padding: '20px 22px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Status + Payment row */}
+          
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ background: '#F8FAFC', borderRadius: 12, padding: '12px 14px' }}>
               {section('Trạng thái đơn')}
@@ -386,7 +378,6 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
             </div>
           </div>
 
-          {/* Guest + Hotel */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, paddingTop: 16, borderTop: '1px solid #F1F5F9' }}>
             <div>
               {section('Khách hàng')}
@@ -401,7 +392,6 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
             </div>
           </div>
 
-          {/* Stay */}
           <div style={{ background: '#EFF6FF', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{ fontSize: 10, fontWeight: 700, color: '#93C5FD', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 4px' }}>Check-in</p>
@@ -416,7 +406,6 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
             </div>
           </div>      
 
-          {/* Price breakdown */}
           <div style={{ background: '#F8FAFC', borderRadius: 12, padding: '14px 16px' }}>
             {section('Chi tiết giá')}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: '#6B7280' }}>
@@ -449,7 +438,6 @@ function BookingDetailModal({ booking: b, ownerName, onClose }: {
             </div>
           </div>
 
-          {/* Cancel info */}
           {b.cancelReason && (
             <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 14px' }}>
               <p style={{ fontSize: 10, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 6px' }}>Lý do huỷ</p>

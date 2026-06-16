@@ -10,7 +10,7 @@ import {
 import axiosInstance from '@/lib/api/axios'
 import { cn } from '@/lib/utils'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+
 interface Message {
     id: string
     role: 'user' | 'assistant'
@@ -28,7 +28,7 @@ interface AIChatWidgetProps {
     onToggle?: () => void
 }
 
-// ── Markdown Parser ──────────────────────────────────────────────────────────
+
 function renderMarkdown(text: string) {
     if (!text) return ''
     return text
@@ -40,7 +40,7 @@ function renderMarkdown(text: string) {
         .replace(/\n/g, '<br/>')
 }
 
-// ── Components ───────────────────────────────────────────────────────────────
+
 const TypingIndicator = () => (
     <div className="flex items-center gap-1.5 py-2 px-3 bg-white border border-gray-100 rounded-2xl w-fit shadow-sm">
         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
@@ -51,13 +51,13 @@ const TypingIndicator = () => (
 
 const WELCOME_TEXT = 'Xin chào! Tôi là **Vago AI** 🤖\n\nTôi có thể giúp bạn tìm phòng, kiểm tra giá, tư vấn lịch trình hoặc giải đáp chính sách khách sạn. Bạn cần hỗ trợ gì hôm nay?'
 
-// ── Main Widget ───────────────────────────────────────────────────────────────
+
 export default function AIChatWidget({ panelOnly, externalOpen, onToggle }: AIChatWidgetProps) {
     const params = useParams()
     const hotelId = params?.id ? Number(params.id) : null
 
-    // Nếu panelOnly: dùng externalOpen để biết có hiển thị panel không
-    // Nếu standalone: dùng isOpen nội bộ
+    
+    
     const [internalOpen, setInternalOpen] = useState(false)
     const isOpen = panelOnly ? (externalOpen ?? false) : internalOpen
 
@@ -71,7 +71,7 @@ export default function AIChatWidget({ panelOnly, externalOpen, onToggle }: AICh
 
     const storageKey = hotelId ? `vago_ai_chat_hotel_${hotelId}` : 'vago_ai_chat_general'
 
-    // Load lịch sử
+    
     useEffect(() => {
         const saved = localStorage.getItem(storageKey)
         if (saved) {
@@ -91,7 +91,7 @@ export default function AIChatWidget({ panelOnly, externalOpen, onToggle }: AICh
         }
     }, [hotelId, storageKey, panelOnly])
 
-    // Lưu lịch sử + scroll
+    
     useEffect(() => {
         if (messages.length > 0) {
             localStorage.setItem(storageKey, JSON.stringify(messages))
@@ -99,7 +99,7 @@ export default function AIChatWidget({ panelOnly, externalOpen, onToggle }: AICh
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages, storageKey])
 
-    // Focus input khi panel mở
+    
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => inputRef.current?.focus(), 300)

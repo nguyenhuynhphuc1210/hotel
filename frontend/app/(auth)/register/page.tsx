@@ -78,7 +78,7 @@ export default function RegisterPage() {
     return (
         <div className="w-full max-w-md mx-auto">
 
-            {/* Logo */}
+            
             <div className="text-center mb-8">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#E8F0FE] mb-4">
                     <span className="text-3xl">🏨</span>
@@ -87,14 +87,14 @@ export default function RegisterPage() {
                 <p className="text-sm text-gray-400 mt-1">Tạo tài khoản mới để đặt phòng</p>
             </div>
 
-            {/* Card */}
+            
             <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_24px_rgba(0,0,0,0.06)] p-8">
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">Đăng ký</h2>
                 <p className="text-sm text-gray-400 mb-7">Điền thông tin để tạo tài khoản miễn phí.</p>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
 
-                    {/* Full Name */}
+                    
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Họ và tên</label>
                         <div className="relative">
@@ -108,7 +108,7 @@ export default function RegisterPage() {
                         <FieldError msg={errors.fullName?.message} />
                     </div>
 
-                    {/* Email */}
+                    
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                         <div className="relative">
@@ -123,7 +123,7 @@ export default function RegisterPage() {
                         <FieldError msg={errors.email?.message} />
                     </div>
 
-                    {/* Phone + Gender row */}
+                    
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">Điện thoại</label>
@@ -151,7 +151,7 @@ export default function RegisterPage() {
                         </div>
                     </div>
 
-                    {/* Password */}
+                    
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Mật khẩu</label>
                         <div className="relative">
@@ -173,7 +173,7 @@ export default function RegisterPage() {
                         <FieldError msg={errors.password?.message} />
                     </div>
 
-                    {/* Confirm Password */}
+                    
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Xác nhận mật khẩu</label>
                         <div className="relative">
@@ -195,7 +195,7 @@ export default function RegisterPage() {
                         <FieldError msg={errors.confirmPassword?.message} />
                     </div>
 
-                    {/* Submit */}
+                    
                     <button
                         type="submit"
                         disabled={loading}
@@ -207,7 +207,7 @@ export default function RegisterPage() {
 
                 </form>
 
-                {/* Footer */}
+                
                 <p className="text-center text-sm text-gray-500 mt-6">
                     Đã có tài khoản?{' '}
                     <a href="/login" className="text-[#1A56DB] font-semibold hover:underline">

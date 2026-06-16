@@ -11,7 +11,8 @@ import {
     Camera,
     Loader2,
     ChevronRight,
-    MessageSquare
+    MessageSquare,
+    LifeBuoy
 } from 'lucide-react'
 
 import { useAuthStore } from '@/store/authStore'
@@ -30,11 +31,11 @@ export default function ProfileLayout({
 
     const { user, logout, setUser, isLoading } = useAuthStore()
 
-    // Biến để kiểm tra đã render ở Client chưa nhằm tránh lỗi Hydration
+    
     const [isMounted, setIsMounted] = useState(false)
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+        
         setIsMounted(true)
     }, [])
 
@@ -56,7 +57,7 @@ export default function ProfileLayout({
         }
     }
 
-    // Nếu chưa Mounted (ở Server) hoặc đang Loading dữ liệu
+    
     if (!isMounted || isLoading || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
@@ -66,11 +67,11 @@ export default function ProfileLayout({
     }
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] py-2 md:py-6"> {/* Giảm padding trên dưới xuống tối thiểu */}
-            <div className="max-w-[1400px] mx-auto px-2 md:px-6"> {/* Agoda dùng container rất rộng (1400px) */}
+        <div className="min-h-screen bg-[#f8fafc] py-2 md:py-6"> 
+            <div className="max-w-[1400px] mx-auto px-2 md:px-6"> 
                 <div className="grid grid-cols-12 gap-4 md:gap-6">
 
-                    {/* SIDEBAR - Chiếm 3/12 cột, Sticky để luôn thấy menu khi cuộn */}
+                    
                     <div className="col-span-12 lg:col-span-3">
                         <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm sticky top-20">
                             
@@ -146,7 +147,13 @@ export default function ProfileLayout({
                                     active={pathname === '/profile/security'}
                                     icon={<Lock size={18} />}
                                     label="Bảo mật & Mật khẩu"
-                                    onClick={() => router.push('/profile/security')}
+                                    onClick={() => router.push('/profile/security')}                                />
+                                
+                                <SidebarBtn
+                                    active={pathname === '/profile/support'}
+                                    icon={<LifeBuoy size={18} />}
+                                    label="Hỗ trợ hệ thống"
+                                    onClick={() => router.push('/profile/support')}
                                 />
                                 <div className="pt-2 mt-2 border-t border-gray-100">
                                     <button
@@ -164,7 +171,7 @@ export default function ProfileLayout({
                         </div>
                     </div>
 
-                    {/* CONTENT - Chiếm 9/12 cột, mở rộng tối đa sang hai bên */}
+                    
                     <div className="col-span-12 lg:col-span-9">
                         {children}
                     </div>
