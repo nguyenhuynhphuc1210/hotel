@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -227,16 +226,13 @@ public class ChatServiceImpl implements ChatService {
         @Override
         @Transactional(readOnly = true)
         public List<ConversationResponse> getAdminInbox() {
-                List<Conversation> userAdminInbox = conversationRepository
-                                .findByTypeOrderByLastMessageAtDesc(ConversationType.USER_ADMIN);
-                List<Conversation> hotelAdminInbox = conversationRepository
-                                .findByTypeOrderByLastMessageAtDesc(ConversationType.HOTEL_ADMIN);
 
-                List<Conversation> allAdminInbox = new ArrayList<>();
-                allAdminInbox.addAll(userAdminInbox);
-                allAdminInbox.addAll(hotelAdminInbox);
+                List<ConversationType> adminTypes = List.of(
+                                ConversationType.USER_ADMIN,
+                                ConversationType.HOTEL_ADMIN);
 
-                allAdminInbox.sort((c1, c2) -> c2.getLastMessageAt().compareTo(c1.getLastMessageAt()));
+                List<Conversation> allAdminInbox = conversationRepository
+                                .findByTypeInOrderByLastMessageAtDesc(adminTypes);
 
                 return chatMapper.toConversationResponseList(allAdminInbox);
         }

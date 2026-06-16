@@ -23,4 +23,6 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     Optional<Conversation> findByHotel_IdAndType(Long hotelId, ConversationType type);
 
     List<Conversation> findByTypeOrderByLastMessageAtDesc(ConversationType type);
+
+    List<Conversation> findByTypeInOrderByLastMessageAtDesc(List<ConversationType> types);
 }
