@@ -4,6 +4,7 @@ import com.example.backend.dto.response.ChatMessageResponse;
 import com.example.backend.dto.response.ConversationResponse;
 import com.example.backend.entity.ChatMessage;
 import com.example.backend.entity.Conversation;
+import com.example.backend.enums.ConversationType;
 
 import org.springframework.stereotype.Component;
 
@@ -17,7 +18,7 @@ public class ChatMapper {
         if (entity == null) {
             return null;
         }
-        
+
         return ChatMessageResponse.builder()
                 .id(entity.getId())
                 .conversationId(entity.getConversation().getId())
@@ -35,20 +36,36 @@ public class ChatMapper {
     }
 
     public ConversationResponse toConversationResponse(Conversation entity) {
-        if (entity == null) return null;
-        
+        if (entity == null)
+            return null;
+
+        String email = null;
+        String fullName = null;
+        String avatar = null;
+        Long uId = null;
+
+        if (entity.getUser() != null) {
+            email = entity.getUser().getEmail();
+            fullName = entity.getUser().getFullName();
+            avatar = entity.getUser().getAvatarUrl();
+            uId = entity.getUser().getId();
+        } else if (entity.getType() == ConversationType.HOTEL_ADMIN && entity.getHotel() != null
+                && entity.getHotel().getOwner() != null) {
+            email = entity.getHotel().getOwner().getEmail();
+            fullName = entity.getHotel().getOwner().getFullName();
+            avatar = entity.getHotel().getOwner().getAvatarUrl();
+            uId = entity.getHotel().getOwner().getId();
+        }
+
         return ConversationResponse.builder()
                 .id(entity.getId())
                 .type(entity.getType())
-
                 .hotelId(entity.getHotel() != null ? entity.getHotel().getId() : null)
                 .hotelName(entity.getHotel() != null ? entity.getHotel().getHotelName() : null)
-
-                .userId(entity.getUser() != null ? entity.getUser().getId() : null)
-                .userFullName(entity.getUser() != null ? entity.getUser().getFullName() : null)
-                .userEmail(entity.getUser() != null ? entity.getUser().getEmail() : null)
-                .userAvatar(entity.getUser() != null ? entity.getUser().getAvatarUrl() : null)
-
+                .userId(uId)
+                .userFullName(fullName)
+                .userEmail(email)
+                .userAvatar(avatar)
                 .bookingId(entity.getBooking() != null ? entity.getBooking().getId() : null)
                 .lastMessageAt(entity.getLastMessageAt())
                 .build();

@@ -2,7 +2,6 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.request.ChatMessageRequest;
 import com.example.backend.dto.request.ChatReadRequest;
-import com.example.backend.dto.response.ChatMessageResponse;
 import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.ChatService;
 import com.example.backend.service.GeminiService;
@@ -12,13 +11,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 import java.security.Principal;
-
 
 @Slf4j
 @RestController
@@ -26,12 +23,11 @@ import java.security.Principal;
 public class ChatController {
 
     private final ChatService chatService;
-    private final SimpMessagingTemplate messagingTemplate;
     private final GeminiService geminiService;
 
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload ChatMessageRequest request, Principal principal) {
-        ChatMessageResponse responsePayload = chatService.saveMessage(
+        chatService.saveMessage(
                 request.getUserId(),
                 request.getHotelId(),
                 request.getBookingId(),
@@ -39,16 +35,6 @@ public class ChatController {
                 request.getContent(),
                 request.getType()
         );
-
-        messagingTemplate.convertAndSendToUser(
-                request.getReceiverEmail(),
-                "/queue/messages",
-                responsePayload);
-
-        messagingTemplate.convertAndSendToUser(
-                principal.getName(), 
-                "/queue/messages",
-                responsePayload);
     }
 
     @GetMapping("/api/chat/user-inbox")
@@ -94,7 +80,7 @@ public class ChatController {
 
         if (hotelIdObj != null 
             && !hotelIdObj.toString().trim().isEmpty() 
-            && !"null".equalsIgnoreCase(hotelIdObj.toString())) {           
+            && !"null".equalsIgnoreCase(hotelIdObj.toString())) {          
             hotelId = Long.valueOf(hotelIdObj.toString());
         }
         String prompt = request.getOrDefault("prompt", "").toString();

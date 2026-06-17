@@ -50,7 +50,6 @@ public class ChatServiceImpl implements ChatService {
                         String content, ConversationType type) {
 
                 Conversation conversation;
-
                 final ConversationType finalType = (type == null) ? ConversationType.USER_HOTEL : type;
 
                 if (finalType == ConversationType.USER_ADMIN) {
@@ -80,7 +79,6 @@ public class ChatServiceImpl implements ChatService {
                                         });
 
                 } else {
-
                         if (bookingId != null) {
                                 conversation = conversationRepository.findByBooking_Id(bookingId)
                                                 .orElseGet(() -> {
@@ -135,6 +133,9 @@ public class ChatServiceImpl implements ChatService {
                                 .build();
 
                 ChatMessage savedMessage = chatMessageRepository.save(message);
+                ChatMessageResponse responsePayload = chatMapper.toResponse(savedMessage);
+
+                String wsReceiverEmail = null;
 
                 if (finalType == ConversationType.USER_HOTEL && hotelId != null) {
                         String ownerEmail = hotelRepository.findOwnerEmailByHotelId(hotelId);
@@ -142,17 +143,15 @@ public class ChatServiceImpl implements ChatService {
                         String hotelName = conversation.getHotel().getHotelName();
 
                         if (ownerEmail != null && !senderEmail.equalsIgnoreCase(ownerEmail)) {
-                                notificationService.createNotification(
-                                                ownerEmail,
-                                                "Bạn có tin nhắn mới",
+                                wsReceiverEmail = ownerEmail;
+                                notificationService.createNotification(ownerEmail, "Bạn có tin nhắn mới",
                                                 "Khách hàng " + senderEmail + " đã gửi tin nhắn đến khách sạn "
                                                                 + hotelName + ".");
                         }
 
                         if (userEmail != null && !senderEmail.equalsIgnoreCase(userEmail)) {
-                                notificationService.createNotification(
-                                                userEmail,
-                                                "Tin nhắn mới từ " + hotelName,
+                                wsReceiverEmail = userEmail;
+                                notificationService.createNotification(userEmail, "Tin nhắn mới từ " + hotelName,
                                                 "Khách sạn " + hotelName + " vừa trả lời tin nhắn của bạn.");
                         }
 
@@ -160,16 +159,14 @@ public class ChatServiceImpl implements ChatService {
                         String userEmail = conversation.getUser().getEmail();
 
                         if (!senderEmail.equalsIgnoreCase(adminEmail)) {
-                                notificationService.createNotification(
-                                                adminEmail,
-                                                "Khách hàng cần hỗ trợ",
+                                wsReceiverEmail = adminEmail;
+                                notificationService.createNotification(adminEmail, "Khách hàng cần hỗ trợ",
                                                 "Người dùng " + senderEmail + " vừa gửi tin nhắn nhờ hỗ trợ.");
                         }
 
                         if (userEmail != null && !senderEmail.equalsIgnoreCase(userEmail)) {
-                                notificationService.createNotification(
-                                                userEmail,
-                                                "Phản hồi từ Admin",
+                                wsReceiverEmail = userEmail;
+                                notificationService.createNotification(userEmail, "Phản hồi từ Admin",
                                                 "Quản trị viên hệ thống vừa phản hồi tin nhắn của bạn.");
                         }
 
@@ -178,23 +175,27 @@ public class ChatServiceImpl implements ChatService {
                         String hotelName = conversation.getHotel().getHotelName();
 
                         if (!senderEmail.equalsIgnoreCase(adminEmail)) {
-                                notificationService.createNotification(
-                                                adminEmail,
-                                                "Đối tác khách sạn cần hỗ trợ",
+                                wsReceiverEmail = adminEmail;
+                                notificationService.createNotification(adminEmail, "Đối tác khách sạn cần hỗ trợ",
                                                 "Chủ khách sạn " + hotelName + " (" + senderEmail
                                                                 + ") vừa gửi tin nhắn liên hệ.");
                         }
 
                         if (ownerEmail != null && !senderEmail.equalsIgnoreCase(ownerEmail)) {
-                                notificationService.createNotification(
-                                                ownerEmail,
-                                                "Phản hồi từ Admin",
+                                wsReceiverEmail = ownerEmail;
+                                notificationService.createNotification(ownerEmail, "Phản hồi từ Admin",
                                                 "Quản trị viên hệ thống vừa phản hồi yêu cầu của khách sạn " + hotelName
                                                                 + ".");
                         }
                 }
 
-                return chatMapper.toResponse(savedMessage);
+                if (wsReceiverEmail != null) {
+                        messagingTemplate.convertAndSendToUser(wsReceiverEmail, "/queue/messages", responsePayload);
+                }
+
+                messagingTemplate.convertAndSendToUser(senderEmail, "/queue/messages", responsePayload);
+
+                return responsePayload;
         }
 
         @Override
