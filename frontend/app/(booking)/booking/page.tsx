@@ -294,7 +294,7 @@ function BookingContent() {
     return (
         <div className="min-h-screen bg-[#f7f8fa] py-8 font-sans">
             <style>{`
-                @import url('https:
+                @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
                 .booking-page { font-family: 'Be Vietnam Pro', sans-serif; }
                 .input-field {
                     width: 100%; padding: 12px 16px;

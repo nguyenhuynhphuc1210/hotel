@@ -22,7 +22,7 @@ interface ConversationResponse {
     userAvatar: string | null
     bookingId: number | null
     lastMessageAt: string
-    hotelOwnerEmail: string
+    
 }
 
 interface ChatMsg {
@@ -190,7 +190,7 @@ export default function AdminSupportOwnerPage() {
                     hotelId: selectedConv.hotelId,
                     content,
                     type: 'HOTEL_ADMIN',
-                    receiverEmail: selectedConv.hotelOwnerEmail
+                    receiverEmail: selectedConv.userEmail
                 }),
             })
         } catch {
