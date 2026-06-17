@@ -30,7 +30,6 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
         @Override
         @Transactional(readOnly = true)
         public List<HotelAmenityResponse> getAll() {
-
                 if (isAdmin()) {
                         return hotelAmenityRepository.findAll()
                                         .stream()
@@ -80,9 +79,7 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
                 Hotel hotel = hotelRepository.findById(request.getHotelId())
                                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn"));
 
-                if (!isAdmin()) {
-                        checkOwnerOrAdmin(hotel.getOwner().getEmail());
-                }
+                checkOwner(hotel.getOwner().getEmail());
 
                 Amenity amenity = amenityRepository.findById(request.getAmenityId())
                                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tiện ích (Amenity)"));
@@ -92,7 +89,6 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
                 if (Boolean.TRUE.equals(entity.getIsFree())) {
                         entity.setAdditionalFee(java.math.BigDecimal.ZERO);
                 } else {
-
                         if (entity.getAdditionalFee() == null
                                         || entity.getAdditionalFee().compareTo(java.math.BigDecimal.ZERO) <= 0) {
                                 throw new IllegalArgumentException(
@@ -115,9 +111,7 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
                                 .orElseThrow(() -> new EntityNotFoundException(
                                                 "Không tìm thấy tiện ích của khách sạn này"));
 
-                if (!isAdmin()) {
-                        checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
-                }
+                checkOwner(existing.getHotel().getOwner().getEmail());
 
                 existing.setIsFree(request.getIsFree());
 
@@ -142,9 +136,7 @@ public class HotelAmenityServiceImpl implements HotelAmenityService {
                 Hotel hotel = hotelRepository.findById(hotelId)
                                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn"));
 
-                if (!isAdmin()) {
-                        checkOwnerOrAdmin(hotel.getOwner().getEmail());
-                }
+                checkOwner(hotel.getOwner().getEmail());
 
                 if (!hotelAmenityRepository.existsByHotel_IdAndAmenity_Id(hotelId, amenityId)) {
                         throw new EntityNotFoundException("Không tìm thấy tiện ích trong khách sạn để xóa");

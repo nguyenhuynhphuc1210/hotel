@@ -92,8 +92,7 @@ public class RoomCalendarServiceImpl implements RoomCalendarService {
         RoomType roomType = roomTypeRepository.findById(roomTypeId)
                 .orElseThrow(() -> new EntityNotFoundException("Loại phòng không tồn tại"));
 
-        SecurityUtils.checkOwnerOrAdmin(
-                roomType.getHotel().getOwner().getEmail());
+        SecurityUtils.checkOwner(roomType.getHotel().getOwner().getEmail());
 
         List<RoomCalendar> calendarsToUpdate = roomCalendarRepository
                 .findByRoomType_IdAndDateBetween(

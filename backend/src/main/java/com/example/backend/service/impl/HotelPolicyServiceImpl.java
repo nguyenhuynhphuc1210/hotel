@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 
@@ -66,19 +65,15 @@ public class HotelPolicyServiceImpl implements HotelPolicyService {
     @Transactional
     public HotelPolicyResponse createHotelPolicy(HotelPolicyRequest request) {
 
-        if (!isAdmin() && !isHotelOwner()) {
-            throw new AccessDeniedException("Bạn không có quyền tạo chính sách!");
-        }
-
         Hotel hotel = hotelRepository.findById(request.getHotelId())
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy khách sạn với ID = " + request.getHotelId()));
 
-        if (!isAdmin()) {
-            checkOwnerOrAdmin(hotel.getOwner().getEmail());
-        }
+        checkOwner(hotel.getOwner().getEmail());
 
         if (hotelPolicyRepository.existsByHotel_Id(request.getHotelId())) {
-            throw new IllegalArgumentException("Khách sạn này đã có chính sách rồi!");
+            throw new IllegalArgumentException(
+                    "Khách sạn này đã có chính sách rồi!");
         }
 
         HotelPolicy saved = hotelPolicyRepository.save(
@@ -89,22 +84,28 @@ public class HotelPolicyServiceImpl implements HotelPolicyService {
 
     @Override
     @Transactional
-    public HotelPolicyResponse updateHotelPolicy(Long id, HotelPolicyRequest request) {
+    public HotelPolicyResponse updateHotelPolicy(Long id,
+            HotelPolicyRequest request) {
 
         HotelPolicy existing = hotelPolicyRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy chính sách khách sạn với ID = " + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy chính sách khách sạn với ID = " + id));
 
-        if (!isAdmin()) {
-            checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
-        }
+        checkOwner(existing.getHotel().getOwner().getEmail());
 
         if (request.getHotelId() != null) {
-            Hotel hotel = hotelRepository.findById(request.getHotelId())
-                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
 
-            if (!hotel.getId().equals(existing.getHotel().getId()) &&
-                    hotelPolicyRepository.existsByHotel_Id(request.getHotelId())) {
-                throw new IllegalArgumentException("Khách sạn này đã có chính sách!");
+            Hotel hotel = hotelRepository.findById(request.getHotelId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Không tìm thấy khách sạn với ID = " + request.getHotelId()));
+
+            checkOwner(hotel.getOwner().getEmail());
+
+            if (!hotel.getId().equals(existing.getHotel().getId())
+                    && hotelPolicyRepository.existsByHotel_Id(request.getHotelId())) {
+
+                throw new IllegalArgumentException(
+                        "Khách sạn này đã có chính sách!");
             }
 
             existing.setHotel(hotel);
@@ -112,12 +113,16 @@ public class HotelPolicyServiceImpl implements HotelPolicyService {
 
         if (request.getCheckInTime() != null)
             existing.setCheckInTime(request.getCheckInTime());
+
         if (request.getCheckOutTime() != null)
             existing.setCheckOutTime(request.getCheckOutTime());
+
         if (request.getCancellationPolicy() != null)
             existing.setCancellationPolicy(request.getCancellationPolicy());
+
         if (request.getChildrenPolicy() != null)
             existing.setChildrenPolicy(request.getChildrenPolicy());
+
         if (request.getPetPolicy() != null)
             existing.setPetPolicy(request.getPetPolicy());
 
@@ -130,11 +135,10 @@ public class HotelPolicyServiceImpl implements HotelPolicyService {
     public void deleteHotelPolicy(Long id) {
 
         HotelPolicy existing = hotelPolicyRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy chính sách khách sạn với ID = " + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy chính sách khách sạn với ID = " + id));
 
-        if (!isAdmin()) {
-            checkOwnerOrAdmin(existing.getHotel().getOwner().getEmail());
-        }
+        checkOwner(existing.getHotel().getOwner().getEmail());
 
         hotelPolicyRepository.delete(existing);
     }

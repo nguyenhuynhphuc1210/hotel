@@ -412,7 +412,7 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Không tìm thấy đơn đặt phòng"));
 
-        SecurityUtils.checkOwnerOrAdmin(
+        SecurityUtils.checkOwner(
                 booking.getHotel().getOwner().getEmail());
 
         BookingStatus currentStatus = booking.getStatus();
@@ -440,13 +440,9 @@ public class BookingServiceImpl implements BookingService {
             String cancelReason = (request.getReason() != null
                     && !request.getReason().isBlank())
                             ? request.getReason().trim()
-                            : (SecurityUtils.isAdmin()
-                                    ? "Đơn đặt phòng bị hủy bởi quản trị viên"
-                                    : "Đơn đặt phòng bị hủy bởi chủ khách sạn");
+                            : "Đơn đặt phòng bị hủy bởi chủ khách sạn";
 
-            String cancelledBy = SecurityUtils.isAdmin()
-                    ? "ADMIN"
-                    : "OWNER";
+            String cancelledBy = "OWNER";
 
             booking.setCancelledAt(LocalDateTime.now());
             booking.setCancelReason(cancelReason);

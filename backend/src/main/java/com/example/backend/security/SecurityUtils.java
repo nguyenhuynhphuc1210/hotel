@@ -17,7 +17,8 @@ public class SecurityUtils {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.");
         }
 
         return auth;
@@ -35,6 +36,13 @@ public class SecurityUtils {
     public static boolean isHotelOwner() {
         return getAuth().getAuthorities().stream()
                 .anyMatch(r -> r.getAuthority().equals("ROLE_HOTEL_OWNER"));
+    }
+
+    public static void checkOwner(String ownerEmail) {
+        if (!ownerEmail.equals(getCurrentUserEmail())) {
+            throw new AccessDeniedException(
+                    "Bạn không có quyền thực hiện thao tác này!");
+        }
     }
 
     public static void checkOwnerOrAdmin(String ownerEmail) {

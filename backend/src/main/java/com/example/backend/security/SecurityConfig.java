@@ -36,7 +36,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:3000", "http://192.168.*.*:3000", "https://hotel-zeta-azure.vercel.app"));
+        configuration.setAllowedOriginPatterns(
+                List.of("http://localhost:3000", "http://192.168.*.*:3000", "https://hotel-zeta-azure.vercel.app"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -58,7 +59,6 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {
                 })
-                // Báo cho Spring biết đây là API Stateless (không dùng Session lưu trạng thái)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
@@ -69,23 +69,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/chat/ai").permitAll()
                         .requestMatchers("/api/chat/**").authenticated()
 
-
-                        .requestMatchers(HttpMethod.GET, "/api/room-types/deleted").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.PATCH, "/api/room-types/*/suspend")
-                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.PATCH, "/api/room-types/*/reactivate")
-                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.PATCH, "/api/room-types/*/restore")
-                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/room-types/deleted").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/room-types/*/suspend").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/room-types/*/reactivate").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/room-types/*/restore").hasRole("HOTEL_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/room-types/hotel/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/room-types/active").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/room-types/*").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/room-types").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.GET, "/api/room-types/hotel/*/admin")
-                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.POST, "/api/room-types").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.PUT, "/api/room-types/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/room-types/*").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/room-types").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/room-types/hotel/*/admin").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/room-types").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/room-types/*").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/room-types/*").hasRole("HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.GET, "/api/hotels/active").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/hotels/search").permitAll()
@@ -106,22 +101,19 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.GET, "/api/amenities/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/amenities").hasAnyRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/amenities/**").hasAnyRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/amenities").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/amenities/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/amenities/**").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.GET, "/api/hotel-amenities/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/hotel-amenities").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.PUT, "/api/hotel-amenities/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/hotel-amenities/**")
-                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/hotel-amenities").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/hotel-amenities/**").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/hotel-amenities/**").hasRole("HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.GET, "/api/room-type-amenities/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/room-type-amenities").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.PUT, "/api/room-type-amenities/**")
-                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/room-type-amenities/**")
-                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/room-type-amenities").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/room-type-amenities/**").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/room-type-amenities/**").hasRole("HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.GET, "/api/promotions/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/promotions").hasAnyRole("ADMIN", "HOTEL_OWNER")
@@ -129,27 +121,27 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/promotions/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.GET, "/api/hotel-policies/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/hotel-policies").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.PUT, "/api/hotel-policies/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/hotel-policies/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/hotel-policies").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/hotel-policies/**").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/hotel-policies/**").hasRole("HOTEL_OWNER")
 
-                        .requestMatchers(HttpMethod.POST, "/api/hotel-images/upload").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.PUT, "/api/hotel-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/hotel-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/hotel-images/upload").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/hotel-images/**").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/hotel-images/**").hasRole("HOTEL_OWNER")
 
-                        .requestMatchers(HttpMethod.POST, "/api/room-images/upload").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.PUT, "/api/room-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/room-images/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/room-images/upload").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/room-images/**").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/room-images/**").hasRole("HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.GET, "/api/room-calendars/**").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/room-calendars/**").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/room-calendars/**").hasRole("HOTEL_OWNER")
 
                         .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/lookup").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/admin").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/bookings/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/*").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/status").hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/status").hasRole("HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/cancel").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/export").hasAnyRole("ADMIN", "HOTEL_OWNER")
 
@@ -164,8 +156,7 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "HOTEL_OWNER")
 
                         .requestMatchers("/api/favorites/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/statistics")
-                        .hasAnyRole("ADMIN", "HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/statistics").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/statistics/export").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/statistics/dashboard").hasAnyRole("ADMIN", "HOTEL_OWNER")
 

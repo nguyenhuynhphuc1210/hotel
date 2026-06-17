@@ -1,10 +1,11 @@
 package com.example.backend.service.impl;
 
+import static com.example.backend.security.SecurityUtils.*;
+
 import com.example.backend.entity.RoomImage;
 import com.example.backend.entity.RoomType;
 import com.example.backend.repository.RoomImageRepository;
 import com.example.backend.repository.RoomTypeRepository;
-import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.CloudinaryService;
 import com.example.backend.service.RoomImageService;
 
@@ -33,8 +34,7 @@ public class RoomImageServiceImpl implements RoomImageService {
         RoomType roomType = roomTypeRepository.findById(roomTypeId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID: " + roomTypeId));
 
-        SecurityUtils.checkOwnerOrAdmin(
-                roomType.getHotel().getOwner().getEmail());
+        checkOwner(roomType.getHotel().getOwner().getEmail());
 
         try {
             List<Map<String, Object>> uploadResults = cloudinaryService.uploadMultipleImages(
@@ -81,8 +81,7 @@ public class RoomImageServiceImpl implements RoomImageService {
         RoomImage roomImage = roomImageRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy ảnh phòng với Public ID: " + publicId));
 
-        SecurityUtils.checkOwnerOrAdmin(
-                roomImage.getRoomType().getHotel().getOwner().getEmail());
+        checkOwner(roomImage.getRoomType().getHotel().getOwner().getEmail());
 
         try {
             Long roomTypeId = roomImage.getRoomType().getId();
@@ -111,8 +110,7 @@ public class RoomImageServiceImpl implements RoomImageService {
         RoomImage targetImage = roomImageRepository.findById(imageId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy ảnh phòng với ID: " + imageId));
 
-        SecurityUtils.checkOwnerOrAdmin(
-                targetImage.getRoomType().getHotel().getOwner().getEmail());
+        checkOwner(targetImage.getRoomType().getHotel().getOwner().getEmail());
 
         Long roomTypeId = targetImage.getRoomType().getId();
 

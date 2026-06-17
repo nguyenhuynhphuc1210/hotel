@@ -81,9 +81,7 @@ public class RoomTypeAmenityServiceImpl implements RoomTypeAmenityService {
                 RoomType roomType = roomTypeRepository.findById(request.getRoomTypeId())
                                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng"));
 
-                if (!isAdmin()) {
-                        checkOwnerOrAdmin(roomType.getHotel().getOwner().getEmail());
-                }
+                checkOwner(roomType.getHotel().getOwner().getEmail());
 
                 Amenity amenity = amenityRepository.findById(request.getAmenityId())
                                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tiện ích (Amenity)"));
@@ -115,9 +113,7 @@ public class RoomTypeAmenityServiceImpl implements RoomTypeAmenityService {
                                 .orElseThrow(() -> new EntityNotFoundException(
                                                 "Không tìm thấy tiện ích của loại phòng này"));
 
-                if (!isAdmin()) {
-                        checkOwnerOrAdmin(existing.getRoomType().getHotel().getOwner().getEmail());
-                }
+                checkOwner(existing.getRoomType().getHotel().getOwner().getEmail());
 
                 existing.setIsFree(request.getIsFree());
 
@@ -142,9 +138,7 @@ public class RoomTypeAmenityServiceImpl implements RoomTypeAmenityService {
                 RoomType roomType = roomTypeRepository.findById(roomTypeId)
                                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng"));
 
-                if (!isAdmin()) {
-                        checkOwnerOrAdmin(roomType.getHotel().getOwner().getEmail());
-                }
+                checkOwner(roomType.getHotel().getOwner().getEmail());
 
                 if (!roomTypeAmenityRepository.existsByRoomTypeAndAmenity(roomTypeId, amenityId)) {
                         throw new EntityNotFoundException("Không tìm thấy tiện ích trong loại phòng để xóa");

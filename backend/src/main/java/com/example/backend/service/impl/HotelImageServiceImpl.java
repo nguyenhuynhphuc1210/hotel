@@ -1,10 +1,11 @@
 package com.example.backend.service.impl;
 
+import static com.example.backend.security.SecurityUtils.*;
+
 import com.example.backend.entity.Hotel;
 import com.example.backend.entity.HotelImage;
 import com.example.backend.repository.HotelImageRepository;
 import com.example.backend.repository.HotelRepository;
-import com.example.backend.security.SecurityUtils;
 import com.example.backend.service.CloudinaryService;
 import com.example.backend.service.HotelImageService;
 
@@ -36,8 +37,7 @@ public class HotelImageServiceImpl implements HotelImageService {
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Không tìm thấy khách sạn với ID: " + hotelId));
 
-        SecurityUtils.checkOwnerOrAdmin(
-                hotel.getOwner().getEmail());
+        checkOwner(hotel.getOwner().getEmail());
 
         try {
 
@@ -90,10 +90,7 @@ public class HotelImageServiceImpl implements HotelImageService {
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Không tìm thấy ảnh"));
 
-        SecurityUtils.checkOwnerOrAdmin(
-                hotelImage.getHotel()
-                        .getOwner()
-                        .getEmail());
+        checkOwner(hotelImage.getHotel().getOwner().getEmail());
 
         try {
 
@@ -131,10 +128,7 @@ public class HotelImageServiceImpl implements HotelImageService {
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Không tìm thấy ảnh"));
 
-        SecurityUtils.checkOwnerOrAdmin(
-                targetImage.getHotel()
-                        .getOwner()
-                        .getEmail());
+        checkOwner(targetImage.getHotel().getOwner().getEmail());
 
         Long hotelId = targetImage.getHotel().getId();
 
