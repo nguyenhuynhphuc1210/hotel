@@ -29,6 +29,11 @@ public class RoomTypeController {
         return ResponseEntity.ok(roomTypeService.getActiveRoomTypes());
     }
 
+    @GetMapping("/bed-types")
+    public ResponseEntity<List<String>> getAvailableBedTypes() {
+        return ResponseEntity.ok(roomTypeService.getAvailableBedTypes());
+    }
+
     @GetMapping("/hotel/{hotelId}")
     public ResponseEntity<List<RoomTypeSummaryResponse>> getActiveRoomTypesByHotel(@PathVariable Long hotelId) {
         return ResponseEntity.ok(roomTypeService.getActiveRoomTypesByHotel(hotelId));

@@ -131,13 +131,17 @@ public class HotelController {
             @RequestParam(required = false) List<Integer> stars,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) List<String> hotelAmenities,
+            @RequestParam(required = false) List<String> roomAmenities,
+            @RequestParam(required = false) List<String> bedTypes,
             @RequestParam(defaultValue = "recommended") String sortBy,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         return ResponseEntity.ok(hotelService.searchHotels(
                 districts, keyword, checkIn, checkOut, adults, children,
-                stars, minPrice, maxPrice, sortBy, page, size));
+                stars, minPrice, maxPrice, hotelAmenities, roomAmenities, bedTypes,
+                sortBy, page, size));
     }
 
     @GetMapping("/{id}/min-price")

@@ -9,6 +9,7 @@ import java.util.List;
 public interface RoomTypeService {
     List<RoomTypeSummaryResponse> getAllRoomTypes();
     List<RoomTypeSummaryResponse> getActiveRoomTypes();
+    List<String> getAvailableBedTypes();
     List<RoomTypeSummaryResponse> getActiveRoomTypesByHotel(Long hotelId);
     List<RoomTypeSummaryResponse> getAllRoomTypesByHotelForManagement(Long hotelId);
     RoomTypeResponse getRoomTypeById(Long id);

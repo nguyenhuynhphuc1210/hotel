@@ -77,7 +77,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/room-types/active").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/room-types/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/room-types").hasRole("HOTEL_OWNER")
-                        .requestMatchers(HttpMethod.GET, "/api/room-types/hotel/*/admin").hasRole("HOTEL_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/room-types/hotel/*/admin").hasAnyRole("ADMIN", "HOTEL_OWNER")
                         .requestMatchers(HttpMethod.POST, "/api/room-types").hasRole("HOTEL_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/room-types/*").hasRole("HOTEL_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/room-types/*").hasRole("HOTEL_OWNER")

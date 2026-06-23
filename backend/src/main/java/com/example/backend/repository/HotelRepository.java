@@ -58,6 +58,15 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                     AND rc.date < :checkOut
                     AND rt.maxAdults >= :adults
                     AND (rt.maxAdults + COALESCE(rt.maxChildren,0)) >= (:adults + :children)
+                    AND (:bedTypes IS NULL OR LOWER(rt.bedType) IN :bedTypes)
+                    AND (:roomAmenities IS NULL OR rt.id IN (
+                        SELECT rta2.roomType.id
+                        FROM RoomTypeAmenity rta2
+                        JOIN rta2.amenity a2
+                        WHERE LOWER(a2.amenityName) IN :roomAmenities
+                        GROUP BY rta2.roomType.id
+                        HAVING COUNT(DISTINCT LOWER(a2.amenityName)) = :roomAmenitiesSize
+                    ))
                 GROUP BY rt.id, rt.hotel.id
                 HAVING COUNT(DISTINCT rc.date) = :nights
             ) roomPrice ON roomPrice.hotelId = h.id
@@ -69,6 +78,13 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                      OR LOWER(h.hotelName) LIKE :keyword 
                      OR LOWER(h.addressLine) LIKE :keyword)
                 AND (COALESCE(:stars, NULL) IS NULL OR h.starRating IN :stars)
+                AND (:hotelAmenities IS NULL OR (
+                    SELECT COUNT(DISTINCT LOWER(ha2.amenity.amenityName))
+                    FROM HotelAmenity ha2
+                    WHERE ha2.hotel.id = h.id
+                      AND ha2.amenity.type = com.example.backend.enums.AmenityType.HOTEL
+                      AND LOWER(ha2.amenity.amenityName) IN :hotelAmenities
+                ) = :hotelAmenitiesSize)
             GROUP BY 
                 h.id, h.hotelName, h.starRating, h.district, h.city, h.status
             HAVING 
@@ -90,6 +106,11 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
             @Param("stars") List<BigDecimal> stars,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice,
+            @Param("hotelAmenities") List<String> hotelAmenities,
+            @Param("hotelAmenitiesSize") Integer hotelAmenitiesSize,
+            @Param("roomAmenities") List<String> roomAmenities,
+            @Param("roomAmenitiesSize") Integer roomAmenitiesSize,
+            @Param("bedTypes") List<String> bedTypes,
             @Param("sortBy") String sortBy,
             Pageable pageable);
 

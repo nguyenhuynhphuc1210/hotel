@@ -54,6 +54,9 @@ public interface HotelService {
             List<Integer> stars,
             BigDecimal minPrice,
             BigDecimal maxPrice,
+            List<String> hotelAmenities,
+            List<String> roomAmenities,
+            List<String> bedTypes,
             String sortBy,
             int page,
             int size);

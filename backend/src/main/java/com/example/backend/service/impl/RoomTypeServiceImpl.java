@@ -62,6 +62,19 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<String> getAvailableBedTypes() {
+        return roomTypeRepository.findDistinctBedTypesByIsActiveTrueAndDeletedAtIsNull()
+                .stream()
+                .map(String::trim)
+                .filter(type -> !type.isBlank())
+                .map(String::valueOf)
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<RoomTypeSummaryResponse> getActiveRoomTypesByHotel(Long hotelId) {
         return roomTypeRepository.findActiveRoomTypesByHotel(hotelId)
                 .stream()

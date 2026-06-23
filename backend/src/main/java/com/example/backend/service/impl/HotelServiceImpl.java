@@ -399,6 +399,7 @@ public class HotelServiceImpl implements HotelService {
             LocalDate checkIn, LocalDate checkOut,
             Integer adults, Integer children,
             List<Integer> stars, BigDecimal minPrice, BigDecimal maxPrice,
+            List<String> hotelAmenities, List<String> roomAmenities, List<String> bedTypes,
             String sortBy, int page, int size) {
 
         List<String> searchDistricts = null;
@@ -426,6 +427,42 @@ public class HotelServiceImpl implements HotelService {
             searchStars = stars.stream()
                     .map(BigDecimal::valueOf)
                     .toList();
+        }
+
+        List<String> searchHotelAmenities = null;
+        if (hotelAmenities != null && !hotelAmenities.isEmpty()) {
+            searchHotelAmenities = hotelAmenities.stream()
+                    .filter(a -> a != null && !a.trim().isEmpty())
+                    .map(String::trim)
+                    .map(String::toLowerCase)
+                    .toList();
+            if (searchHotelAmenities.isEmpty()) {
+                searchHotelAmenities = null;
+            }
+        }
+
+        List<String> searchRoomAmenities = null;
+        if (roomAmenities != null && !roomAmenities.isEmpty()) {
+            searchRoomAmenities = roomAmenities.stream()
+                    .filter(a -> a != null && !a.trim().isEmpty())
+                    .map(String::trim)
+                    .map(String::toLowerCase)
+                    .toList();
+            if (searchRoomAmenities.isEmpty()) {
+                searchRoomAmenities = null;
+            }
+        }
+
+        List<String> searchBedTypes = null;
+        if (bedTypes != null && !bedTypes.isEmpty()) {
+            searchBedTypes = bedTypes.stream()
+                    .filter(b -> b != null && !b.trim().isEmpty())
+                    .map(String::trim)
+                    .map(String::toLowerCase)
+                    .toList();
+            if (searchBedTypes.isEmpty()) {
+                searchBedTypes = null;
+            }
         }
 
         if (checkIn != null && checkOut != null) {
@@ -457,6 +494,11 @@ public class HotelServiceImpl implements HotelService {
                 searchStars,
                 minPrice,
                 maxPrice,
+                searchHotelAmenities,
+                searchHotelAmenities != null ? searchHotelAmenities.size() : null,
+                searchRoomAmenities,
+                searchRoomAmenities != null ? searchRoomAmenities.size() : null,
+                searchBedTypes,
                 sortBy,
                 pageable);
     }

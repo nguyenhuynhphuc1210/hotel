@@ -41,7 +41,7 @@ public interface RoomCalendarRepository extends JpaRepository<RoomCalendar, Long
         void resumeFutureSales(@Param("roomTypeId") Long roomTypeId, @Param("today") LocalDate today);
 
         @Lock(LockModeType.PESSIMISTIC_WRITE)
-        @Query("SELECT c FROM RoomCalendar c WHERE c.roomType.id = :roomTypeId AND c.date >= :startDate AND c.date <= :endDate")
+        @Query("SELECT c FROM RoomCalendar c WHERE c.roomType.id = :roomTypeId AND c.date >= :startDate AND c.date <= :endDate ORDER BY c.date ASC")
         List<RoomCalendar> findAndLockByRoomType_IdAndDateBetween(
                         @Param("roomTypeId") Long roomTypeId,
                         @Param("startDate") LocalDate startDate,

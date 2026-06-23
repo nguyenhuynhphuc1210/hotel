@@ -14,6 +14,14 @@ public interface RoomTypeRepository extends JpaRepository<RoomType, Long> {
     List<RoomType> findByIsActiveTrueAndDeletedAtIsNull();
 
     @Query("""
+                SELECT DISTINCT rt.bedType FROM RoomType rt
+                WHERE rt.isActive = true
+                AND rt.deletedAt IS NULL
+                AND rt.bedType IS NOT NULL
+            """)
+    List<String> findDistinctBedTypesByIsActiveTrueAndDeletedAtIsNull();
+
+    @Query("""
                 SELECT rt FROM RoomType rt
                 WHERE rt.hotel.id = :hotelId
                 AND rt.hotel.deletedAt IS NULL
