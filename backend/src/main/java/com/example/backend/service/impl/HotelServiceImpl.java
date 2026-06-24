@@ -402,64 +402,78 @@ public class HotelServiceImpl implements HotelService {
             List<Long> hotelAmenities, List<Long> roomAmenities, List<String> bedTypes,
             String sortBy, int page, int size) {
 
-        List<String> searchDistricts = null;
+        // 1. Xử lý Districts
+        List<String> finalDistricts = List.of("_ALL_");
         if (districts != null && !districts.isEmpty()) {
-            searchDistricts = districts.stream()
+            List<String> filteredDistricts = districts.stream()
                     .filter(d -> d != null && !d.trim().isEmpty())
                     .map(String::trim)
                     .toList();
-
-            if (searchDistricts.isEmpty()) {
-                searchDistricts = null;
+            if (!filteredDistricts.isEmpty()) {
+                finalDistricts = filteredDistricts;
             }
         }
 
-        String searchKeyword = null;
+        // 2. Xử lý Keyword
+        String finalKeyword = "";
         if (keyword != null && !keyword.trim().isEmpty()) {
-            searchKeyword = "%" + keyword.trim().toLowerCase() + "%";
+            finalKeyword = "%" + keyword.trim().toLowerCase() + "%";
         }
 
-        Integer searchAdults = (adults != null && adults > 0) ? adults : 1;
-        Integer searchChildren = (children != null && children > 0) ? children : 0;
+        // 3. Xử lý số lượng khách
+        Integer finalAdults = (adults != null && adults > 0) ? adults : 1;
+        Integer finalChildren = (children != null && children > 0) ? children : 0;
 
-        List<Integer> searchStars = null;
+        // 4. Xử lý Stars
+        List<Integer> finalStars = List.of(-1);
         if (stars != null && !stars.isEmpty()) {
-            searchStars = stars.stream()
-                    .toList();
+            finalStars = stars;
         }
 
-        List<Long> searchHotelAmenities = null;
+        // 5. Xử lý Hotel Amenities
+        List<Long> finalHotelAmenities = List.of(-1L);
+        int finalHotelAmenitiesSize = 0;
         if (hotelAmenities != null && !hotelAmenities.isEmpty()) {
-            searchHotelAmenities = hotelAmenities.stream()
+            List<Long> filteredHotelAmens = hotelAmenities.stream()
                     .filter(a -> a != null && a > 0)
                     .toList();
-            if (searchHotelAmenities.isEmpty()) {
-                searchHotelAmenities = null;
+            if (!filteredHotelAmens.isEmpty()) {
+                finalHotelAmenities = filteredHotelAmens;
+                finalHotelAmenitiesSize = filteredHotelAmens.size();
             }
         }
 
-        List<Long> searchRoomAmenities = null;
+        // 6. Xử lý Room Amenities
+        List<Long> finalRoomAmenities = List.of(-1L);
+        int finalRoomAmenitiesSize = 0;
         if (roomAmenities != null && !roomAmenities.isEmpty()) {
-            searchRoomAmenities = roomAmenities.stream()
+            List<Long> filteredRoomAmens = roomAmenities.stream()
                     .filter(a -> a != null && a > 0)
                     .toList();
-            if (searchRoomAmenities.isEmpty()) {
-                searchRoomAmenities = null;
+            if (!filteredRoomAmens.isEmpty()) {
+                finalRoomAmenities = filteredRoomAmens;
+                finalRoomAmenitiesSize = filteredRoomAmens.size();
             }
         }
 
-        List<String> searchBedTypes = null;
+        // 7. Xử lý Bed Types
+        List<String> finalBedTypes = List.of("_ALL_");
         if (bedTypes != null && !bedTypes.isEmpty()) {
-            searchBedTypes = bedTypes.stream()
+            List<String> filteredBedTypes = bedTypes.stream()
                     .filter(b -> b != null && !b.trim().isEmpty())
                     .map(String::trim)
                     .map(String::toLowerCase)
                     .toList();
-            if (searchBedTypes.isEmpty()) {
-                searchBedTypes = null;
+            if (!filteredBedTypes.isEmpty()) {
+                finalBedTypes = filteredBedTypes;
             }
         }
 
+        // 8. Xử lý khoảng giá
+        BigDecimal finalMinPrice = (minPrice != null) ? minPrice : BigDecimal.valueOf(-1);
+        BigDecimal finalMaxPrice = (maxPrice != null) ? maxPrice : BigDecimal.valueOf(-1);
+
+        // 9. Xử lý thời gian Check-in & Check-out
         if (checkIn != null && checkOut != null) {
             if (!checkIn.isBefore(checkOut)) {
                 throw new IllegalArgumentException("Ngày nhận phòng phải diễn ra trước ngày trả phòng.");
@@ -469,31 +483,30 @@ public class HotelServiceImpl implements HotelService {
             checkOut = LocalDate.now().plusDays(1);
         }
 
-        long nights = 1;
-        if (checkIn != null && checkOut != null) {
-            nights = java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
-            if (nights <= 0)
-                nights = 1;
+        long nights = java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
+        if (nights <= 0) {
+            nights = 1;
         }
 
         Pageable pageable = PageRequest.of(page, size);
 
+        // Thực thi truy vấn
         return hotelRepository.searchHotelsWithFilters(
-                searchDistricts,
-                searchKeyword,
+                finalDistricts,
+                finalKeyword,
                 checkIn,
                 checkOut,
                 nights,
-                searchAdults,
-                searchChildren,
-                searchStars,
-                minPrice,
-                maxPrice,
-                searchHotelAmenities,
-                searchHotelAmenities != null ? searchHotelAmenities.size() : null,
-                searchRoomAmenities,
-                searchRoomAmenities != null ? searchRoomAmenities.size() : null,
-                searchBedTypes,
+                finalAdults,
+                finalChildren,
+                finalStars,
+                finalMinPrice,
+                finalMaxPrice,
+                finalHotelAmenities,
+                finalHotelAmenitiesSize,
+                finalRoomAmenities,
+                finalRoomAmenitiesSize,
+                finalBedTypes,
                 sortBy,
                 pageable);
     }
