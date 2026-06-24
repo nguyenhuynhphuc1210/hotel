@@ -62,10 +62,9 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                     AND (:roomAmenities IS NULL OR rt.id IN (
                         SELECT rta2.roomType.id
                         FROM RoomTypeAmenity rta2
-                        JOIN rta2.amenity a2
-                        WHERE LOWER(a2.amenityName) IN :roomAmenities
+                        WHERE rta2.amenity.id IN :roomAmenities
                         GROUP BY rta2.roomType.id
-                        HAVING COUNT(DISTINCT LOWER(a2.amenityName)) = :roomAmenitiesSize
+                        HAVING COUNT(DISTINCT rta2.amenity.id) = :roomAmenitiesSize
                     ))
                 GROUP BY rt.id, rt.hotel.id
                 HAVING COUNT(DISTINCT rc.date) = :nights
@@ -77,13 +76,13 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
                 AND (:keyword IS NULL 
                      OR LOWER(h.hotelName) LIKE :keyword 
                      OR LOWER(h.addressLine) LIKE :keyword)
-                AND (COALESCE(:stars, NULL) IS NULL OR h.starRating IN :stars)
+                AND (COALESCE(:stars, NULL) IS NULL OR FUNCTION('floor', h.starRating) IN :stars)
                 AND (:hotelAmenities IS NULL OR (
-                    SELECT COUNT(DISTINCT LOWER(ha2.amenity.amenityName))
+                    SELECT COUNT(DISTINCT ha2.amenity.id)
                     FROM HotelAmenity ha2
                     WHERE ha2.hotel.id = h.id
                       AND ha2.amenity.type = com.example.backend.enums.AmenityType.HOTEL
-                      AND LOWER(ha2.amenity.amenityName) IN :hotelAmenities
+                      AND ha2.amenity.id IN :hotelAmenities
                 ) = :hotelAmenitiesSize)
             GROUP BY 
                 h.id, h.hotelName, h.starRating, h.district, h.city, h.status
@@ -103,12 +102,12 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
             @Param("nights") Long nights,
             @Param("adults") Integer adults,
             @Param("children") Integer children,
-            @Param("stars") List<BigDecimal> stars,
+            @Param("stars") List<Integer> stars,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice,
-            @Param("hotelAmenities") List<String> hotelAmenities,
+            @Param("hotelAmenities") List<Long> hotelAmenities,
             @Param("hotelAmenitiesSize") Integer hotelAmenitiesSize,
-            @Param("roomAmenities") List<String> roomAmenities,
+            @Param("roomAmenities") List<Long> roomAmenities,
             @Param("roomAmenitiesSize") Integer roomAmenitiesSize,
             @Param("bedTypes") List<String> bedTypes,
             @Param("sortBy") String sortBy,
