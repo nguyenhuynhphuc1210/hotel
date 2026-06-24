@@ -58,8 +58,14 @@ function HotelsContent() {
     const maxPriceUrl = searchParams.get('maxPrice') ?? ''
     const sortBy = (searchParams.get('sortBy') as SortOption) ?? 'recommended'
 
-    const hotelAmenities = searchParams.getAll('hotelAmenities')
-    const roomAmenities = searchParams.getAll('roomAmenities')
+    const hotelAmenities = useMemo(
+        () => searchParams.getAll('hotelAmenities').map(Number).filter(n => !isNaN(n)),
+        [searchParams]
+    )
+    const roomAmenities = useMemo(
+        () => searchParams.getAll('roomAmenities').map(Number).filter(n => !isNaN(n)),
+        [searchParams]
+    )
     const bedTypes = searchParams.getAll('bedTypes')
 
     const hasFullDates = !!checkIn && !!checkOut
@@ -176,19 +182,17 @@ function HotelsContent() {
         updateQueryParams({ stars: next })
     }
 
-    const toggleHotelAmenity = (name: string) => {
-        const value = name.trim().toLowerCase()
-        const next = hotelAmenities.includes(value)
-            ? hotelAmenities.filter(x => x !== value)
-            : [...hotelAmenities, value]
+    const toggleHotelAmenity = (id: number) => {
+        const next = hotelAmenities.includes(id)
+            ? hotelAmenities.filter(x => x !== id)
+            : [...hotelAmenities, id]
         updateQueryParams({ hotelAmenities: next })
     }
 
-    const toggleRoomAmenity = (name: string) => {
-        const value = name.trim().toLowerCase()
-        const next = roomAmenities.includes(value)
-            ? roomAmenities.filter(x => x !== value)
-            : [...roomAmenities, value]
+    const toggleRoomAmenity = (id: number) => {
+        const next = roomAmenities.includes(id)
+            ? roomAmenities.filter(x => x !== id)
+            : [...roomAmenities, id]
         updateQueryParams({ roomAmenities: next })
     }
 
@@ -319,20 +323,17 @@ function HotelsContent() {
                         <div className="bg-white rounded-xl border border-gray-200 p-4">
                             <h3 className="text-sm font-semibold text-gray-900 mb-3">Tiện nghi khách sạn</h3>
                             <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                                {hotelAmenityOptions.map(a => {
-                                    const value = a.amenityName.trim().toLowerCase()
-                                    return (
-                                        <label key={a.id} className="flex items-center gap-2.5 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={hotelAmenities.includes(value)}
-                                                onChange={() => toggleHotelAmenity(a.amenityName)}
-                                                className="w-4 h-4 rounded accent-blue-600"
-                                            />
-                                            <span className="text-sm text-gray-600">{a.amenityName}</span>
-                                        </label>
-                                    )
-                                })}
+                                {hotelAmenityOptions.map(a => (
+                                    <label key={a.id} className="flex items-center gap-2.5 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={hotelAmenities.includes(a.id)}
+                                            onChange={() => toggleHotelAmenity(a.id)}
+                                            className="w-4 h-4 rounded accent-blue-600"
+                                        />
+                                        <span className="text-sm text-gray-600">{a.amenityName}</span>
+                                    </label>
+                                ))}
                                 {hotelAmenityOptions.length === 0 && (
                                     <p className="text-xs text-gray-400">Chưa có tiện nghi nào</p>
                                 )}
@@ -342,20 +343,17 @@ function HotelsContent() {
                         <div className="bg-white rounded-xl border border-gray-200 p-4">
                             <h3 className="text-sm font-semibold text-gray-900 mb-3">Tiện nghi phòng</h3>
                             <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                                {roomAmenityOptions.map(a => {
-                                    const value = a.amenityName.trim().toLowerCase()
-                                    return (
-                                        <label key={a.id} className="flex items-center gap-2.5 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={roomAmenities.includes(value)}
-                                                onChange={() => toggleRoomAmenity(a.amenityName)}
-                                                className="w-4 h-4 rounded accent-blue-600"
-                                            />
-                                            <span className="text-sm text-gray-600">{a.amenityName}</span>
-                                        </label>
-                                    )
-                                })}
+                                {roomAmenityOptions.map(a => (
+                                    <label key={a.id} className="flex items-center gap-2.5 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={roomAmenities.includes(a.id)}
+                                            onChange={() => toggleRoomAmenity(a.id)}
+                                            className="w-4 h-4 rounded accent-blue-600"
+                                        />
+                                        <span className="text-sm text-gray-600">{a.amenityName}</span>
+                                    </label>
+                                ))}
                                 {roomAmenityOptions.length === 0 && (
                                     <p className="text-xs text-gray-400">Chưa có tiện nghi nào</p>
                                 )}
