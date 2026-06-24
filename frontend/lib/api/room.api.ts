@@ -6,6 +6,9 @@ const roomApi = {
   getAll: () =>
     axiosInstance.get<RoomTypeResponse[]>(API_CONFIG.ENDPOINTS.ROOM_TYPES),
 
+  getAvailableBedTypes: () =>
+    axiosInstance.get<string[]>(`${API_CONFIG.ENDPOINTS.ROOM_TYPES}/bed-types`),
+
   getById: (id: number | string) =>
     axiosInstance.get<RoomTypeResponse>(API_CONFIG.ENDPOINTS.ROOM_TYPE_BY_ID(id)),
 

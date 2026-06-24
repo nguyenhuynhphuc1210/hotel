@@ -18,6 +18,8 @@ import favoriteApi from '@/lib/api/favorite.api'
 import { cn } from '@/lib/utils'
 import { PromotionResponse } from '@/types/promotion.types'
 import promotionApi from '@/lib/api/promotion.api'
+import { useAmenities } from '@/hooks/useAmenity'
+import roomApi from '@/lib/api/room.api'
 
 
 type SortOption = 'recommended' | 'price_asc' | 'price_desc' | 'star_desc'
@@ -41,7 +43,7 @@ function HotelsContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
 
-    
+
     const keyword = searchParams.get('keyword') ?? ''
     const districts = searchParams.getAll('districts')
     const checkIn = searchParams.get('checkIn') ?? ''
@@ -56,6 +58,10 @@ function HotelsContent() {
     const maxPriceUrl = searchParams.get('maxPrice') ?? ''
     const sortBy = (searchParams.get('sortBy') as SortOption) ?? 'recommended'
 
+    const hotelAmenities = searchParams.getAll('hotelAmenities')
+    const roomAmenities = searchParams.getAll('roomAmenities')
+    const bedTypes = searchParams.getAll('bedTypes')
+
     const hasFullDates = !!checkIn && !!checkOut
     const [showFilter, setShowFilter] = useState(true)
     const pageSize = 10
@@ -67,6 +73,23 @@ function HotelsContent() {
     useEffect(() => { setLocalMin(minPriceUrl) }, [minPriceUrl])
     useEffect(() => { setLocalMax(maxPriceUrl) }, [maxPriceUrl])
 
+    const { data: amenities = [] } = useAmenities()
+
+    const hotelAmenityOptions = useMemo(
+        () => amenities.filter(a => a.type === 'HOTEL'),
+        [amenities]
+    )
+    const roomAmenityOptions = useMemo(
+        () => amenities.filter(a => a.type === 'ROOM'),
+        [amenities]
+    )
+
+    const { data: bedTypeOptions = [] } = useQuery({
+        queryKey: ['bed-types-available'],
+        queryFn: () => roomApi.getAvailableBedTypes().then(r => r.data),
+        staleTime: 1000 * 60 * 30,
+    })
+
     const queryParams: HotelSearchParams = useMemo(() => ({
         keyword: keyword || undefined,
         districts: districts.length > 0 ? districts : undefined,
@@ -77,10 +100,13 @@ function HotelsContent() {
         stars: stars.length > 0 ? stars : undefined,
         minPrice: minPriceUrl ? Number(minPriceUrl) : undefined,
         maxPrice: maxPriceUrl ? Number(maxPriceUrl) : undefined,
+        hotelAmenities: hotelAmenities.length > 0 ? hotelAmenities : undefined,
+        roomAmenities: roomAmenities.length > 0 ? roomAmenities : undefined,
+        bedTypes: bedTypes.length > 0 ? bedTypes : undefined,
         sortBy: sortBy,
         page: currentPage,
         size: pageSize,
-    }), [keyword, districts, checkIn, checkOut, adults, children, stars, minPriceUrl, maxPriceUrl, sortBy, currentPage])
+    }), [keyword, districts, checkIn, checkOut, adults, children, stars, minPriceUrl, maxPriceUrl, hotelAmenities, roomAmenities, bedTypes, sortBy, currentPage])
 
     const { data: pageData, isLoading } = useQuery({
         queryKey: ['hotels-search', queryParams],
@@ -88,21 +114,21 @@ function HotelsContent() {
     })
 
     const hotels = useMemo(() => {
-    const list = pageData?.content || []
-    if (sortBy === 'star_desc') {
-        return [...list].sort((a, b) => Number(b.starRating ?? 0) - Number(a.starRating ?? 0))
-    }
-    if (sortBy === 'price_asc') {
-        return [...list].sort((a, b) => Number(a.minPrice ?? 0) - Number(b.minPrice ?? 0))
-    }
-    if (sortBy === 'price_desc') {
-        return [...list].sort((a, b) => Number(b.minPrice ?? 0) - Number(a.minPrice ?? 0))
-    }
-    return list
-}, [pageData, sortBy])
+        const list = pageData?.content || []
+        if (sortBy === 'star_desc') {
+            return [...list].sort((a, b) => Number(b.starRating ?? 0) - Number(a.starRating ?? 0))
+        }
+        if (sortBy === 'price_asc') {
+            return [...list].sort((a, b) => Number(a.minPrice ?? 0) - Number(b.minPrice ?? 0))
+        }
+        if (sortBy === 'price_desc') {
+            return [...list].sort((a, b) => Number(b.minPrice ?? 0) - Number(a.minPrice ?? 0))
+        }
+        return list
+    }, [pageData, sortBy])
     const totalElements = pageData?.totalElements || 0
 
-    
+
     const updateQueryParams = (updates: Record<string, string | string[] | number[] | number | null>) => {
         const p = new URLSearchParams(searchParams.toString())
 
@@ -123,18 +149,18 @@ function HotelsContent() {
     }
 
     const { data: promotions = [] } = useQuery<PromotionResponse[]>({
-    queryKey: ['promotions-active'],
-    queryFn: async () => {
-        const response = await promotionApi.getAll()
-        const data: PromotionResponse[] = response.data
-        const now = new Date()
-        return data.filter((p: PromotionResponse) =>
-            p.isActive &&
-            new Date(p.startDate) <= now &&
-            new Date(p.endDate) >= now
-        )
-    },
-})
+        queryKey: ['promotions-active'],
+        queryFn: async () => {
+            const response = await promotionApi.getAll()
+            const data: PromotionResponse[] = response.data
+            const now = new Date()
+            return data.filter((p: PromotionResponse) =>
+                p.isActive &&
+                new Date(p.startDate) <= now &&
+                new Date(p.endDate) >= now
+            )
+        },
+    })
 
     const toggleDistrict = (district: string) => {
         const next = districts.includes(district)
@@ -148,6 +174,30 @@ function HotelsContent() {
             ? stars.filter(s => s !== star)
             : [...stars, star]
         updateQueryParams({ stars: next })
+    }
+
+    const toggleHotelAmenity = (name: string) => {
+        const value = name.trim().toLowerCase()
+        const next = hotelAmenities.includes(value)
+            ? hotelAmenities.filter(x => x !== value)
+            : [...hotelAmenities, value]
+        updateQueryParams({ hotelAmenities: next })
+    }
+
+    const toggleRoomAmenity = (name: string) => {
+        const value = name.trim().toLowerCase()
+        const next = roomAmenities.includes(value)
+            ? roomAmenities.filter(x => x !== value)
+            : [...roomAmenities, value]
+        updateQueryParams({ roomAmenities: next })
+    }
+
+    const toggleBedType = (bedType: string) => {
+        const value = bedType.trim().toLowerCase()
+        const next = bedTypes.includes(value)
+            ? bedTypes.filter(x => x !== value)
+            : [...bedTypes, value]
+        updateQueryParams({ bedTypes: next })
     }
 
     const clearAllFilters = () => {
@@ -168,6 +218,7 @@ function HotelsContent() {
         : 0
 
     const activeFilterCount = stars.length + (minPriceUrl ? 1 : 0) + (maxPriceUrl ? 1 : 0)
+        + hotelAmenities.length + roomAmenities.length + bedTypes.length
     const title = keyword || districts.length > 0
         ? `${keyword || districts.join(', ')}: tìm thấy ${totalElements} khách sạn`
         : `Tất cả khách sạn tại TP.HCM: ${totalElements} kết quả`
@@ -262,6 +313,75 @@ function HotelsContent() {
                                     placeholder="Đến (₫)"
                                     className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-400"
                                 />
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-gray-200 p-4">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Tiện nghi khách sạn</h3>
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                {hotelAmenityOptions.map(a => {
+                                    const value = a.amenityName.trim().toLowerCase()
+                                    return (
+                                        <label key={a.id} className="flex items-center gap-2.5 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={hotelAmenities.includes(value)}
+                                                onChange={() => toggleHotelAmenity(a.amenityName)}
+                                                className="w-4 h-4 rounded accent-blue-600"
+                                            />
+                                            <span className="text-sm text-gray-600">{a.amenityName}</span>
+                                        </label>
+                                    )
+                                })}
+                                {hotelAmenityOptions.length === 0 && (
+                                    <p className="text-xs text-gray-400">Chưa có tiện nghi nào</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-gray-200 p-4">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Tiện nghi phòng</h3>
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                {roomAmenityOptions.map(a => {
+                                    const value = a.amenityName.trim().toLowerCase()
+                                    return (
+                                        <label key={a.id} className="flex items-center gap-2.5 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={roomAmenities.includes(value)}
+                                                onChange={() => toggleRoomAmenity(a.amenityName)}
+                                                className="w-4 h-4 rounded accent-blue-600"
+                                            />
+                                            <span className="text-sm text-gray-600">{a.amenityName}</span>
+                                        </label>
+                                    )
+                                })}
+                                {roomAmenityOptions.length === 0 && (
+                                    <p className="text-xs text-gray-400">Chưa có tiện nghi nào</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-gray-200 p-4">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Loại giường</h3>
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                {bedTypeOptions.map(bt => {
+                                    const value = bt.trim().toLowerCase()
+                                    return (
+                                        <label key={bt} className="flex items-center gap-2.5 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={bedTypes.includes(value)}
+                                                onChange={() => toggleBedType(bt)}
+                                                className="w-4 h-4 rounded accent-blue-600"
+                                            />
+                                            <span className="text-sm text-gray-600">{bt}</span>
+                                        </label>
+                                    )
+                                })}
+                                {bedTypeOptions.length === 0 && (
+                                    <p className="text-xs text-gray-400">Chưa có dữ liệu loại giường</p>
+                                )}
                             </div>
                         </div>
 
@@ -388,12 +508,12 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: 
     const displayImage = h.thumbnailUrl || h.images?.find(i => i.isPrimary)?.imageUrl
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
 
-    
+
     const { data: myFavsPage } = useQuery<FavoritePageResponse>({
         queryKey: ['my-favorites', user?.id],
         queryFn: () => favoriteApi.getMyFavorites(0, 100).then(r => r.data as FavoritePageResponse),
         enabled: !!token && !!user,
-        staleTime: 1000 * 60 * 5, 
+        staleTime: 1000 * 60 * 5,
     })
 
     const isFavorited = useMemo(() => {
@@ -402,7 +522,7 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: 
     }, [myFavsPage, h.id])
 
     const handleToggleFavorite = async (e: React.MouseEvent) => {
-        e.stopPropagation() 
+        e.stopPropagation()
         if (!token) {
             toast.error('Vui lòng đăng nhập để lưu khách sạn!')
             router.push(`/login?redirect=${window.location.pathname}`)
@@ -412,7 +532,7 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: 
         setIsTogglingFav(true)
         try {
             const res = await favoriteApi.toggle(h.id)
-            
+
             await queryClient.invalidateQueries({ queryKey: ['my-favorites', user?.id] })
             toast.success(res.data.isFavorited ? 'Đã thêm vào yêu thích!' : 'Đã xóa khỏi yêu thích!')
         } catch {
@@ -431,31 +551,31 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: 
         >
             <div className="w-72 shrink-0 bg-gray-100 relative overflow-hidden">
                 {displayImage ? (
-                    <img 
-                        src={displayImage} 
-                        alt={h.hotelName} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                    <img
+                        src={displayImage}
+                        alt={h.hotelName}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-4xl">🏨</div>
                 )}
-                
+
                 <button
                     onClick={handleToggleFavorite}
                     disabled={isTogglingFav}
                     className={cn(
                         "absolute top-3 right-3 p-2 rounded-full shadow-md backdrop-blur-md transition-all active:scale-90 z-10",
-                        isFavorited 
-                            ? "bg-red-500 text-white" 
+                        isFavorited
+                            ? "bg-red-500 text-white"
                             : "bg-white/80 text-gray-600 hover:bg-white hover:text-red-500"
                     )}
                 >
                     {isTogglingFav ? (
                         <Loader2 size={18} className="animate-spin" />
                     ) : (
-                        <Heart 
-                            size={18} 
-                            fill={isFavorited ? 'white' : 'none'} 
+                        <Heart
+                            size={18}
+                            fill={isFavorited ? 'white' : 'none'}
                             className={cn(isFavorited ? "text-white" : "text-current")}
                         />
                     )}
@@ -469,11 +589,11 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: 
                     </h3>
                     <div className="flex items-center gap-0.5 mb-2">
                         {Array.from({ length: 5 }).map((_, i) => (
-                            <Star 
-                                key={i} 
-                                size={14} 
-                                fill={i < stars ? '#f59e0b' : 'none'} 
-                                className={i < stars ? 'text-amber-400' : 'text-gray-200'} 
+                            <Star
+                                key={i}
+                                size={14}
+                                fill={i < stars ? '#f59e0b' : 'none'}
+                                className={i < stars ? 'text-amber-400' : 'text-gray-200'}
                             />
                         ))}
                     </div>
@@ -483,7 +603,7 @@ function HotelCard({ hotel: h, nights, onCardClick, hasFullDates, promotions }: 
                 </div>
                 <div className="flex items-end justify-end mt-4 pt-4 border-t border-gray-100">
                     <div className="text-right">
-                        
+
                         {hotelPromo && (
                             <div className="flex items-center justify-end gap-1 text-red-600 font-bold text-[10px] animate-pulse mb-1">
                                 <Tag size={10} /> Có ưu đãi

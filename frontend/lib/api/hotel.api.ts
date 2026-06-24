@@ -96,6 +96,9 @@ export interface HotelSearchParams {
   stars?: number[]
   minPrice?: number
   maxPrice?: number
+  hotelAmenities?: string[]   
+  roomAmenities?: string[]
+  bedTypes?: string[]
   sortBy?: string
   page?: number
   size?: number
