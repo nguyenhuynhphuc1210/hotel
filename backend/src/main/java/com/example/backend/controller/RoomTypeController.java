@@ -1,13 +1,17 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.request.RoomTypeRequest;
+import com.example.backend.dto.response.RoomTypeImportResponse;
 import com.example.backend.dto.response.RoomTypeResponse;
 import com.example.backend.dto.response.RoomTypeSummaryResponse;
 import com.example.backend.service.RoomTypeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import java.util.List;
@@ -86,5 +90,22 @@ public class RoomTypeController {
     @PatchMapping("/{id}/reactivate")
     public ResponseEntity<RoomTypeResponse> reactivateRoomType(@PathVariable Long id) {
         return ResponseEntity.ok(roomTypeService.reactivateRoomType(id));
+    }
+
+    @GetMapping("/import-template")
+    public ResponseEntity<byte[]> downloadImportTemplate() {
+        byte[] excelData = roomTypeService.downloadImportTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", "room-types-import-template.xlsx");
+        return new ResponseEntity<>(excelData, headers, HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<RoomTypeImportResponse> importRoomTypesFromExcel(
+            @RequestParam Long hotelId,
+            @RequestParam("file") MultipartFile file) {
+        RoomTypeImportResponse response = roomTypeService.importRoomTypesFromExcel(hotelId, file);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }

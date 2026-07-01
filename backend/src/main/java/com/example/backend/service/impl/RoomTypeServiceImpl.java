@@ -3,6 +3,7 @@ package com.example.backend.service.impl;
 import static com.example.backend.security.SecurityUtils.*;
 
 import com.example.backend.dto.request.RoomTypeRequest;
+import com.example.backend.dto.response.RoomTypeImportResponse;
 import com.example.backend.dto.response.RoomTypeResponse;
 import com.example.backend.dto.response.RoomTypeSummaryResponse;
 import com.example.backend.entity.Hotel;
@@ -14,14 +15,36 @@ import com.example.backend.repository.RoomTypeRepository;
 import com.example.backend.service.RoomTypeService;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.DataValidation;
+import org.apache.poi.ss.usermodel.DataValidationConstraint;
+import org.apache.poi.ss.usermodel.DataValidationHelper;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.util.CellRangeAddressList;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +55,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     private final HotelRepository hotelRepository;
     private final RoomTypeMapper roomTypeMapper;
     private final RoomCalendarServiceImpl roomCalendarService;
+    private final DataFormatter formatter = new DataFormatter();
 
     @Override
     @Transactional(readOnly = true)
@@ -88,7 +112,6 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + hotelId));
 
-        // Hàm này CHỈ ĐỂ XEM, nên cho phép cả Admin xem để tiện quản lý và hỗ trợ
         checkOwnerOrAdmin(hotel.getOwner().getEmail());
 
         return roomTypeRepository.findByHotelIdAndDeletedAtIsNull(hotelId)
@@ -112,7 +135,6 @@ public class RoomTypeServiceImpl implements RoomTypeService {
                 .orElseThrow(
                         () -> new EntityNotFoundException("Không tìm thấy khách sạn với ID = " + request.getHotelId()));
 
-        // CHỈ CHỦ KHÁCH SẠN MỚI ĐƯỢC TẠO PHÒNG
         checkOwner(hotel.getOwner().getEmail());
 
         RoomType roomType = roomTypeMapper.toRoomType(request, hotel);
@@ -130,7 +152,6 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         RoomType existing = roomTypeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
 
-        // CHỈ CHỦ KHÁCH SẠN MỚI ĐƯỢC SỬA (Giá, số lượng phòng...)
         checkOwner(existing.getHotel().getOwner().getEmail());
 
         if (existing.getDeletedAt() != null) {
@@ -168,7 +189,6 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         RoomType existing = roomTypeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
 
-        // CHỈ CHỦ KHÁCH SẠN MỚI ĐƯỢC TẠM NGƯNG BÁN PHÒNG
         checkOwner(existing.getHotel().getOwner().getEmail());
 
         if (existing.getDeletedAt() != null) {
@@ -193,13 +213,12 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         RoomType existing = roomTypeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
 
-        // CHỈ CHỦ KHÁCH SẠN MỚI ĐƯỢC MỞ BÁN LẠI PHÒNG
         checkOwner(existing.getHotel().getOwner().getEmail());
 
         if (existing.getHotel() != null && existing.getHotel().getStatus() != HotelStatus.APPROVED) {
             throw new IllegalArgumentException(
-                "Không thể mở bán loại phòng vì khách sạn hiện không ở trạng thái hoạt động (Trạng thái hiện tại: " + existing.getHotel().getStatus() + ")"
-            );
+                    "Không thể mở bán loại phòng vì khách sạn hiện không ở trạng thái hoạt động (Trạng thái hiện tại: "
+                            + existing.getHotel().getStatus() + ")");
         }
 
         if (existing.getDeletedAt() != null) {
@@ -224,7 +243,6 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         RoomType existing = roomTypeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
 
-        // CHỈ CHỦ KHÁCH SẠN MỚI ĐƯỢC XÓA (Chuyển vào thùng rác)
         checkOwner(existing.getHotel().getOwner().getEmail());
 
         existing.setDeletedAt(LocalDateTime.now());
@@ -240,7 +258,6 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         RoomType existing = roomTypeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy loại phòng với ID = " + id));
 
-        // CHỈ CHỦ KHÁCH SẠN MỚI ĐƯỢC KHÔI PHỤC PHÒNG
         checkOwner(existing.getHotel().getOwner().getEmail());
 
         if (existing.getDeletedAt() == null) {
@@ -276,5 +293,350 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         return deletedTypes.stream()
                 .map(roomTypeMapper::toRoomTypeSummaryResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadImportTemplate() {
+
+        try (Workbook workbook = new XSSFWorkbook();
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("room_types_import");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            List<String> headers = List.of(
+                    "typeName",
+                    "description",
+                    "maxAdults",
+                    "maxChildren",
+                    "bedType",
+                    "roomSize",
+                    "basePrice",
+                    "totalRooms",
+                    "isNonSmoking");
+
+            Row headerRow = sheet.createRow(0);
+
+            for (int i = 0; i < headers.size(); i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers.get(i));
+                cell.setCellStyle(headerStyle);
+            }
+
+            Row sampleRow = sheet.createRow(1);
+
+            sampleRow.createCell(0).setCellValue("Deluxe Twin");
+            sampleRow.createCell(1).setCellValue("Phòng đẹp, phù hợp 2 người lớn");
+            sampleRow.createCell(2).setCellValue(2);
+            sampleRow.createCell(3).setCellValue(1);
+            sampleRow.createCell(4).setCellValue("1 giường đôi");
+            sampleRow.createCell(5).setCellValue(35.5);
+            sampleRow.createCell(6).setCellValue(1200000);
+            sampleRow.createCell(7).setCellValue(10);
+            sampleRow.createCell(8).setCellValue(true);
+
+            DataValidationHelper helper = sheet.getDataValidationHelper();
+
+            DataValidationConstraint constraint = helper.createExplicitListConstraint(new String[] { "TRUE", "FALSE" });
+
+            CellRangeAddressList addressList = new CellRangeAddressList(1, 1000, 8, 8);
+
+            DataValidation validation = helper.createValidation(constraint, addressList);
+
+            validation.setSuppressDropDownArrow(false);
+            validation.setShowErrorBox(true);
+
+            sheet.addValidationData(validation);
+
+            sheet.createFreezePane(0, 1);
+
+            for (int i = 0; i < headers.size(); i++) {
+                sheet.autoSizeColumn(i);
+                sheet.setColumnWidth(i, Math.max(sheet.getColumnWidth(i), 5000));
+            }
+
+            workbook.write(outputStream);
+
+            return outputStream.toByteArray();
+
+        } catch (IOException e) {
+            throw new IllegalStateException("Không thể tạo file mẫu Excel", e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public RoomTypeImportResponse importRoomTypesFromExcel(Long hotelId, MultipartFile file) {
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn file Excel.");
+        }
+
+        String fileName = file.getOriginalFilename();
+
+        if (fileName == null ||
+                (!fileName.toLowerCase().endsWith(".xlsx")
+                        && !fileName.toLowerCase().endsWith(".xls"))) {
+
+            throw new IllegalArgumentException("Chỉ hỗ trợ file Excel (.xlsx hoặc .xls).");
+        }
+
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách sạn."));
+
+        checkOwner(hotel.getOwner().getEmail());
+
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+
+            if (sheet == null) {
+                throw new IllegalArgumentException("File Excel không có dữ liệu.");
+            }
+
+            Row headerRow = sheet.getRow(0);
+
+            if (headerRow == null) {
+                throw new IllegalArgumentException("Thiếu dòng tiêu đề.");
+            }
+
+            Map<String, Integer> headerIndexes = readHeaderIndexes(headerRow);
+            validateHeaders(headerIndexes);
+
+            List<String> errors = new ArrayList<>();
+
+            int imported = 0;
+            int failed = 0;
+            int totalRows = 0;
+
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+
+                Row row = sheet.getRow(i);
+
+                if (isRowEmpty(row)) {
+                    continue;
+                }
+
+                totalRows++;
+
+                try {
+
+                    RoomTypeRequest request = parseRoomTypeRequest(row, headerIndexes);
+
+                    RoomType roomType = roomTypeMapper.toRoomType(request, hotel);
+
+                    RoomType saved = roomTypeRepository.save(roomType);
+
+                    roomCalendarService.generateCalendarForNewRoomType(saved);
+
+                    imported++;
+
+                } catch (Exception ex) {
+
+                    failed++;
+
+                    errors.add("Dòng " + (i + 1) + ": " + ex.getMessage());
+                }
+            }
+
+            return RoomTypeImportResponse.builder()
+                    .totalRows(totalRows)
+                    .importedCount(imported)
+                    .failedCount(failed)
+                    .errors(errors)
+                    .build();
+
+        } catch (IOException e) {
+
+            throw new IllegalStateException("Không thể đọc file Excel.", e);
+        }
+    }
+
+    private Map<String, Integer> readHeaderIndexes(Row headerRow) {
+
+        Map<String, Integer> indexes = new LinkedHashMap<>();
+
+        for (Cell cell : headerRow) {
+            String header = formatter.formatCellValue(cell)
+                    .trim()
+                    .toLowerCase();
+            if (!header.isEmpty()) {
+                indexes.put(header, cell.getColumnIndex());
+            }
+        }
+        return indexes;
+    }
+
+    private void validateHeaders(Map<String, Integer> headers) {
+
+        List<String> required = List.of(
+                "typename",
+                "description",
+                "maxadults",
+                "maxchildren",
+                "bedtype",
+                "roomsize",
+                "baseprice",
+                "totalrooms",
+                "isnonsmoking");
+
+        for (String item : required) {
+            if (!headers.containsKey(item)) {
+                throw new IllegalArgumentException("Thiếu cột: " + item);
+            }
+        }
+    }
+
+    private RoomTypeRequest parseRoomTypeRequest(Row row, Map<String, Integer> headerIndexes) {
+        String typeName = readRequiredString(row, headerIndexes.get("typename"), "Tên loại phòng");
+        String description = readOptionalString(row, headerIndexes.get("description"));
+        Integer maxAdults = readRequiredInteger(row, headerIndexes.get("maxadults"), "Số người lớn tối đa");
+        Integer maxChildren = readOptionalInteger(row, headerIndexes.get("maxchildren"));
+        String bedType = readRequiredString(row, headerIndexes.get("bedtype"), "Loại giường");
+        Double roomSize = readOptionalDouble(row, headerIndexes.get("roomsize"));
+        BigDecimal basePrice = readRequiredBigDecimal(row, headerIndexes.get("baseprice"), "Giá phòng");
+        Integer totalRooms = readRequiredInteger(row, headerIndexes.get("totalrooms"), "Tổng số phòng");
+        Boolean isNonSmoking = readRequiredBoolean(row, headerIndexes.get("isnonsmoking"));
+
+        return RoomTypeRequest.builder()
+                .hotelId(null)
+                .typeName(typeName)
+                .description(description)
+                .maxAdults(maxAdults)
+                .maxChildren(maxChildren)
+                .bedType(bedType)
+                .roomSize(roomSize)
+                .basePrice(basePrice)
+                .totalRooms(totalRooms)
+                .isNonSmoking(isNonSmoking)
+                .build();
+    }
+
+    private String readRequiredString(Row row, Integer index, String fieldName) {
+        String value = readOptionalString(row, index);
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " không được để trống");
+        }
+        return value.trim();
+    }
+
+    private String readOptionalString(Row row, Integer index) {
+        if (index == null) {
+            return null;
+        }
+        Cell cell = row.getCell(index);
+        if (cell == null) {
+            return null;
+        }
+        return getCellStringValue(cell);
+    }
+
+    private Integer readRequiredInteger(Row row, Integer index, String fieldName) {
+
+        String value = readRequiredString(row, index, fieldName);
+        try {
+            int result = Integer.parseInt(value);
+            if (result <= 0) {
+                throw new IllegalArgumentException(fieldName + " phải lớn hơn 0");
+            }
+            return result;
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(fieldName + " phải là số nguyên.");
+        }
+    }
+
+    private Integer readOptionalInteger(Row row, Integer index) {
+
+        String value = readOptionalString(row, index);
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value);
+
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Số trẻ em phải là số nguyên.");
+        }
+    }
+
+    private Double readOptionalDouble(Row row, Integer index) {
+
+        String value = readOptionalString(row, index);
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            double result = Double.parseDouble(value);
+            if (result <= 0) {
+                throw new IllegalArgumentException("Diện tích phòng phải lớn hơn 0.");
+            }
+            return result;
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Diện tích phòng phải là số.");
+        }
+    }
+
+    private BigDecimal readRequiredBigDecimal(Row row,
+            Integer index,
+            String fieldName) {
+
+        String value = readRequiredString(row, index, fieldName);
+
+        try {
+            BigDecimal result = new BigDecimal(value);
+            if (result.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException(fieldName + " phải lớn hơn 0");
+            }
+            return result;
+
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(fieldName + " không hợp lệ.");
+        }
+    }
+
+    private Boolean readRequiredBoolean(Row row, Integer index) {
+        String value = readOptionalString(row, index);
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Trạng thái hút thuốc không được để trống");
+        }
+
+        String normalized = value.trim().toLowerCase();
+        if (List.of("true", "1", "yes", "y", "có", "co").contains(normalized)) {
+            return true;
+        }
+        if (List.of("false", "0", "no", "n", "không", "khong").contains(normalized)) {
+            return false;
+        }
+        throw new IllegalArgumentException("isNonSmoking phải là true/false hoặc yes/no");
+    }
+
+    private String getCellStringValue(Cell cell) {
+
+        if (cell == null) {
+            return null;
+        }
+
+        return formatter.formatCellValue(cell).trim();
+    }
+
+    private boolean isRowEmpty(Row row) {
+        if (row == null) {
+            return true;
+        }
+        for (Cell cell : row) {
+            if (!formatter.formatCellValue(cell).trim().isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 }

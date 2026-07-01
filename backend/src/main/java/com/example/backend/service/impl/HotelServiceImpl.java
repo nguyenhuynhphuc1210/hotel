@@ -402,7 +402,6 @@ public class HotelServiceImpl implements HotelService {
             List<Long> hotelAmenities, List<Long> roomAmenities, List<String> bedTypes,
             String sortBy, int page, int size) {
 
-        // 1. Xử lý Districts
         List<String> finalDistricts = List.of("_ALL_");
         if (districts != null && !districts.isEmpty()) {
             List<String> filteredDistricts = districts.stream()
@@ -414,23 +413,19 @@ public class HotelServiceImpl implements HotelService {
             }
         }
 
-        // 2. Xử lý Keyword
         String finalKeyword = "";
         if (keyword != null && !keyword.trim().isEmpty()) {
             finalKeyword = "%" + keyword.trim().toLowerCase() + "%";
         }
 
-        // 3. Xử lý số lượng khách
         Integer finalAdults = (adults != null && adults > 0) ? adults : 1;
         Integer finalChildren = (children != null && children > 0) ? children : 0;
 
-        // 4. Xử lý Stars
         List<Integer> finalStars = List.of(-1);
         if (stars != null && !stars.isEmpty()) {
             finalStars = stars;
         }
 
-        // 5. Xử lý Hotel Amenities
         List<Long> finalHotelAmenities = List.of(-1L);
         int finalHotelAmenitiesSize = 0;
         if (hotelAmenities != null && !hotelAmenities.isEmpty()) {
@@ -443,7 +438,6 @@ public class HotelServiceImpl implements HotelService {
             }
         }
 
-        // 6. Xử lý Room Amenities
         List<Long> finalRoomAmenities = List.of(-1L);
         int finalRoomAmenitiesSize = 0;
         if (roomAmenities != null && !roomAmenities.isEmpty()) {
@@ -456,7 +450,6 @@ public class HotelServiceImpl implements HotelService {
             }
         }
 
-        // 7. Xử lý Bed Types
         List<String> finalBedTypes = List.of("_ALL_");
         if (bedTypes != null && !bedTypes.isEmpty()) {
             List<String> filteredBedTypes = bedTypes.stream()
@@ -469,11 +462,9 @@ public class HotelServiceImpl implements HotelService {
             }
         }
 
-        // 8. Xử lý khoảng giá
         BigDecimal finalMinPrice = (minPrice != null) ? minPrice : BigDecimal.valueOf(-1);
         BigDecimal finalMaxPrice = (maxPrice != null) ? maxPrice : BigDecimal.valueOf(-1);
 
-        // 9. Xử lý thời gian Check-in & Check-out
         if (checkIn != null && checkOut != null) {
             if (!checkIn.isBefore(checkOut)) {
                 throw new IllegalArgumentException("Ngày nhận phòng phải diễn ra trước ngày trả phòng.");
@@ -490,7 +481,6 @@ public class HotelServiceImpl implements HotelService {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        // Thực thi truy vấn
         return hotelRepository.searchHotelsWithFilters(
                 finalDistricts,
                 finalKeyword,

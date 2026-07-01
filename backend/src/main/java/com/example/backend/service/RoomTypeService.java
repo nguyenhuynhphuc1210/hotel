@@ -1,8 +1,10 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.request.RoomTypeRequest;
+import com.example.backend.dto.response.RoomTypeImportResponse;
 import com.example.backend.dto.response.RoomTypeResponse;
 import com.example.backend.dto.response.RoomTypeSummaryResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -20,4 +22,6 @@ public interface RoomTypeService {
     List<RoomTypeSummaryResponse> getDeletedRoomTypes();
     RoomTypeResponse suspendRoomType(Long id);
     RoomTypeResponse reactivateRoomType(Long id);
+    byte[] downloadImportTemplate();
+    RoomTypeImportResponse importRoomTypesFromExcel(Long hotelId, MultipartFile file);
 }
